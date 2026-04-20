@@ -30,14 +30,23 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const { pathname } = request.nextUrl;
-  const isAuthRoute = pathname.startsWith("/login") || pathname.startsWith("/signup");
-  const isAuthCallback = pathname.startsWith("/auth/callback");
 
-  if (!user && !isAuthRoute && !isAuthCallback && pathname !== "/") {
+  const isPublicRoute =
+    pathname === "/" ||
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/signup") ||
+    pathname.startsWith("/auth");
+
+  const isOnboarding = pathname.startsWith("/onboarding");
+
+  // Unauthenticated → public routes only
+  if (!user && !isPublicRoute && !isOnboarding) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  if (user && isAuthRoute) {
+  // Authenticated user hitting login/signup → skip to dashboard
+  // (they may still be redirected to /onboarding from the dashboard layout)
+  if (user && (pathname.startsWith("/login") || pathname.startsWith("/signup"))) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
@@ -45,5 +54,7 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+  ],
 };
