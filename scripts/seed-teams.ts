@@ -11,72 +11,80 @@ config({ path: ".env.local" });
 
 import { createClient } from "@supabase/supabase-js";
 
+const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+if (!serviceKey) {
+  console.error("Missing SUPABASE_SERVICE_ROLE_KEY in .env.local");
+  console.error("Get it from: Supabase Dashboard → Settings → API → service_role");
+  process.exit(1);
+}
+
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  serviceKey,
+  { auth: { persistSession: false } }
 );
 
 const teams = [
   // ── Group A ──────────────────────────────────────────────
-  { name: "United States",   group_letter: "A" },
-  { name: "Morocco",         group_letter: "A" },
-  { name: "Germany",         group_letter: "A" },
-  { name: "Japan",           group_letter: "A" },
+  { name: "Mexico",                   group_letter: "A" },
+  { name: "South Africa",             group_letter: "A" },
+  { name: "South Korea",              group_letter: "A" },
+  { name: "Czech Republic",           group_letter: "A" },
   // ── Group B ──────────────────────────────────────────────
-  { name: "Mexico",          group_letter: "B" },
-  { name: "Senegal",         group_letter: "B" },
-  { name: "France",          group_letter: "B" },
-  { name: "South Korea",     group_letter: "B" },
+  { name: "Canada",                   group_letter: "B" },
+  { name: "Bosnia and Herzegovina",   group_letter: "B" },
+  { name: "Qatar",                    group_letter: "B" },
+  { name: "Switzerland",              group_letter: "B" },
   // ── Group C ──────────────────────────────────────────────
-  { name: "Canada",          group_letter: "C" },
-  { name: "Nigeria",         group_letter: "C" },
-  { name: "Spain",           group_letter: "C" },
-  { name: "Australia",       group_letter: "C" },
+  { name: "United States",            group_letter: "C" },
+  { name: "Paraguay",                 group_letter: "C" },
+  { name: "Australia",                group_letter: "C" },
+  { name: "Turkiye",                  group_letter: "C" },
   // ── Group D ──────────────────────────────────────────────
-  { name: "Argentina",       group_letter: "D" },
-  { name: "Egypt",           group_letter: "D" },
-  { name: "Croatia",         group_letter: "D" },
-  { name: "Iran",            group_letter: "D" },
+  { name: "Brazil",                   group_letter: "D" },
+  { name: "Morocco",                  group_letter: "D" },
+  { name: "Haiti",                    group_letter: "D" },
+  { name: "Scotland",                 group_letter: "D" },
   // ── Group E ──────────────────────────────────────────────
-  { name: "Brazil",          group_letter: "E" },
-  { name: "Ivory Coast",     group_letter: "E" },
-  { name: "Serbia",          group_letter: "E" },
-  { name: "Saudi Arabia",    group_letter: "E" },
+  { name: "Germany",                  group_letter: "E" },
+  { name: "Curaçao",                  group_letter: "E" },
+  { name: "Ivory Coast",              group_letter: "E" },
+  { name: "Ecuador",                  group_letter: "E" },
   // ── Group F ──────────────────────────────────────────────
-  { name: "England",         group_letter: "F" },
-  { name: "Uruguay",         group_letter: "F" },
-  { name: "Austria",         group_letter: "F" },
-  { name: "Qatar",           group_letter: "F" },
+  { name: "Netherlands",              group_letter: "F" },
+  { name: "Japan",                    group_letter: "F" },
+  { name: "Sweden",                   group_letter: "F" },
+  { name: "Tunisia",                  group_letter: "F" },
   // ── Group G ──────────────────────────────────────────────
-  { name: "Portugal",        group_letter: "G" },
-  { name: "Colombia",        group_letter: "G" },
-  { name: "Denmark",         group_letter: "G" },
-  { name: "Uzbekistan",      group_letter: "G" },
+  { name: "Spain",                    group_letter: "G" },
+  { name: "Cape Verde",               group_letter: "G" },
+  { name: "Saudi Arabia",             group_letter: "G" },
+  { name: "Uruguay",                  group_letter: "G" },
   // ── Group H ──────────────────────────────────────────────
-  { name: "Netherlands",     group_letter: "H" },
-  { name: "Ecuador",         group_letter: "H" },
-  { name: "Switzerland",     group_letter: "H" },
-  { name: "Jordan",          group_letter: "H" },
+  { name: "Belgium",                  group_letter: "H" },
+  { name: "Egypt",                    group_letter: "H" },
+  { name: "Iran",                     group_letter: "H" },
+  { name: "New Zealand",              group_letter: "H" },
   // ── Group I ──────────────────────────────────────────────
-  { name: "Belgium",         group_letter: "I" },
-  { name: "Paraguay",        group_letter: "I" },
-  { name: "Hungary",         group_letter: "I" },
-  { name: "DR Congo",        group_letter: "I" },
+  { name: "France",                   group_letter: "I" },
+  { name: "Senegal",                  group_letter: "I" },
+  { name: "Iraq",                     group_letter: "I" },
+  { name: "Norway",                   group_letter: "I" },
   // ── Group J ──────────────────────────────────────────────
-  { name: "Italy",           group_letter: "J" },
-  { name: "Panama",          group_letter: "J" },
-  { name: "Slovakia",        group_letter: "J" },
-  { name: "South Africa",    group_letter: "J" },
+  { name: "Argentina",                group_letter: "J" },
+  { name: "Algeria",                  group_letter: "J" },
+  { name: "Austria",                  group_letter: "J" },
+  { name: "Jordan",                   group_letter: "J" },
   // ── Group K ──────────────────────────────────────────────
-  { name: "Romania",         group_letter: "K" },
-  { name: "Honduras",        group_letter: "K" },
-  { name: "Algeria",         group_letter: "K" },
-  { name: "New Zealand",     group_letter: "K" },
+  { name: "Portugal",                 group_letter: "K" },
+  { name: "DR Congo",                 group_letter: "K" },
+  { name: "Ghana",                    group_letter: "K" },
+  { name: "Panama",                   group_letter: "K" },
   // ── Group L ──────────────────────────────────────────────
-  { name: "Chile",           group_letter: "L" },
-  { name: "Costa Rica",      group_letter: "L" },
-  { name: "Cameroon",        group_letter: "L" },
-  { name: "Jamaica",         group_letter: "L" },
+  { name: "England",                  group_letter: "L" },
+  { name: "Croatia",                  group_letter: "L" },
+  { name: "Uzbekistan",               group_letter: "L" },
+  { name: "Colombia",                 group_letter: "L" },
 ];
 
 async function main() {
