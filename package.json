@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "seed:teams": "tsx scripts/seed-teams.ts",
-    "seed:players": "tsx scripts/fetch-players.ts"
+    "seed:players": "tsx scripts/fetch-players.ts",
+    "seed:players:mock": "tsx scripts/seed-players-mock.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.2",
