@@ -130,6 +130,19 @@ export default function OnboardingForm({
     setLoading(true);
     setError(null);
 
+    // ── Defensive: guarantee public.users row exists before FK insert ──────
+    const { error: ensureErr } = await supabase
+      .from("users")
+      .upsert({ id: userId }, { onConflict: "id" });
+
+    if (ensureErr) {
+      console.error("ensure users row —", ensureErr.message, "| code:", ensureErr.code, "| details:", ensureErr.details);
+      setError(`שגיאה בהגדרת פרופיל (${ensureErr.code ?? ensureErr.message})`);
+      setLoading(false);
+      return;
+    }
+
+    // ── Build payload ──────────────────────────────────────────────────────
     const payload: Record<string, unknown> = {
       user_id:                   userId,
       predicted_winner_team_id:  parseInt(winnerId, 10),
@@ -147,8 +160,9 @@ export default function OnboardingForm({
       .upsert(payload, { onConflict: "user_id" });
 
     if (upsErr) {
-      console.error("outright_bets upsert:", upsErr);
-      setError("שגיאה בשמירת הניחושים");
+      // PostgrestError props are non-enumerable — must log explicitly
+      console.error("outright_bets upsert —", upsErr.message, "| code:", upsErr.code, "| details:", upsErr.details, "| hint:", upsErr.hint);
+      setError(`שגיאה בשמירת הניחושים (${upsErr.code ?? upsErr.message})`);
     } else {
       router.push("/dashboard");
       router.refresh();

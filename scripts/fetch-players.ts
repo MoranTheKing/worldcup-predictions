@@ -32,7 +32,7 @@ import { createClient } from "@supabase/supabase-js";
 const API_KEY      = process.env.API_FOOTBALL_KEY;
 const API_BASE     = "https://v3.football.api-sports.io";
 const WC_LEAGUE    = 1;
-const WC_SEASON    = 2026;
+const WC_SEASON    = 2022; // ← 2022 for testing (free plan); change to 2026 for production
 const DELAY_MS     = 400;   // stay comfortably under rate limits
 const MAX_PER_TEAM = 15;    // max players stored per national team
 
