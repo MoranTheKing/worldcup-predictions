@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html dir="rtl">
+<head>
+<meta charset="utf-8">
+<style>
+@font-face {
+  font-family: 'FWC2026';
+  src: url('../fonts/FWC2026-UltraCondensedMedium.ttf') format('truetype');
+  font-weight: 500; font-display: swap;
+}
+@import url('https://fonts.googleapis.com/css2?family=Rubik:wght@900&family=Heebo:wght@300;700&display=swap');
+/* Strategy:
+   FWC2026  → Latin text, numbers, Latin headings
+   Rubik 900 → Hebrew display headings (bold, sporty, energetic)
+   Heebo     → functional Hebrew UI (body, labels)
+*/
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #060D1A; overflow: hidden; width: 700px; }
+.canvas {
+  width: 700px; background: #060D1A;
+  position: relative; overflow: hidden;
+}
+.canvas::before {
+  content:''; position:absolute; inset:0; pointer-events:none;
+  background:
+    radial-gradient(ellipse 60% 40% at 50% -10%, rgba(0,230,90,0.06) 0%, transparent 70%),
+    radial-gradient(ellipse 40% 30% at 20% 100%, rgba(0,48,135,0.15) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 30% at 80% 80%, rgba(124,58,237,0.08) 0%, transparent 60%);
+}
+
+.glow-stripe { height: 2px; background: linear-gradient(to right, transparent, #00E65A 30%, #00E65A 70%, transparent); opacity: 0.4; }
+
+.font-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: #0D1B2E; border: 1px solid #1E2F4A; border-radius: 100px;
+  padding: 4px 12px 4px 8px; font-family: 'Heebo', sans-serif; font-size: 10px;
+}
+.font-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+/* Split showcase */
+.split { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+.split-col { padding: 20px 24px; position: relative; }
+.split-col:first-child { border-left: 1px solid #1E2F4A; }
+.col-label {
+  font-family: 'Heebo', sans-serif; font-size: 9px; font-weight: 700;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
+}
+.col-label::after { content:''; flex:1; height:1px; background:rgba(30,47,74,0.6); }
+
+/* Latin specimens — FWC2026 */
+.lat { font-family: 'FWC2026', sans-serif; color: #EEF2FF; line-height: 1; }
+/* Hebrew specimens — Rubik 900 */
+.heb { font-family: 'Rubik', sans-serif; font-weight: 900; color: #EEF2FF; line-height: 1.05; }
+
+.row { margin-bottom: 12px; }
+.row-meta { font-family:'Heebo',sans-serif; font-size:9px; color:#4A6080; font-weight:700; letter-spacing:0.06em; margin-bottom:3px; text-transform:uppercase; }
+
+.divider { height:1px; background:linear-gradient(to right, transparent, #1E2F4A 20%, #1E2F4A 80%, transparent); margin:0 28px; }
+
+/* Score strip */
+.score-strip {
+  display: flex; align-items: center; gap: 0;
+  padding: 16px 28px; background: linear-gradient(to right, rgba(0,230,90,0.04), transparent 50%, rgba(245,197,24,0.04));
+  border-top: 1px solid rgba(30,47,74,0.5);
+}
+.score-num { font-family:'FWC2026',sans-serif; font-size:80px; line-height:1; }
+.score-sep { font-family:'FWC2026',sans-serif; font-size:52px; color:#1E2F4A; margin:0 16px; line-height:1; }
+.score-info { margin-right: 20px; display:flex; flex-direction:column; gap:4px; }
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="glow-stripe"></div>
+
+  <!-- Font legend -->
+  <div style="padding:14px 28px 10px; display:flex; gap:10px; align-items:center; border-bottom:1px solid rgba(30,47,74,0.4);">
+    <div class="font-badge">
+      <div class="font-dot" style="background:#00E65A;"></div>
+      <span style="color:#00E65A; font-weight:700;">FWC2026</span>
+      <span style="color:#4A6080;">Latin & Numbers</span>
+    </div>
+    <div class="font-badge">
+      <div class="font-dot" style="background:#A78BFA;"></div>
+      <span style="color:#A78BFA; font-weight:700;">Rubik 900</span>
+      <span style="color:#4A6080;">Hebrew Display</span>
+    </div>
+    <div class="font-badge">
+      <div class="font-dot" style="background:#4A6080;"></div>
+      <span style="color:#8899BB; font-weight:700;">Heebo</span>
+      <span style="color:#4A6080;">Functional UI</span>
+    </div>
+  </div>
+
+  <!-- Side by side: Latin vs Hebrew -->
+  <div class="split">
+    <!-- Latin side -->
+    <div class="split-col">
+      <div class="col-label" style="color:#00E65A;">FWC2026 — Latin</div>
+      <div class="row">
+        <div class="row-meta">96px · Hero</div>
+        <div class="lat" style="font-size:96px; color:#00E65A; text-shadow:0 0 30px rgba(0,230,90,0.35);">2026</div>
+      </div>
+      <div class="row">
+        <div class="row-meta">64px · Display</div>
+        <div class="lat" style="font-size:64px;">WORLD CUP</div>
+      </div>
+      <div class="row">
+        <div class="row-meta">42px · Title</div>
+        <div class="lat" style="font-size:42px; color:#8899BB;">GROUP STAGE</div>
+      </div>
+      <div class="row">
+        <div class="row-meta">28px · Section</div>
+        <div class="lat" style="font-size:28px; color:#F5C518;">FINAL · 19 JULY</div>
+      </div>
+      <div class="row">
+        <div class="row-meta">20px · Label</div>
+        <div class="lat" style="font-size:20px; color:#4A6080;">GROUP A · ROUND 3</div>
+      </div>
+    </div>
+
+    <!-- Hebrew side -->
+    <div class="split-col">
+      <div class="col-label" style="color:#A78BFA;">Rubik 900 — עברית</div>
+      <div class="row">
+        <div class="row-meta">72px · Hero</div>
+        <div class="heb" style="font-size:72px; color:#00E65A; text-shadow:0 0 24px rgba(0,230,90,0.3);">מונדיאל</div>
+      </div>
+      <div class="row">
+        <div class="row-meta">48px · Display</div>
+        <div class="heb" style="font-size:48px;">שלב הבתים</div>
+      </div>
+      <div class="row">
+        <div class="row-meta">36px · Title</div>
+        <div class="heb" style="font-size:36px; color:#8899BB;">ניחושי אלופים</div>
+      </div>
+      <div class="row">
+        <div class="row-meta">28px · Section</div>
+        <div class="heb" style="font-size:28px; color:#F5C518;">גמר · 19 ביולי</div>
+      </div>
+      <div class="row">
+        <div class="row-meta">20px · Label</div>
+        <div class="heb" style="font-size:20px; color:#4A6080;">בית א׳ · סיבוב 3</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Score display — combined -->
+  <div class="score-strip">
+    <div style="text-align:center; min-width:140px;">
+      <div class="heb" style="font-size:18px; color:#8899BB; margin-bottom:4px;">ברזיל</div>
+      <div class="score-num" style="color:#00E65A; text-shadow:0 0 30px rgba(0,230,90,0.4);">3</div>
+    </div>
+    <div class="score-sep">—</div>
+    <div style="text-align:center; min-width:140px;">
+      <div class="heb" style="font-size:18px; color:#8899BB; margin-bottom:4px;">צרפת</div>
+      <div class="score-num" style="color:#F5C518; text-shadow:0 0 30px rgba(245,197,24,0.4);">1</div>
+    </div>
+    <div class="score-info">
+      <div style="font-family:'FWC2026',sans-serif; font-size:11px; letter-spacing:0.12em; color:#4A6080; text-transform:uppercase;">FINAL SCORE</div>
+      <div class="heb" style="font-size:22px; color:#EEF2FF;">גמר מונדיאל 2026</div>
+      <div style="font-family:'FWC2026',sans-serif; font-size:14px; color:#4A6080; letter-spacing:0.06em;">19 JULY · NEW YORK</div>
+      <div style="margin-top:6px; background:rgba(245,197,24,0.08); border:1px solid rgba(245,197,24,0.25); border-radius:100px; padding:3px 12px; display:inline-flex; align-items:center; gap:6px;">
+        <span style="font-size:14px;">🏆</span>
+        <span class="heb" style="font-size:14px; color:#F5C518;">ברזיל — זוכה הטורניר</span>
+      </div>
+    </div>
+  </div>
+</div>
+</body></html>

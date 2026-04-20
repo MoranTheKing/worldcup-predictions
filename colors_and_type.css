@@ -1,0 +1,351 @@
+/**
+ * מונדיאל 2026 — Design System Tokens
+ * Colors extracted from official FIFA World Cup 2026 logo
+ * Typography: Secular One (display) + Heebo (functional/Hebrew RTL)
+ */
+
+/* ─── Brand Fonts ─────────────────────────────────────────────────────────── */
+@font-face {
+  font-family: 'FWC2026';
+  src: url('fonts/FWC2026-UltraCondensedMedium.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ─── Google Fonts (Heebo for functional Hebrew UI) ─────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&display=swap');
+
+/* ─── Base Tokens ─────────────────────────────────────────────────────────── */
+:root {
+  /* ── Backgrounds ── */
+  --wc-bg:              #060D1A;   /* Page background — ultra-dark navy */
+  --wc-surface:         #0D1B2E;   /* Card / panel background */
+  --wc-surface-raised:  #142338;   /* Elevated: dropdowns, hover states */
+  --wc-surface-overlay: rgba(13, 27, 46, 0.85); /* Glassmorphism */
+
+  /* ── Borders ── */
+  --wc-border:          #1E2F4A;   /* Default subtle border */
+  --wc-border-accent:   #2A4060;   /* Active/focus border */
+  --wc-border-glass:    rgba(255, 255, 255, 0.06); /* Glass border */
+
+  /* ── Brand Colors (from FIFA 2026 Logo) ── */
+  --wc-navy:            #003087;   /* Trophy blue — FIFA official */
+  --wc-red:             #C8102E;   /* USA logo red — danger, fire, goals */
+  --wc-green:           #009A3D;   /* Canada logo green — success, qualify */
+  --wc-white:           #F0F4FF;   /* High-contrast white with cool tint */
+  --wc-black:           #060D1A;   /* Brand black (actually deep navy) */
+
+  /* ── Gamification Accents ── */
+  --wc-neon-green:      #00E65A;   /* Active nav, CTAs, confirmed state */
+  --wc-neon-green-dim:  #00B847;   /* Hover/pressed neon green */
+  --wc-neon-green-glow: rgba(0, 230, 90, 0.15); /* Neon glow shadow */
+  --wc-neon-green-bg:   rgba(0, 230, 90, 0.08); /* Neon tint background */
+
+  --wc-purple:          #7C3AED;   /* Joker boost — premium action */
+  --wc-purple-dim:      #6D28D9;
+  --wc-purple-glow:     rgba(124, 58, 237, 0.25);
+  --wc-purple-bg:       rgba(124, 58, 237, 0.10);
+
+  --wc-gold:            #F5C518;   /* Trophy, winner, final match highlight */
+  --wc-gold-dim:        #E5B008;
+  --wc-gold-glow:       rgba(245, 197, 24, 0.20);
+  --wc-gold-bg:         rgba(245, 197, 24, 0.08);
+
+  --wc-fire:            #FF4D1C;   /* Hot streak 🔥, urgency */
+  --wc-fire-bg:         rgba(255, 77, 28, 0.10);
+
+  --wc-amber:           #F59E0B;   /* 3rd-place rank, warning/edge state */
+  --wc-amber-bg:        rgba(245, 158, 11, 0.10);
+
+  /* ── Text ── */
+  --wc-fg1:             #EEF2FF;   /* Primary text */
+  --wc-fg2:             #8899BB;   /* Secondary / muted text */
+  --wc-fg3:             #4A6080;   /* Placeholder, disabled */
+  --wc-fg-inverse:      #060D1A;   /* Text on light/neon backgrounds */
+
+  /* ── Semantic ── */
+  --wc-success:         var(--wc-green);
+  --wc-success-bg:      rgba(0, 154, 61, 0.10);
+  --wc-danger:          var(--wc-red);
+  --wc-danger-bg:       rgba(200, 16, 46, 0.10);
+  --wc-warning:         var(--wc-amber);
+  --wc-warning-bg:      var(--wc-amber-bg);
+
+  /* ── Spacing ── */
+  --wc-space-xs:        4px;
+  --wc-space-sm:        8px;
+  --wc-space-md:        16px;
+  --wc-space-lg:        24px;
+  --wc-space-xl:        40px;
+
+  /* ── Radii ── */
+  --wc-radius-sm:       8px;    /* Badges, micro elements */
+  --wc-radius-md:       12px;   /* Inputs, buttons */
+  --wc-radius-lg:       16px;   /* Cards */
+  --wc-radius-xl:       24px;   /* Large cards, bottom sheet */
+  --wc-radius-full:     9999px; /* Pills, avatars */
+
+  /* ── Shadows ── */
+  --wc-shadow-card:     0 1px 3px rgba(0,0,0,0.5), 0 1px 2px rgba(0,0,0,0.3);
+  --wc-shadow-elevated: 0 4px 16px rgba(0,0,0,0.5);
+  --wc-shadow-neon:     0 0 16px var(--wc-neon-green-glow), 0 0 4px rgba(0,230,90,0.3);
+  --wc-shadow-purple:   0 0 20px var(--wc-purple-glow);
+  --wc-shadow-gold:     0 0 20px var(--wc-gold-glow);
+
+  /* ── Typography ── */
+  /* Display fonts — two roles:
+     FWC2026 = Latin text, numbers, Latin headings (ultra condensed, energetic)
+     Rubik 900 = Hebrew display headings (bold, sporty, excellent RTL) */
+  --wc-font-display-latin:  'FWC2026', sans-serif;
+  --wc-font-display-hebrew: 'Rubik', 'Heebo', sans-serif;
+  --wc-font-display:        'Rubik', 'Heebo', Arial, sans-serif; /* legacy fallback */
+  --wc-font-body:       'Heebo', Arial, sans-serif;
+
+  /* Font sizes */
+  --wc-text-micro:      11px;
+  --wc-text-xs:         12px;
+  --wc-text-sm:         13px;
+  --wc-text-base:       15px;
+  --wc-text-md:         17px;
+  --wc-text-lg:         20px;
+  --wc-text-xl:         24px;
+  --wc-text-2xl:        28px;
+  --wc-text-3xl:        36px;
+  --wc-text-4xl:        48px;
+  --wc-text-hero:       64px;
+
+  /* Font weights */
+  --wc-weight-regular:  400;
+  --wc-weight-medium:   500;
+  --wc-weight-semibold: 600;
+  --wc-weight-bold:     700;
+  --wc-weight-black:    900;
+
+  /* Line heights */
+  --wc-leading-tight:   1.1;
+  --wc-leading-snug:    1.3;
+  --wc-leading-normal:  1.5;
+  --wc-leading-relaxed: 1.7;
+
+  /* ── Transitions ── */
+  --wc-transition-fast:   150ms ease;
+  --wc-transition-base:   200ms ease-out;
+  --wc-transition-slow:   300ms ease-out;
+
+  /* ── Bottom Nav ── */
+  --wc-nav-height:      64px;
+}
+
+/* ─── Semantic / Utility Classes ──────────────────────────────────────────── */
+
+/* Typography */
+.wc-display {
+  font-family: var(--wc-font-display);
+  line-height: var(--wc-leading-tight);
+  color: var(--wc-fg1);
+}
+
+.wc-body {
+  font-family: var(--wc-font-body);
+  line-height: var(--wc-leading-normal);
+  color: var(--wc-fg1);
+}
+
+.wc-h1 {
+  font-family: var(--wc-font-display);
+  font-size: var(--wc-text-3xl);
+  line-height: var(--wc-leading-tight);
+  color: var(--wc-fg1);
+}
+
+.wc-h2 {
+  font-family: var(--wc-font-display);
+  font-size: var(--wc-text-2xl);
+  line-height: var(--wc-leading-snug);
+  color: var(--wc-fg1);
+}
+
+.wc-h3 {
+  font-family: var(--wc-font-body);
+  font-size: var(--wc-text-lg);
+  font-weight: var(--wc-weight-bold);
+  color: var(--wc-fg1);
+}
+
+.wc-label {
+  font-family: var(--wc-font-body);
+  font-size: var(--wc-text-xs);
+  font-weight: var(--wc-weight-semibold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--wc-fg2);
+}
+
+.wc-score {
+  font-family: var(--wc-font-display);
+  font-size: var(--wc-text-4xl);
+  color: var(--wc-fg1);
+  line-height: 1;
+}
+
+/* Cards */
+.wc-card {
+  background: var(--wc-surface);
+  border: 1px solid var(--wc-border);
+  border-radius: var(--wc-radius-lg);
+  box-shadow: var(--wc-shadow-card);
+  transition: transform var(--wc-transition-fast), box-shadow var(--wc-transition-fast);
+}
+
+.wc-card:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--wc-shadow-elevated);
+}
+
+.wc-card-glass {
+  background: var(--wc-surface-overlay);
+  backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid var(--wc-border-glass);
+  border-radius: var(--wc-radius-lg);
+}
+
+/* Buttons */
+.wc-btn-primary {
+  font-family: var(--wc-font-body);
+  font-size: var(--wc-text-base);
+  font-weight: var(--wc-weight-bold);
+  background: var(--wc-neon-green);
+  color: var(--wc-fg-inverse);
+  border-radius: var(--wc-radius-md);
+  padding: 0.75rem 1.5rem;
+  border: none;
+  cursor: pointer;
+  transition: opacity var(--wc-transition-fast), transform var(--wc-transition-fast), box-shadow var(--wc-transition-fast);
+}
+
+.wc-btn-primary:hover {
+  opacity: 0.88;
+  box-shadow: var(--wc-shadow-neon);
+}
+
+.wc-btn-primary:active {
+  transform: scale(0.97);
+}
+
+.wc-btn-secondary {
+  font-family: var(--wc-font-body);
+  font-size: var(--wc-text-base);
+  font-weight: var(--wc-weight-medium);
+  background: var(--wc-surface-raised);
+  color: var(--wc-fg1);
+  border: 1px solid var(--wc-border);
+  border-radius: var(--wc-radius-md);
+  padding: 0.75rem 1.5rem;
+  cursor: pointer;
+  transition: background var(--wc-transition-fast), transform var(--wc-transition-fast);
+}
+
+.wc-btn-secondary:hover { background: var(--wc-border); }
+.wc-btn-secondary:active { transform: scale(0.97); }
+
+.wc-btn-joker {
+  background: var(--wc-purple);
+  color: #fff;
+  box-shadow: var(--wc-shadow-purple);
+  font-weight: var(--wc-weight-bold);
+}
+
+.wc-btn-joker:hover {
+  background: var(--wc-purple-dim);
+}
+
+/* Inputs */
+.wc-input {
+  font-family: var(--wc-font-body);
+  font-size: var(--wc-text-base);
+  background: var(--wc-surface-raised);
+  border: 1.5px solid var(--wc-border);
+  border-radius: var(--wc-radius-md);
+  color: var(--wc-fg1);
+  padding: 0.75rem 1rem;
+  outline: none;
+  transition: border-color var(--wc-transition-fast), box-shadow var(--wc-transition-fast);
+  width: 100%;
+}
+
+.wc-input::placeholder { color: var(--wc-fg3); }
+
+.wc-input:focus {
+  border-color: var(--wc-neon-green);
+  box-shadow: 0 0 0 3px var(--wc-neon-green-glow);
+}
+
+/* Badges */
+.wc-badge {
+  font-family: var(--wc-font-body);
+  font-size: var(--wc-text-xs);
+  font-weight: var(--wc-weight-semibold);
+  border-radius: var(--wc-radius-full);
+  padding: 2px 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.wc-badge-success {
+  background: var(--wc-success-bg);
+  color: var(--wc-green);
+  border: 1px solid rgba(0, 154, 61, 0.25);
+}
+
+.wc-badge-warning {
+  background: var(--wc-amber-bg);
+  color: var(--wc-amber);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+.wc-badge-danger {
+  background: var(--wc-danger-bg);
+  color: var(--wc-red);
+  border: 1px solid rgba(200, 16, 46, 0.25);
+}
+
+.wc-badge-joker {
+  background: var(--wc-purple-bg);
+  color: var(--wc-purple);
+  border: 1px solid rgba(124, 58, 237, 0.3);
+  box-shadow: var(--wc-shadow-purple);
+}
+
+.wc-badge-gold {
+  background: var(--wc-gold-bg);
+  color: var(--wc-gold);
+  border: 1px solid rgba(245, 197, 24, 0.3);
+}
+
+/* Bottom Navigation */
+.wc-bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: var(--wc-nav-height);
+  background: var(--wc-surface-overlay);
+  backdrop-filter: blur(16px) saturate(180%);
+  border-top: 1px solid var(--wc-border-glass);
+  display: flex;
+  align-items: center;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  z-index: 50;
+}
+
+/* Neon glow animation */
+@keyframes neon-pulse {
+  0%, 100% { box-shadow: var(--wc-shadow-neon); }
+  50% { box-shadow: 0 0 24px var(--wc-neon-green-glow), 0 0 8px rgba(0,230,90,0.5); }
+}
+
+.wc-neon-pulse {
+  animation: neon-pulse 2s ease-in-out infinite;
+}

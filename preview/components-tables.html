@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html dir="rtl">
+<head>
+<meta charset="utf-8">
+<style>
+@font-face {
+  font-family: 'FWC2026';
+  src: url('../fonts/FWC2026-UltraCondensedMedium.ttf') format('truetype');
+  font-weight: 500; font-display: swap;
+}
+@import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700;800&display=swap');
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #060D1A; width: 700px; overflow: hidden; font-family: 'Heebo', sans-serif; direction: rtl; }
+.canvas { width: 700px; position: relative; overflow: hidden; }
+.canvas::before {
+  content:''; position:absolute; inset:0; pointer-events:none;
+  background: radial-gradient(ellipse 50% 50% at 100% 0%, rgba(0,154,61,0.07) 0%, transparent 70%);
+}
+
+.section { padding: 16px 28px; border-bottom: 1px solid rgba(30,47,74,0.5); position: relative; }
+.section:last-child { border-bottom: none; padding-bottom: 24px; }
+.sec-label { font-size:9px; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:#4A6080; margin-bottom:12px; display:flex; align-items:center; gap:8px; }
+.sec-label::after { content:''; flex:1; height:1px; background:rgba(30,47,74,0.6); }
+
+.tables-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+
+.group-card { background: #0D1B2E; border: 1px solid #1E2F4A; border-radius: 16px; overflow: hidden; }
+.group-header {
+  padding: 10px 16px;
+  display: flex; align-items: center; gap: 8px;
+  background: #142338;
+  border-bottom: 1px solid #1E2F4A;
+}
+.group-letter { font-family: 'FWC2026', sans-serif; font-size: 20px; color: #EEF2FF; }
+
+table { width: 100%; border-collapse: collapse; font-size: 11px; }
+thead th {
+  padding: 7px 10px; font-size: 9px; font-weight: 700; letter-spacing: 0.08em;
+  text-transform: uppercase; color: #4A6080; border-bottom: 1px solid rgba(30,47,74,0.5);
+  text-align: center;
+}
+thead th:nth-child(2) { text-align: right; }
+tbody tr { border-bottom: 1px solid rgba(30,47,74,0.35); }
+tbody tr:last-child { border-bottom: none; }
+td { padding: 9px 8px; text-align: center; color: #8899BB; }
+td:nth-child(2) { text-align: right; }
+
+.rank-1 { border-right: 3px solid #00E65A; background: rgba(0,230,90,0.04); }
+.rank-2 { border-right: 3px solid #00B847; background: rgba(0,184,71,0.025); }
+.rank-3 { border-right: 3px solid #F59E0B; background: rgba(245,158,11,0.05); }
+.rank-4 { border-right: 3px solid transparent; }
+
+.team-cell { display:flex; align-items:center; gap:6px; }
+.flag-xs { width:18px; height:12px; border-radius:2px; flex-shrink:0; border:1px solid rgba(255,255,255,0.06); }
+.pts-bold { font-weight:800; color:#EEF2FF; }
+.rank-num { font-weight:700; font-size:12px; }
+
+/* Legend */
+.legend { display:flex; gap:16px; margin-top:10px; }
+.legend-item { display:flex; align-items:center; gap:6px; font-size:11px; color:#8899BB; }
+.legend-dot { width:10px; height:10px; border-radius:2px; flex-shrink:0; }
+</style>
+</head>
+<body>
+<div class="canvas">
+
+  <div class="section">
+    <div class="sec-label">Group Stage Standings Tables — Color-coded Qualification</div>
+    <div class="tables-row">
+
+      <!-- Group A -->
+      <div class="group-card">
+        <div class="group-header">
+          <span style="font-size:14px; color:#00E65A;">⬡</span>
+          <span class="group-letter">בית A</span>
+          <span style="font-size:10px; color:#4A6080; margin-right:auto;">4 קבוצות</span>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th style="width:20px;">#</th>
+              <th>קבוצה</th>
+              <th>מ</th><th>נ</th><th>ת</th><th>ה</th><th>נק׳</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="rank-1">
+              <td class="rank-num" style="color:#00E65A;">1</td>
+              <td><div class="team-cell"><div class="flag-xs" style="background:linear-gradient(#009C3B,#FFDF00);"></div><span style="font-weight:700;color:#EEF2FF;">ברזיל</span></div></td>
+              <td>3</td><td style="color:#00E65A;font-weight:700;">2</td><td>1</td><td>0</td><td class="pts-bold">7</td>
+            </tr>
+            <tr class="rank-2">
+              <td class="rank-num" style="color:#00B847;">2</td>
+              <td><div class="team-cell"><div class="flag-xs" style="background:#C8102E;"></div><span style="font-weight:700;color:#EEF2FF;">פורטוגל</span></div></td>
+              <td>3</td><td>2</td><td>0</td><td>1</td><td class="pts-bold">6</td>
+            </tr>
+            <tr class="rank-3">
+              <td class="rank-num" style="color:#F59E0B;">3</td>
+              <td><div class="team-cell"><div class="flag-xs" style="background:#003087;"></div><span style="font-weight:700;color:#8899BB;">אנגליה</span></div></td>
+              <td>3</td><td>1</td><td>1</td><td>1</td><td class="pts-bold" style="color:#8899BB;">4</td>
+            </tr>
+            <tr class="rank-4">
+              <td class="rank-num" style="color:#4A6080;">4</td>
+              <td><div class="team-cell"><div class="flag-xs" style="background:#0038A8;"></div><span style="font-weight:600;color:#4A6080;">אורוגוואי</span></div></td>
+              <td style="color:#4A6080;">3</td><td style="color:#4A6080;">0</td><td style="color:#4A6080;">0</td><td style="color:#4A6080;">3</td><td style="font-weight:800;color:#4A6080;">0</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Group B -->
+      <div class="group-card">
+        <div class="group-header">
+          <span style="font-size:14px; color:#00E65A;">⬡</span>
+          <span class="group-letter">בית B</span>
+          <span style="font-size:10px; color:#4A6080; margin-right:auto;">4 קבוצות</span>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th style="width:20px;">#</th>
+              <th>קבוצה</th>
+              <th>מ</th><th>נ</th><th>ת</th><th>ה</th><th>נק׳</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="rank-1">
+              <td class="rank-num" style="color:#00E65A;">1</td>
+              <td><div class="team-cell"><div class="flag-xs" style="background:linear-gradient(to right,#002395 33%,#fff 33%,#fff 66%,#ED2939 66%);"></div><span style="font-weight:700;color:#EEF2FF;">צרפת</span></div></td>
+              <td>3</td><td style="color:#00E65A;font-weight:700;">3</td><td>0</td><td>0</td><td class="pts-bold">9</td>
+            </tr>
+            <tr class="rank-2">
+              <td class="rank-num" style="color:#00B847;">2</td>
+              <td><div class="team-cell"><div class="flag-xs" style="background:linear-gradient(#c60b1e 28%,#ffc400 28%,#ffc400 72%,#c60b1e 72%);"></div><span style="font-weight:700;color:#EEF2FF;">ספרד</span></div></td>
+              <td>3</td><td>2</td><td>0</td><td>1</td><td class="pts-bold">6</td>
+            </tr>
+            <tr class="rank-3">
+              <td class="rank-num" style="color:#F59E0B;">3</td>
+              <td><div class="team-cell"><div class="flag-xs" style="background:linear-gradient(#000 33%,#D00 33%,#D00 66%,#FFD700 66%);"></div><span style="font-weight:700;color:#8899BB;">גרמניה</span></div></td>
+              <td>3</td><td>1</td><td>0</td><td>2</td><td class="pts-bold" style="color:#8899BB;">3</td>
+            </tr>
+            <tr class="rank-4">
+              <td class="rank-num" style="color:#4A6080;">4</td>
+              <td><div class="team-cell"><div class="flag-xs" style="background:#BC002D;"></div><span style="font-weight:600;color:#4A6080;">יפן</span></div></td>
+              <td style="color:#4A6080;">3</td><td style="color:#4A6080;">0</td><td style="color:#4A6080;">0</td><td style="color:#4A6080;">3</td><td style="font-weight:800;color:#4A6080;">0</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#00E65A;"></div>עוברים (1–2)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#F59E0B;"></div>מועמדים לעבור כ-3</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#1E2F4A;"></div>נפלטים (4)</div>
+    </div>
+  </div>
+
+</div>
+</body></html>
