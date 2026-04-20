@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html dir="rtl">
+<head>
+<meta charset="utf-8">
+<style>
+@font-face {
+  font-family: 'FWC2026';
+  src: url('../fonts/FWC2026-UltraCondensedMedium.ttf') format('truetype');
+  font-weight: 500; font-display: swap;
+}
+@import url('https://fonts.googleapis.com/css2?family=Rubik:wght@900&family=Heebo:wght@400;600;700;800&display=swap');
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #060D1A; width: 700px; overflow: hidden; font-family: 'Heebo', sans-serif; direction: rtl; }
+.canvas { width: 700px; position: relative; overflow: hidden; }
+.canvas::before {
+  content:''; position:absolute; inset:0; pointer-events:none;
+  background:
+    radial-gradient(ellipse 40% 50% at 0% 50%, rgba(0,48,135,0.12) 0%, transparent 60%),
+    radial-gradient(ellipse 30% 40% at 100% 0%, rgba(0,230,90,0.05) 0%, transparent 60%);
+}
+
+.top-bar {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  height: 3px;
+}
+.bar-seg { flex: 1; height: 3px; }
+
+.section { padding: 20px 28px; border-bottom: 1px solid rgba(30,47,74,0.5); position: relative; }
+.section:last-child { border-bottom: none; padding-bottom: 24px; }
+.sec-label {
+  font-size: 9px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+  color: #4A6080; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;
+}
+.sec-label::after { content: ''; flex:1; height:1px; background: rgba(30,47,74,0.6); }
+
+.btn-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+button, .btn {
+  font-family: 'Heebo', sans-serif; border: none; cursor: pointer;
+  border-radius: 12px; font-weight: 700; transition: all 150ms ease;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  position: relative; overflow: hidden;
+}
+.btn-xl { font-size: 16px; padding: 14px 28px; }
+.btn-lg { font-size: 14px; padding: 12px 22px; }
+.btn-md { font-size: 13px; padding: 10px 18px; }
+.btn-sm { font-size: 11px; padding: 7px 14px; border-radius: 9px; }
+
+/* Primary — neon green */
+.btn-primary {
+  background: #00E65A; color: #060D1A;
+  box-shadow: 0 2px 16px rgba(0,230,90,0.25);
+}
+.btn-primary .label-font { font-family: 'Rubik', sans-serif; font-weight: 900; font-size: 18px; }
+
+/* Secondary */
+.btn-secondary { background: #142338; color: #EEF2FF; border: 1px solid #1E2F4A; }
+
+/* Joker */
+.btn-joker {
+  background: linear-gradient(135deg, #7C3AED, #5B21B6);
+  color: #fff;
+  box-shadow: 0 2px 20px rgba(124,58,237,0.35), 0 0 0 1px rgba(124,58,237,0.3);
+}
+
+/* Gold */
+.btn-gold {
+  background: linear-gradient(135deg, #F5C518, #E5A300);
+  color: #060D1A;
+  box-shadow: 0 2px 20px rgba(245,197,24,0.3);
+}
+
+/* Danger */
+.btn-danger { background: #C8102E; color: #fff; box-shadow: 0 2px 12px rgba(200,16,46,0.3); }
+
+/* Ghost */
+.btn-ghost { background: transparent; color: #EEF2FF; border: 1.5px solid #2A4060; }
+.btn-ghost:hover { border-color: #00E65A; color: #00E65A; }
+
+/* Disabled */
+.btn-disabled { opacity: 0.32; cursor: not-allowed; filter: grayscale(30%); }
+
+/* Google */
+.btn-google { background: #0D1B2E; border: 1px solid #1E2F4A; color: #EEF2FF; font-weight: 600; }
+
+/* Size column */
+.size-col { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+
+/* Featured CTA showcase */
+.featured-row {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+}
+.feature-card {
+  background: #0D1B2E; border: 1px solid #1E2F4A; border-radius: 14px; padding: 14px 16px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="top-bar">
+    <div class="bar-seg" style="background:#C8102E;"></div>
+    <div class="bar-seg" style="background:#003087;"></div>
+    <div class="bar-seg" style="background:#009A3D;"></div>
+    <div class="bar-seg" style="background:#F5C518;"></div>
+    <div class="bar-seg" style="background:#7C3AED;"></div>
+    <div class="bar-seg" style="background:#00E65A;"></div>
+  </div>
+
+  <!-- Feature CTA cards -->
+  <div class="section">
+    <div class="sec-label">Primary Actions</div>
+    <div class="featured-row">
+      <div class="feature-card" style="border-color:rgba(0,230,90,0.3);">
+        <div style="font-size:9px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:#00E65A;">Primary · CTA</div>
+        <button class="btn btn-primary btn-xl" style="width:100%;">
+          שמור ניחושים
+        </button>
+        <button class="btn btn-primary btn-md btn-disabled" style="width:100%;" disabled>
+          שומר...
+        </button>
+      </div>
+      <div class="feature-card" style="border-color:rgba(124,58,237,0.3);">
+        <div style="font-size:9px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:#A78BFA;">Joker · Premium</div>
+        <button class="btn btn-joker btn-xl" style="width:100%;">
+          <span style="font-size:16px;">⚡</span> הפעל ג׳וקר
+        </button>
+        <button class="btn btn-joker btn-md" style="width:100%; opacity:0.7;">⚡ ג׳וקר פעיל ×3</button>
+      </div>
+      <div class="feature-card" style="border-color:rgba(245,197,24,0.25);">
+        <div style="font-size:9px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:#F5C518;">Gold · Winner</div>
+        <button class="btn btn-gold btn-xl" style="width:100%;">
+          <span style="font-size:16px;">🏆</span> בחר זוכה
+        </button>
+        <button class="btn btn-danger btn-md" style="width:100%;">יציאה מהחשבון</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Secondary & Ghost -->
+  <div class="section">
+    <div class="sec-label">Secondary & Ghost</div>
+    <div class="btn-row">
+      <button class="btn btn-secondary btn-lg">בטל</button>
+      <button class="btn btn-ghost btn-lg">✏️ ערוך</button>
+      <button class="btn btn-ghost btn-md">עריכת ניחושי אלופים</button>
+      <button class="btn btn-secondary btn-sm">חזרה</button>
+    </div>
+  </div>
+
+  <!-- Auth + Size Scale -->
+  <div class="section">
+    <div class="sec-label">OAuth & Size Scale</div>
+    <div style="display:flex; gap:20px; align-items:flex-start;">
+      <div>
+        <button class="btn btn-google btn-lg">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M17.64 9.205c0-.639-.057-1.252-.164-1.841H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615Z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18Z" fill="#34A853"/><path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332Z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58Z" fill="#EA4335"/></svg>
+          המשך עם Google
+        </button>
+      </div>
+      <div class="size-col">
+        <div style="font-size:9px; font-weight:700; color:#4A6080; letter-spacing:0.1em; text-transform:uppercase; margin-bottom:4px;">Size Scale</div>
+        <button class="btn btn-primary" style="font-size:18px; padding:14px 26px;">XL — שמור ניחושים</button>
+        <button class="btn btn-primary" style="font-size:15px; padding:12px 22px;">LG — שמור ניחושים</button>
+        <button class="btn btn-primary" style="font-size:13px; padding:10px 18px;">MD — שמור</button>
+        <button class="btn btn-primary" style="font-size:11px; padding:7px 14px; border-radius:9px;">SM — שמור</button>
+      </div>
+    </div>
+  </div>
+</div>
+</body></html>

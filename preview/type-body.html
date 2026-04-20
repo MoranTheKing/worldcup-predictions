@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html dir="rtl">
+<head>
+<meta charset="utf-8">
+<style>
+@font-face {
+  font-family: 'FWC2026';
+  src: url('../fonts/FWC2026-UltraCondensedMedium.ttf') format('truetype');
+  font-weight: 500; font-display: swap;
+}
+@import url('https://fonts.googleapis.com/css2?family=Rubik:wght@900&family=Heebo:wght@300;400;500;600;700;800;900&display=swap');
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #060D1A; width: 700px; overflow: hidden; font-family: 'Heebo', sans-serif; direction: rtl; }
+.canvas { width: 700px; position: relative; overflow: hidden; }
+.canvas::before {
+  content:''; position:absolute; inset:0; pointer-events:none;
+  background: radial-gradient(ellipse 50% 60% at 80% 20%, rgba(0,230,90,0.04) 0%, transparent 60%);
+}
+.header { padding:14px 28px 10px; display:flex; align-items:center; gap:10px; border-bottom:1px solid #1E2F4A; }
+.pill { font-family:'Heebo',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; background:#0D1B2E; border:1px solid #1E2F4A; border-radius:100px; padding:3px 12px; }
+.block { padding:18px 28px; border-bottom:1px solid rgba(30,47,74,0.5); position:relative; }
+.block:last-child { border-bottom:none; padding-bottom:22px; }
+.block-label { font-size:9px; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:#4A6080; margin-bottom:14px; display:flex; align-items:center; gap:8px; }
+.block-label::after { content:''; flex:1; height:1px; background:rgba(30,47,74,0.6); }
+
+/* Heebo weight grid */
+.wgrid { display:grid; grid-template-columns:1fr 1fr; gap:12px 32px; }
+.wrow { display:flex; flex-direction:column; gap:3px; }
+.wmeta { font-family:'Heebo',sans-serif; font-size:9px; color:#4A6080; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; }
+.wsamp { font-family:'Heebo',sans-serif; color:#EEF2FF; line-height:1.15; }
+
+/* Role rows */
+.role-row { display:flex; align-items:baseline; gap:20px; margin-bottom:10px; }
+.role-tag { font-family:'Heebo',sans-serif; font-size:9px; color:#4A6080; font-weight:700; min-width:110px; letter-spacing:0.06em; text-transform:uppercase; flex-shrink:0; }
+
+/* Live UI panel */
+.ui-strip { display:flex; gap:10px; align-items:stretch; }
+.ui-card { background:#0D1B2E; border:1px solid #1E2F4A; border-radius:14px; padding:14px; flex:1; display:flex; flex-direction:column; gap:7px; }
+.inp { background:#142338; border:1.5px solid #1E2F4A; border-radius:9px; padding:9px 12px; font-family:'Heebo',sans-serif; font-size:13px; color:#4A6080; }
+.inp.on { border-color:#00E65A; color:#EEF2FF; box-shadow:0 0 0 3px rgba(0,230,90,0.10); }
+.btn-save { background:#00E65A; border-radius:9px; padding:10px; text-align:center; font-size:13px; font-weight:700; color:#060D1A; font-family:'Heebo',sans-serif; }
+.btn-cancel { background:#142338; border:1px solid #1E2F4A; border-radius:9px; padding:10px; text-align:center; font-size:13px; font-weight:600; color:#8899BB; font-family:'Heebo',sans-serif; }
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="header">
+    <span class="pill" style="color:#8899BB;">Body Font</span>
+    <span style="font-family:'Heebo',sans-serif; font-size:10px; color:#4A6080; font-weight:700; letter-spacing:0.08em; text-transform:uppercase;">Heebo · Hebrew RTL · Functional UI · All Weights</span>
+  </div>
+
+  <!-- Weight Ramp -->
+  <div class="block">
+    <div class="block-label">Weight Ramp — Heebo</div>
+    <div class="wgrid">
+      <div class="wrow">
+        <div class="wmeta">300 · Light</div>
+        <div class="wsamp" style="font-weight:300; font-size:17px; color:#4A6080;">19 ביוני – 19 ביולי 2026</div>
+      </div>
+      <div class="wrow">
+        <div class="wmeta">400 · Regular</div>
+        <div class="wsamp" style="font-weight:400; font-size:17px; color:#8899BB;">לוח המשחקים של מונדיאל 2026</div>
+      </div>
+      <div class="wrow">
+        <div class="wmeta">600 · SemiBold</div>
+        <div class="wsamp" style="font-weight:600; font-size:17px;">הניחושים שלך חלים על כל הליגות</div>
+      </div>
+      <div class="wrow">
+        <div class="wmeta">700 · Bold</div>
+        <div class="wsamp" style="font-weight:700; font-size:17px;">שמור ניחושים · ג׳וקר = ×3</div>
+      </div>
+      <div class="wrow">
+        <div class="wmeta">800 · ExtraBold</div>
+        <div class="wsamp" style="font-weight:800; font-size:19px;">מוראן 🔥 +4 רצף</div>
+      </div>
+      <div class="wrow">
+        <div class="wmeta">900 · Black</div>
+        <div class="wsamp" style="font-weight:900; font-size:22px; color:#00E65A;">שמור ניחושים</div>
+      </div>
+    </div>
+
+    <!-- Also show Rubik 900 for Hebrew display -->
+    <div style="margin-top:16px; padding-top:14px; border-top:1px solid rgba(30,47,74,0.4);">
+      <div style="font-family:'Heebo',sans-serif; font-size:9px; color:#A78BFA; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; margin-bottom:10px; display:flex; align-items:center; gap:8px;">Rubik 900 — Hebrew Display Headings<span style="flex:1; height:1px; background:rgba(124,58,237,0.2); display:block;"></span></div>
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;">
+        <div>
+          <div style="font-family:'Heebo',sans-serif; font-size:9px; color:#4A6080; margin-bottom:3px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase;">72px · Hero</div>
+          <div style="font-family:'Rubik',sans-serif; font-weight:900; font-size:48px; color:#EEF2FF; line-height:1;">מונדיאל</div>
+        </div>
+        <div>
+          <div style="font-family:'Heebo',sans-serif; font-size:9px; color:#4A6080; margin-bottom:3px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase;">36px · Section</div>
+          <div style="font-family:'Rubik',sans-serif; font-weight:900; font-size:36px; color:#00E65A; line-height:1.1; text-shadow:0 0 16px rgba(0,230,90,0.3);">הפרופיל שלי</div>
+        </div>
+        <div>
+          <div style="font-family:'Heebo',sans-serif; font-size:9px; color:#4A6080; margin-bottom:3px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase;">28px · Title</div>
+          <div style="font-family:'Rubik',sans-serif; font-weight:900; font-size:28px; color:#F5C518; line-height:1.1;">🏆 ברזיל זוכה</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Role hierarchy -->
+  <div class="block">
+    <div class="block-label">UI Role Hierarchy</div>
+    <div>
+      <div class="role-row">
+        <div class="role-tag">Page Title</div>
+        <div style="font-family:'Rubik',sans-serif; font-weight:900; font-size:24px; color:#EEF2FF;">הפרופיל שלי</div>
+      </div>
+      <div class="role-row">
+        <div class="role-tag">Section Head</div>
+        <div style="font-family:'Heebo',sans-serif; font-weight:700; font-size:17px; color:#EEF2FF;">ניחושי אלופים</div>
+      </div>
+      <div class="role-row">
+        <div class="role-tag">Body</div>
+        <div style="font-family:'Heebo',sans-serif; font-weight:400; font-size:14px; color:#8899BB;">נהל את הכינוי וניחושי האלופים שלך</div>
+      </div>
+      <div class="role-row">
+        <div class="role-tag">Caption / Label</div>
+        <div style="font-family:'Heebo',sans-serif; font-weight:700; font-size:11px; color:#4A6080; letter-spacing:0.1em; text-transform:uppercase;">זוכה הטורניר</div>
+      </div>
+      <div class="role-row">
+        <div class="role-tag">Error</div>
+        <div style="font-family:'Heebo',sans-serif; font-weight:600; font-size:12px; color:#F87171;">אימייל או סיסמה שגויים</div>
+      </div>
+      <div class="role-row">
+        <div class="role-tag">Micro</div>
+        <div style="font-family:'Heebo',sans-serif; font-weight:700; font-size:10px; color:#4A6080; letter-spacing:0.1em; text-transform:uppercase;">ניתן לערוך עד: 11 ביוני 2026</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Live UI strip -->
+  <div class="block">
+    <div class="block-label">Live UI Context</div>
+    <div class="ui-strip">
+      <div class="ui-card">
+        <div style="font-size:9px; font-weight:700; color:#4A6080; letter-spacing:0.1em; text-transform:uppercase;">כינוי</div>
+        <div class="inp">כינוי שלך</div>
+        <div class="inp on">מוראן</div>
+        <div style="font-size:12px; color:#F87171; font-weight:600;">אימייל זה כבר רשום</div>
+        <div class="btn-save">שמור</div>
+        <div class="btn-cancel">בטל</div>
+      </div>
+      <div class="ui-card" style="flex:1.6;">
+        <div style="font-family:'Rubik',sans-serif; font-weight:900; font-size:22px; color:#EEF2FF; margin-bottom:4px;">הפרופיל שלי</div>
+        <div style="font-family:'Heebo',sans-serif; font-size:12px; color:#8899BB; margin-bottom:10px;">נהל את הכינוי וניחושי האלופים שלך</div>
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+          <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#00E65A,#009A3D);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;color:#060D1A;font-family:'Heebo',sans-serif;flex-shrink:0;">מ</div>
+          <div>
+            <div style="font-family:'Heebo',sans-serif; font-size:15px; font-weight:800; color:#EEF2FF;">מוראן 🔥</div>
+            <div style="font-family:'Heebo',sans-serif; font-size:11px; font-weight:700; color:#FF4D1C;">+4 רצף</div>
+          </div>
+        </div>
+        <div style="font-family:'Heebo',sans-serif; font-size:9px; color:#4A6080; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; margin-bottom:3px;">ניחושי אלופים</div>
+        <div style="font-family:'Heebo',sans-serif; font-size:15px; font-weight:700; color:#F5C518;">🏆 ברזיל</div>
+        <div style="font-family:'Heebo',sans-serif; font-size:11px; color:#4A6080; text-decoration:underline; margin-top:6px;">עריכת ניחושי אלופים (עד תחילת הטורניר)</div>
+      </div>
+    </div>
+  </div>
+</div>
+</body></html>

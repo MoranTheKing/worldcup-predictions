@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html dir="rtl">
+<head>
+<meta charset="utf-8">
+<style>
+@font-face {
+  font-family: 'FWC2026';
+  src: url('../fonts/FWC2026-UltraCondensedMedium.ttf') format('truetype');
+  font-weight: 500; font-display: swap;
+}
+@import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700;800&display=swap');
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #060D1A; width: 700px; overflow: hidden; font-family: 'Heebo', sans-serif; direction: rtl; }
+.canvas { width: 700px; position: relative; overflow: hidden; }
+.canvas::before {
+  content:''; position:absolute; inset:0; pointer-events:none;
+  background:
+    radial-gradient(ellipse 40% 60% at 30% 0%, rgba(0,48,135,0.10) 0%, transparent 70%),
+    radial-gradient(ellipse 30% 40% at 90% 60%, rgba(124,58,237,0.08) 0%, transparent 60%);
+}
+
+.section { padding: 16px 28px; border-bottom: 1px solid rgba(30,47,74,0.5); position: relative; }
+.section:last-child { border-bottom: none; padding-bottom: 24px; }
+.sec-label { font-size:9px; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:#4A6080; margin-bottom:12px; display:flex; align-items:center; gap:8px; }
+.sec-label::after { content:''; flex:1; height:1px; background:rgba(30,47,74,0.6); }
+
+.cards-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+
+.card {
+  background: #0D1B2E;
+  border: 1px solid #1E2F4A;
+  border-radius: 16px;
+  padding: 14px 16px;
+  transition: all 200ms;
+}
+.card.active { border-color: rgba(0,230,90,0.4); box-shadow: 0 0 20px rgba(0,230,90,0.10); }
+.card.joker { border-color: rgba(124,58,237,0.4); box-shadow: 0 0 20px rgba(124,58,237,0.15); }
+
+.card-meta { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+.group-tag { font-size:10px; font-weight:700; color:#4A6080; letter-spacing:0.06em; }
+.time-tag { font-size:10px; color:#4A6080; }
+
+.team-row { display:flex; align-items:center; gap:8px; }
+.flag { width:24px; height:16px; border-radius:3px; border:1px solid rgba(255,255,255,0.08); flex-shrink:0; }
+.team-name { font-size:13px; font-weight:700; color:#EEF2FF; }
+
+.score-row { display:flex; align-items:center; gap:8px; margin-top:10px; }
+.score-box {
+  flex:1; background:#142338; border-radius:9px;
+  font-family:'FWC2026',sans-serif; font-size:26px; line-height:1;
+  text-align:center; padding:8px 4px;
+  border: 1.5px solid #1E2F4A;
+}
+.score-box.filled { color:#00E65A; border-color:#00E65A; box-shadow:0 0 10px rgba(0,230,90,0.15); }
+.score-box.joker-fill { color:#A78BFA; border-color:#7C3AED; box-shadow:0 0 10px rgba(124,58,237,0.2); }
+.score-box.empty { color:#4A6080; }
+.score-sep { font-size:16px; color:#1E2F4A; font-weight:700; }
+
+.joker-toggle {
+  width:100%; margin-top:10px; padding:7px; border-radius:8px;
+  font-family:'Heebo',sans-serif; font-size:11px; font-weight:700;
+  border:none; cursor:pointer;
+}
+.joker-toggle.on { background:rgba(124,58,237,0.12); color:#A78BFA; border:1px solid rgba(124,58,237,0.3); }
+.joker-toggle.off { background:#142338; color:#4A6080; border:1px solid #1E2F4A; }
+
+.vs-divider { font-size:10px; color:#1E2F4A; font-weight:700; text-align:center; margin:4px 0; }
+
+/* Wide card (leaguue / scoring info) */
+.wide-card {
+  background: rgba(245,197,24,0.05);
+  border: 1px solid rgba(245,197,24,0.2);
+  border-radius: 16px;
+  padding: 14px 18px;
+}
+.scoring-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px 24px; }
+.scoring-item { font-size:12px; color:rgba(245,197,24,0.7); font-weight:600; }
+.scoring-item::before { content:'✓ '; color:#F5C518; }
+</style>
+</head>
+<body>
+<div class="canvas">
+
+  <!-- Three card states -->
+  <div class="section">
+    <div class="sec-label">Match Cards — Empty / Filled / Joker Active</div>
+    <div class="cards-grid">
+
+      <!-- Empty -->
+      <div class="card">
+        <div class="card-meta">
+          <span class="group-tag">בית A</span>
+          <span class="time-tag">11/6 · 21:00</span>
+        </div>
+        <div class="team-row">
+          <div class="flag" style="background:linear-gradient(#B22234 33%,#fff 33%,#fff 66%,#3C3B6E 66%);"></div>
+          <span class="team-name">ארה״ב</span>
+        </div>
+        <div class="vs-divider">נגד</div>
+        <div class="team-row">
+          <div class="flag" style="background:linear-gradient(#006847 33%,#fff 33%,#fff 66%,#CE1126 66%);"></div>
+          <span class="team-name">מקסיקו</span>
+        </div>
+        <div class="score-row">
+          <div class="score-box empty">?</div>
+          <div class="score-sep">—</div>
+          <div class="score-box empty">?</div>
+        </div>
+        <button class="joker-toggle off">+ הפעל ג׳וקר</button>
+      </div>
+
+      <!-- Filled -->
+      <div class="card active">
+        <div class="card-meta">
+          <span class="group-tag">בית B</span>
+          <span class="time-tag">12/6 · 19:00</span>
+        </div>
+        <div class="team-row">
+          <div class="flag" style="background:linear-gradient(#009C3B,#FFDF00);"></div>
+          <span class="team-name">ברזיל</span>
+        </div>
+        <div class="vs-divider" style="color:rgba(0,230,90,0.2);">נגד</div>
+        <div class="team-row">
+          <div class="flag" style="background:linear-gradient(to right,#002395 33%,#fff 33%,#fff 66%,#ED2939 66%);"></div>
+          <span class="team-name">צרפת</span>
+        </div>
+        <div class="score-row">
+          <div class="score-box filled">2</div>
+          <div class="score-sep" style="color:#00E65A;">—</div>
+          <div class="score-box filled">1</div>
+        </div>
+        <button class="joker-toggle off" style="color:rgba(0,230,90,0.5); border-color:rgba(0,230,90,0.15);">+ הפעל ג׳וקר</button>
+      </div>
+
+      <!-- Joker -->
+      <div class="card joker">
+        <div class="card-meta">
+          <span class="group-tag">בית C</span>
+          <span style="background:rgba(124,58,237,0.12);color:#A78BFA;border:1px solid rgba(124,58,237,0.3);border-radius:100px;padding:2px 10px;font-size:10px;font-weight:700;">⚡ ג׳וקר</span>
+        </div>
+        <div class="team-row">
+          <div class="flag" style="background:#003087;"></div>
+          <span class="team-name">אנגליה</span>
+        </div>
+        <div class="vs-divider" style="color:rgba(124,58,237,0.3);">נגד</div>
+        <div class="team-row">
+          <div class="flag" style="background:linear-gradient(#D52B1E 33%,#FAF0E6 33%,#FAF0E6 66%,#D52B1E 66%);"></div>
+          <span class="team-name">שוויץ</span>
+        </div>
+        <div class="score-row">
+          <div class="score-box joker-fill">3</div>
+          <div class="score-sep" style="color:#7C3AED;">—</div>
+          <div class="score-box joker-fill">0</div>
+        </div>
+        <button class="joker-toggle on">⚡ ג׳וקר פעיל — ×3</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Scoring info card -->
+  <div class="section">
+    <div class="sec-label">Scoring Info Card</div>
+    <div class="wide-card">
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+        <span style="font-family:'FWC2026',sans-serif; font-size:28px; color:#F5C518;">שיטת הניקוד</span>
+        <div style="flex:1; height:1px; background:rgba(245,197,24,0.2);"></div>
+      </div>
+      <div class="scoring-grid">
+        <div class="scoring-item">תוצאה נכונה: 2–10 נקודות (לפי שלב)</div>
+        <div class="scoring-item">תוצאה מדויקת: 5–20 נקודות</div>
+        <div class="scoring-item">ג׳וקר: ×3 על תוצאה מדויקת</div>
+        <div class="scoring-item">מכפיל הפתעה: עד ×2 לפי מסלול</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body></html>
