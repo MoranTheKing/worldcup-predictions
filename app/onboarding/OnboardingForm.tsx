@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-type Team = { id: number; name: string; group_letter: string };
+type Team = { id: number; name: string; name_he: string; flag: string; group_letter: string };
 
 interface Props {
   userId: string;
@@ -31,11 +31,10 @@ export default function OnboardingForm({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Group teams for the select dropdown
-  const grouped: Record<string, Team[]> = {};
-  teams.forEach((t) => {
-    grouped[t.group_letter] = [...(grouped[t.group_letter] ?? []), t];
-  });
+  // Flat list sorted alphabetically by Hebrew name
+  const sortedTeams = [...teams].sort((a, b) =>
+    (a.name_he ?? a.name).localeCompare(b.name_he ?? b.name, "he")
+  );
 
   async function handleUsername() {
     if (!username.trim() || username.trim().length < 2) {
@@ -177,17 +176,11 @@ export default function OnboardingForm({
                 className="w-full px-4 py-3 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm outline-none focus:ring-2 focus:ring-zinc-400"
               >
                 <option value="">-- בחר קבוצה --</option>
-                {Object.entries(grouped)
-                  .sort(([a], [b]) => a.localeCompare(b))
-                  .map(([letter, ts]) => (
-                    <optgroup key={letter} label={`קבוצה ${letter}`}>
-                      {ts.map((t) => (
-                        <option key={t.id} value={t.id}>
-                          {t.name}
-                        </option>
-                      ))}
-                    </optgroup>
-                  ))}
+                {sortedTeams.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.flag} {t.name_he ?? t.name}
+                  </option>
+                ))}
               </select>
             )}
 

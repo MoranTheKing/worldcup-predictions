@@ -24,9 +24,8 @@ export default async function OnboardingPage() {
 
   const { data: teams } = await supabase
     .from("teams")
-    .select("id, name, group_letter")
-    .order("group_letter", { ascending: true })
-    .order("name", { ascending: true });
+    .select("id, name, name_he, flag, group_letter")
+    .order("name_he", { ascending: true });
 
   return (
     <OnboardingForm
