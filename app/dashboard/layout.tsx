@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import DashboardShell from "@/components/DashboardShell";
 
 export default async function DashboardLayout({
   children,
@@ -14,7 +15,11 @@ export default async function DashboardLayout({
   if (!user) redirect("/login");
 
   const [{ data: profile }, { data: outright }] = await Promise.all([
-    supabase.from("users").select("username").eq("id", user.id).single(),
+    supabase
+      .from("users")
+      .select("username, current_streak")
+      .eq("id", user.id)
+      .single(),
     supabase
       .from("outright_bets")
       .select("id")
@@ -22,9 +27,14 @@ export default async function DashboardLayout({
       .maybeSingle(),
   ]);
 
-  if (!profile?.username || !outright) {
-    redirect("/onboarding");
-  }
+  if (!profile?.username || !outright) redirect("/onboarding");
 
-  return <>{children}</>;
+  return (
+    <DashboardShell
+      username={profile.username}
+      streak={profile.current_streak ?? 0}
+    >
+      {children}
+    </DashboardShell>
+  );
 }
