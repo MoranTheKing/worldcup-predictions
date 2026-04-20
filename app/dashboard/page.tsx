@@ -15,10 +15,14 @@ export default async function DashboardPage() {
       .single(),
     supabase
       .from("outright_bets")
-      .select("predicted_winner_team_id, predicted_top_scorer_name, teams(name)")
+      .select("predicted_top_scorer_name, teams(name, name_he, logo_url)")
       .eq("user_id", user!.id)
       .maybeSingle(),
   ]);
+
+  const team = (outright as any)?.teams as
+    | { name: string; name_he: string | null; logo_url: string | null }
+    | null;
 
   return (
     <DashboardClient
@@ -26,7 +30,9 @@ export default async function DashboardPage() {
       streak={profile?.current_streak ?? 0}
       jokersGroups={profile?.jokers_groups_remaining ?? 1}
       jokersKnockouts={profile?.jokers_knockouts_remaining ?? 1}
-      outrightWinner={(outright as any)?.teams?.name ?? null}
+      outrightWinner={team?.name ?? null}
+      outrightWinnerHe={team?.name_he ?? null}
+      outrightWinnerLogo={team?.logo_url ?? null}
       outrightTopScorer={outright?.predicted_top_scorer_name ?? null}
     />
   );

@@ -5,53 +5,23 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
-// ISO 3166-1 alpha-2 codes for flagcdn.com (subdivision codes for England/Scotland)
-const COUNTRY_CODE: Record<string, string> = {
-  "Mexico": "mx",                   "South Africa": "za",
-  "South Korea": "kr",              "Czech Republic": "cz",
-  "Canada": "ca",                   "Bosnia and Herzegovina": "ba",
-  "Qatar": "qa",                    "Switzerland": "ch",
-  "United States": "us",            "Paraguay": "py",
-  "Australia": "au",                "Turkiye": "tr",
-  "Brazil": "br",                   "Morocco": "ma",
-  "Haiti": "ht",                    "Scotland": "gb-sct",
-  "Germany": "de",                  "Curaçao": "cw",
-  "Ivory Coast": "ci",              "Ecuador": "ec",
-  "Netherlands": "nl",              "Japan": "jp",
-  "Sweden": "se",                   "Tunisia": "tn",
-  "Spain": "es",                    "Cape Verde": "cv",
-  "Saudi Arabia": "sa",             "Uruguay": "uy",
-  "Belgium": "be",                  "Egypt": "eg",
-  "Iran": "ir",                     "New Zealand": "nz",
-  "France": "fr",                   "Senegal": "sn",
-  "Iraq": "iq",                     "Norway": "no",
-  "Argentina": "ar",                "Algeria": "dz",
-  "Austria": "at",                  "Jordan": "jo",
-  "Portugal": "pt",                 "DR Congo": "cd",
-  "Ghana": "gh",                    "Panama": "pa",
-  "England": "gb-eng",              "Croatia": "hr",
-  "Uzbekistan": "uz",               "Colombia": "co",
-};
-
-function FlagImg({ name, size = 24 }: { name: string; size?: number }) {
-  const code = COUNTRY_CODE[name];
-  if (!code) return null;
-  return (
-    <Image
-      src={`https://flagcdn.com/w40/${code}.png`}
-      alt={name}
-      width={size}
-      height={Math.round(size * 0.67)}
-      className="rounded-sm object-cover flex-shrink-0"
-      unoptimized
-    />
-  );
-}
-
 // ── Types ──────────────────────────────────────────────────────────────────────
 
-type Team   = { id: number; name: string; name_he: string; flag: string; group_letter: string };
-type Player = { id: number; name: string; team_id: number | null; position: string | null };
+type Team = {
+  id:           number;
+  name:         string;
+  name_he:      string;
+  flag:         string;
+  logo_url:     string | null;  // flagcdn.com URL stored in DB
+  group_letter: string;
+};
+
+type Player = {
+  id:       number;
+  name:     string;
+  team_id:  number | null;
+  position: string | null;
+};
 
 interface Props {
   userId:           string;
@@ -62,6 +32,21 @@ interface Props {
 }
 
 const STEPS = ["כינוי", "זוכה הטורניר", "מלך השערים"];
+
+// ── Flag image — uses logo_url from DB (flagcdn.com), no local map needed ──────
+function FlagImg({ team, size = 24 }: { team: Team; size?: number }) {
+  if (!team.logo_url) return null;
+  return (
+    <Image
+      src={team.logo_url}
+      alt={team.name}
+      width={size}
+      height={Math.round(size * 0.67)}
+      className="rounded-sm object-cover flex-shrink-0"
+      unoptimized
+    />
+  );
+}
 
 // ── Main component ─────────────────────────────────────────────────────────────
 
@@ -76,13 +61,12 @@ export default function OnboardingForm({
   const [winnerId,       setWinnerId]       = useState<string>("");
   const [winnerLabel,    setWinnerLabel]    = useState<string>("");
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
-  const [topScorerText,  setTopScorerText]  = useState(""); // text fallback when no players in DB
+  const [topScorerText,  setTopScorerText]  = useState("");
   const [error,          setError]          = useState<string | null>(null);
   const [loading,        setLoading]        = useState(false);
 
   const hasPlayerData = players.length > 0;
 
-  // Teams sorted by Hebrew name
   const sortedTeams = [...teams].sort((a, b) =>
     (a.name_he ?? a.name).localeCompare(b.name_he ?? b.name, "he")
   );
@@ -106,15 +90,14 @@ export default function OnboardingForm({
     setLoading(true);
     setError(null);
 
-    // ✅ FIX: use upsert (not update) so the row is created if the
-    //    auth trigger didn't fire (e.g. existing users before migration).
+    // upsert ensures the row exists even if the auth trigger didn't fire
     const { error: upsErr } = await supabase
       .from("users")
       .upsert({ id: userId, username: username.trim() }, { onConflict: "id" });
 
     if (upsErr?.code === "23505") setError("הכינוי הזה תפוס, בחר אחר");
     else if (upsErr) {
-      console.error("users upsert:", upsErr);
+      console.error("users upsert:", upsErr.message, upsErr.code);
       setError("שגיאה בשמירת הכינוי");
     } else {
       setStep(1);
@@ -130,22 +113,21 @@ export default function OnboardingForm({
     setLoading(true);
     setError(null);
 
-    // ── Defensive: guarantee public.users row exists before FK insert ──────
+    // Guarantee public.users row exists before FK insert
     const { error: ensureErr } = await supabase
       .from("users")
       .upsert({ id: userId }, { onConflict: "id" });
 
     if (ensureErr) {
-      console.error("ensure users row —", ensureErr.message, "| code:", ensureErr.code, "| details:", ensureErr.details);
+      console.error("ensure users row:", ensureErr.message, ensureErr.code);
       setError(`שגיאה בהגדרת פרופיל (${ensureErr.code ?? ensureErr.message})`);
       setLoading(false);
       return;
     }
 
-    // ── Build payload ──────────────────────────────────────────────────────
     const payload: Record<string, unknown> = {
-      user_id:                   userId,
-      predicted_winner_team_id:  parseInt(winnerId, 10),
+      user_id:                  userId,
+      predicted_winner_team_id: parseInt(winnerId, 10),
     };
 
     if (selectedPlayer) {
@@ -160,8 +142,7 @@ export default function OnboardingForm({
       .upsert(payload, { onConflict: "user_id" });
 
     if (upsErr) {
-      // PostgrestError props are non-enumerable — must log explicitly
-      console.error("outright_bets upsert —", upsErr.message, "| code:", upsErr.code, "| details:", upsErr.details, "| hint:", upsErr.hint);
+      console.error("outright_bets upsert:", upsErr.message, "| code:", upsErr.code, "| details:", upsErr.details);
       setError(`שגיאה בשמירת הניחושים (${upsErr.code ?? upsErr.message})`);
     } else {
       router.push("/dashboard");
@@ -255,7 +236,7 @@ export default function OnboardingForm({
               onClick={() => {
                 if (!winnerId) { setError("בחר קבוצה זוכה"); return; }
                 setError(null);
-                setSelectedPlayer(null); // reset player when winner changes
+                setSelectedPlayer(null);
                 setStep(2);
               }}
               disabled={loading || teams.length === 0}
@@ -286,7 +267,6 @@ export default function OnboardingForm({
                 onChange={setSelectedPlayer}
               />
             ) : (
-              /* Fallback: free-text until seed:players is run */
               <input
                 type="text"
                 placeholder="לדוגמה: Kylian Mbappé"
@@ -327,9 +307,9 @@ export default function OnboardingForm({
 function TeamPicker({
   teams, value, label, onChange,
 }: {
-  teams: Team[];
-  value: string;
-  label: string;
+  teams:    Team[];
+  value:    string;
+  label:    string;
   onChange: (id: string, label: string) => void;
 }) {
   const [open,   setOpen]   = useState(false);
@@ -361,7 +341,7 @@ function TeamPicker({
         className="w-full flex items-center justify-between px-4 py-3 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm outline-none focus:ring-2 focus:ring-zinc-400"
       >
         <span className="flex items-center gap-2">
-          {value && <FlagImg name={selectedTeam?.name ?? ""} />}
+          {selectedTeam && <FlagImg team={selectedTeam} />}
           <span className={value ? "text-zinc-900 dark:text-zinc-50" : "text-zinc-400"}>
             {value ? label : "-- בחר קבוצה --"}
           </span>
@@ -400,7 +380,7 @@ function TeamPicker({
                       String(t.id) === value ? "bg-zinc-100 dark:bg-zinc-800 font-medium" : ""
                     }`}
                   >
-                    <FlagImg name={t.name} size={20} />
+                    <FlagImg team={t} size={20} />
                     <span className="text-zinc-900 dark:text-zinc-50">{displayLabel}</span>
                   </button>
                 </li>
@@ -418,19 +398,18 @@ function TeamPicker({
 function PlayerPicker({
   players, winnerId, value, onChange,
 }: {
-  players: Player[];
+  players:  Player[];
   winnerId: string;
   value:    Player | null;
   onChange: (p: Player | null) => void;
 }) {
-  const [open,   setOpen]   = useState(false);
-  const [search, setSearch] = useState("");
+  const [open,    setOpen]    = useState(false);
+  const [search,  setSearch]  = useState("");
   const [showAll, setShowAll] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
-  // Decide which pool to display
   const winnerPlayers = players.filter((p) => String(p.team_id) === winnerId);
-  const pool = (showAll || winnerPlayers.length === 0) ? players : winnerPlayers;
+  const pool          = (showAll || winnerPlayers.length === 0) ? players : winnerPlayers;
 
   const filtered = search.trim()
     ? pool.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()))
@@ -446,19 +425,22 @@ function PlayerPicker({
 
   return (
     <div ref={ref} className="relative flex flex-col gap-2">
-      {/* Trigger button */}
+      {/* Trigger */}
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
         className="w-full flex items-center justify-between px-4 py-3 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm outline-none focus:ring-2 focus:ring-zinc-400"
       >
-        <span className={value ? "text-zinc-900 dark:text-zinc-50" : "text-zinc-400"}>
-          {value ? value.name : "-- בחר שחקן --"}
+        <span className="flex items-center gap-2">
+          <Image src="/avatar-player.svg" alt="" width={20} height={20} className="opacity-50" />
+          <span className={value ? "text-zinc-900 dark:text-zinc-50" : "text-zinc-400"}>
+            {value ? value.name : "-- בחר שחקן --"}
+          </span>
         </span>
         <span className="text-zinc-400 text-xs">{open ? "▲" : "▼"}</span>
       </button>
 
-      {/* Toggle: winner team only ↔ all players */}
+      {/* Toggle: winner team ↔ all players */}
       {winnerPlayers.length > 0 && (
         <button
           type="button"
@@ -485,7 +467,6 @@ function PlayerPicker({
             />
           </div>
 
-          {/* Section header */}
           <div className="px-4 py-1.5 text-xs text-zinc-400 bg-zinc-50 dark:bg-zinc-800/50 border-b border-zinc-100 dark:border-zinc-800">
             {showAll || winnerPlayers.length === 0
               ? `כל השחקנים (${filtered.length})`
@@ -500,18 +481,17 @@ function PlayerPicker({
               <li key={p.id}>
                 <button
                   type="button"
-                  onClick={() => {
-                    onChange(p);
-                    setOpen(false);
-                    setSearch("");
-                  }}
+                  onClick={() => { onChange(p); setOpen(false); setSearch(""); }}
                   className={`w-full text-right px-4 py-2.5 text-sm flex items-center justify-between hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors ${
                     value?.id === p.id ? "bg-zinc-100 dark:bg-zinc-800 font-medium" : ""
                   }`}
                 >
-                  <span className="text-zinc-900 dark:text-zinc-50">{p.name}</span>
+                  <div className="flex items-center gap-2">
+                    <Image src="/avatar-player.svg" alt="" width={18} height={18} className="opacity-40" />
+                    <span className="text-zinc-900 dark:text-zinc-50">{p.name}</span>
+                  </div>
                   {p.position && (
-                    <span className="text-xs text-zinc-400 mr-2">{translatePosition(p.position)}</span>
+                    <span className="text-xs text-zinc-400 mr-1">{translatePosition(p.position)}</span>
                   )}
                 </button>
               </li>
@@ -524,7 +504,7 @@ function PlayerPicker({
 }
 
 function translatePosition(pos: string): string {
-  if (pos.includes("Attacker"))  return "חלוץ";
+  if (pos.includes("Attacker"))   return "חלוץ";
   if (pos.includes("Midfielder")) return "קשר";
   if (pos.includes("Defender"))   return "בלם";
   if (pos.includes("Goalkeeper")) return "שוער";

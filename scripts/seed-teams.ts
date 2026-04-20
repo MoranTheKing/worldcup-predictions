@@ -23,71 +23,105 @@ const supabase = createClient(
   { auth: { persistSession: false } }
 );
 
+// ISO 3166-1 alpha-2 codes for flagcdn.com
+// Subdivision codes for nations without their own ISO country code
+const FLAG_CODES: Record<string, string> = {
+  "Mexico":                 "mx",  "South Africa":           "za",
+  "South Korea":            "kr",  "Czech Republic":         "cz",
+  "Canada":                 "ca",  "Bosnia and Herzegovina": "ba",
+  "Qatar":                  "qa",  "Switzerland":            "ch",
+  "United States":          "us",  "Paraguay":               "py",
+  "Australia":              "au",  "Turkiye":                "tr",
+  "Brazil":                 "br",  "Morocco":                "ma",
+  "Haiti":                  "ht",  "Scotland":               "gb-sct",
+  "Germany":                "de",  "Curaçao":                "cw",
+  "Ivory Coast":            "ci",  "Ecuador":                "ec",
+  "Netherlands":            "nl",  "Japan":                  "jp",
+  "Sweden":                 "se",  "Tunisia":                "tn",
+  "Spain":                  "es",  "Cape Verde":             "cv",
+  "Saudi Arabia":           "sa",  "Uruguay":                "uy",
+  "Belgium":                "be",  "Egypt":                  "eg",
+  "Iran":                   "ir",  "New Zealand":            "nz",
+  "France":                 "fr",  "Senegal":                "sn",
+  "Iraq":                   "iq",  "Norway":                 "no",
+  "Argentina":              "ar",  "Algeria":                "dz",
+  "Austria":                "at",  "Jordan":                 "jo",
+  "Portugal":               "pt",  "DR Congo":               "cd",
+  "Ghana":                  "gh",  "Panama":                 "pa",
+  "England":                "gb-eng", "Croatia":             "hr",
+  "Uzbekistan":             "uz",  "Colombia":               "co",
+};
+
+function logoUrl(name: string): string {
+  const code = FLAG_CODES[name];
+  return code ? `https://flagcdn.com/w80/${code}.png` : "";
+}
+
 const teams = [
   // Group A
-  { name: "Mexico",                 name_he: "מקסיקו",              flag: "🇲🇽", group_letter: "A" },
-  { name: "South Africa",           name_he: "דרום אפריקה",          flag: "🇿🇦", group_letter: "A" },
-  { name: "South Korea",            name_he: "דרום קוריאה",          flag: "🇰🇷", group_letter: "A" },
-  { name: "Czech Republic",         name_he: "צ'כיה",               flag: "🇨🇿", group_letter: "A" },
+  { name: "Mexico",                 name_he: "מקסיקו",            flag: "🇲🇽", group_letter: "A", logo_url: logoUrl("Mexico") },
+  { name: "South Africa",           name_he: "דרום אפריקה",        flag: "🇿🇦", group_letter: "A", logo_url: logoUrl("South Africa") },
+  { name: "South Korea",            name_he: "דרום קוריאה",        flag: "🇰🇷", group_letter: "A", logo_url: logoUrl("South Korea") },
+  { name: "Czech Republic",         name_he: "צ'כיה",             flag: "🇨🇿", group_letter: "A", logo_url: logoUrl("Czech Republic") },
   // Group B
-  { name: "Canada",                 name_he: "קנדה",                flag: "🇨🇦", group_letter: "B" },
-  { name: "Bosnia and Herzegovina", name_he: "בוסניה והרצגובינה",    flag: "🇧🇦", group_letter: "B" },
-  { name: "Qatar",                  name_he: "קטאר",                flag: "🇶🇦", group_letter: "B" },
-  { name: "Switzerland",            name_he: "שווייץ",              flag: "🇨🇭", group_letter: "B" },
+  { name: "Canada",                 name_he: "קנדה",              flag: "🇨🇦", group_letter: "B", logo_url: logoUrl("Canada") },
+  { name: "Bosnia and Herzegovina", name_he: "בוסניה והרצגובינה",  flag: "🇧🇦", group_letter: "B", logo_url: logoUrl("Bosnia and Herzegovina") },
+  { name: "Qatar",                  name_he: "קטאר",              flag: "🇶🇦", group_letter: "B", logo_url: logoUrl("Qatar") },
+  { name: "Switzerland",            name_he: "שווייץ",            flag: "🇨🇭", group_letter: "B", logo_url: logoUrl("Switzerland") },
   // Group C
-  { name: "United States",          name_he: "ארצות הברית",          flag: "🇺🇸", group_letter: "C" },
-  { name: "Paraguay",               name_he: "פרגוואי",             flag: "🇵🇾", group_letter: "C" },
-  { name: "Australia",              name_he: "אוסטרליה",            flag: "🇦🇺", group_letter: "C" },
-  { name: "Turkiye",                name_he: "טורקיה",              flag: "🇹🇷", group_letter: "C" },
+  { name: "United States",          name_he: "ארצות הברית",        flag: "🇺🇸", group_letter: "C", logo_url: logoUrl("United States") },
+  { name: "Paraguay",               name_he: "פרגוואי",           flag: "🇵🇾", group_letter: "C", logo_url: logoUrl("Paraguay") },
+  { name: "Australia",              name_he: "אוסטרליה",          flag: "🇦🇺", group_letter: "C", logo_url: logoUrl("Australia") },
+  { name: "Turkiye",                name_he: "טורקיה",            flag: "🇹🇷", group_letter: "C", logo_url: logoUrl("Turkiye") },
   // Group D
-  { name: "Brazil",                 name_he: "ברזיל",               flag: "🇧🇷", group_letter: "D" },
-  { name: "Morocco",                name_he: "מרוקו",               flag: "🇲🇦", group_letter: "D" },
-  { name: "Haiti",                  name_he: "האיטי",               flag: "🇭🇹", group_letter: "D" },
-  { name: "Scotland",               name_he: "סקוטלנד",             flag: "🏴󠁧󠁢󠁳󠁣󠁴󠁿", group_letter: "D" },
+  { name: "Brazil",                 name_he: "ברזיל",             flag: "🇧🇷", group_letter: "D", logo_url: logoUrl("Brazil") },
+  { name: "Morocco",                name_he: "מרוקו",             flag: "🇲🇦", group_letter: "D", logo_url: logoUrl("Morocco") },
+  { name: "Haiti",                  name_he: "האיטי",             flag: "🇭🇹", group_letter: "D", logo_url: logoUrl("Haiti") },
+  { name: "Scotland",               name_he: "סקוטלנד",           flag: "🏴󠁧󠁢󠁳󠁣󠁴󠁿", group_letter: "D", logo_url: logoUrl("Scotland") },
   // Group E
-  { name: "Germany",                name_he: "גרמניה",              flag: "🇩🇪", group_letter: "E" },
-  { name: "Curaçao",                name_he: "קוראסאו",             flag: "🇨🇼", group_letter: "E" },
-  { name: "Ivory Coast",            name_he: "חוף השנהב",           flag: "🇨🇮", group_letter: "E" },
-  { name: "Ecuador",                name_he: "אקוודור",             flag: "🇪🇨", group_letter: "E" },
+  { name: "Germany",                name_he: "גרמניה",            flag: "🇩🇪", group_letter: "E", logo_url: logoUrl("Germany") },
+  { name: "Curaçao",                name_he: "קוראסאו",           flag: "🇨🇼", group_letter: "E", logo_url: logoUrl("Curaçao") },
+  { name: "Ivory Coast",            name_he: "חוף השנהב",         flag: "🇨🇮", group_letter: "E", logo_url: logoUrl("Ivory Coast") },
+  { name: "Ecuador",                name_he: "אקוודור",           flag: "🇪🇨", group_letter: "E", logo_url: logoUrl("Ecuador") },
   // Group F
-  { name: "Netherlands",            name_he: "הולנד",               flag: "🇳🇱", group_letter: "F" },
-  { name: "Japan",                  name_he: "יפן",                 flag: "🇯🇵", group_letter: "F" },
-  { name: "Sweden",                 name_he: "שוודיה",              flag: "🇸🇪", group_letter: "F" },
-  { name: "Tunisia",                name_he: "תוניסיה",             flag: "🇹🇳", group_letter: "F" },
+  { name: "Netherlands",            name_he: "הולנד",             flag: "🇳🇱", group_letter: "F", logo_url: logoUrl("Netherlands") },
+  { name: "Japan",                  name_he: "יפן",               flag: "🇯🇵", group_letter: "F", logo_url: logoUrl("Japan") },
+  { name: "Sweden",                 name_he: "שוודיה",            flag: "🇸🇪", group_letter: "F", logo_url: logoUrl("Sweden") },
+  { name: "Tunisia",                name_he: "תוניסיה",           flag: "🇹🇳", group_letter: "F", logo_url: logoUrl("Tunisia") },
   // Group G
-  { name: "Spain",                  name_he: "ספרד",                flag: "🇪🇸", group_letter: "G" },
-  { name: "Cape Verde",             name_he: "כף ורדה",             flag: "🇨🇻", group_letter: "G" },
-  { name: "Saudi Arabia",           name_he: "ערב הסעודית",          flag: "🇸🇦", group_letter: "G" },
-  { name: "Uruguay",                name_he: "אורוגוואי",           flag: "🇺🇾", group_letter: "G" },
+  { name: "Spain",                  name_he: "ספרד",              flag: "🇪🇸", group_letter: "G", logo_url: logoUrl("Spain") },
+  { name: "Cape Verde",             name_he: "כף ורדה",           flag: "🇨🇻", group_letter: "G", logo_url: logoUrl("Cape Verde") },
+  { name: "Saudi Arabia",           name_he: "ערב הסעודית",        flag: "🇸🇦", group_letter: "G", logo_url: logoUrl("Saudi Arabia") },
+  { name: "Uruguay",                name_he: "אורוגוואי",         flag: "🇺🇾", group_letter: "G", logo_url: logoUrl("Uruguay") },
   // Group H
-  { name: "Belgium",                name_he: "בלגיה",               flag: "🇧🇪", group_letter: "H" },
-  { name: "Egypt",                  name_he: "מצרים",               flag: "🇪🇬", group_letter: "H" },
-  { name: "Iran",                   name_he: "איראן",               flag: "🇮🇷", group_letter: "H" },
-  { name: "New Zealand",            name_he: "ניו זילנד",           flag: "🇳🇿", group_letter: "H" },
+  { name: "Belgium",                name_he: "בלגיה",             flag: "🇧🇪", group_letter: "H", logo_url: logoUrl("Belgium") },
+  { name: "Egypt",                  name_he: "מצרים",             flag: "🇪🇬", group_letter: "H", logo_url: logoUrl("Egypt") },
+  { name: "Iran",                   name_he: "איראן",             flag: "🇮🇷", group_letter: "H", logo_url: logoUrl("Iran") },
+  { name: "New Zealand",            name_he: "ניו זילנד",         flag: "🇳🇿", group_letter: "H", logo_url: logoUrl("New Zealand") },
   // Group I
-  { name: "France",                 name_he: "צרפת",                flag: "🇫🇷", group_letter: "I" },
-  { name: "Senegal",                name_he: "סנגל",                flag: "🇸🇳", group_letter: "I" },
-  { name: "Iraq",                   name_he: "עיראק",               flag: "🇮🇶", group_letter: "I" },
-  { name: "Norway",                 name_he: "נורווגיה",            flag: "🇳🇴", group_letter: "I" },
+  { name: "France",                 name_he: "צרפת",              flag: "🇫🇷", group_letter: "I", logo_url: logoUrl("France") },
+  { name: "Senegal",                name_he: "סנגל",              flag: "🇸🇳", group_letter: "I", logo_url: logoUrl("Senegal") },
+  { name: "Iraq",                   name_he: "עיראק",             flag: "🇮🇶", group_letter: "I", logo_url: logoUrl("Iraq") },
+  { name: "Norway",                 name_he: "נורווגיה",          flag: "🇳🇴", group_letter: "I", logo_url: logoUrl("Norway") },
   // Group J
-  { name: "Argentina",              name_he: "ארגנטינה",            flag: "🇦🇷", group_letter: "J" },
-  { name: "Algeria",                name_he: "אלג'יריה",            flag: "🇩🇿", group_letter: "J" },
-  { name: "Austria",                name_he: "אוסטריה",             flag: "🇦🇹", group_letter: "J" },
-  { name: "Jordan",                 name_he: "ירדן",                flag: "🇯🇴", group_letter: "J" },
+  { name: "Argentina",              name_he: "ארגנטינה",          flag: "🇦🇷", group_letter: "J", logo_url: logoUrl("Argentina") },
+  { name: "Algeria",                name_he: "אלג'יריה",          flag: "🇩🇿", group_letter: "J", logo_url: logoUrl("Algeria") },
+  { name: "Austria",                name_he: "אוסטריה",           flag: "🇦🇹", group_letter: "J", logo_url: logoUrl("Austria") },
+  { name: "Jordan",                 name_he: "ירדן",              flag: "🇯🇴", group_letter: "J", logo_url: logoUrl("Jordan") },
   // Group K
-  { name: "Portugal",               name_he: "פורטוגל",             flag: "🇵🇹", group_letter: "K" },
-  { name: "DR Congo",               name_he: "קונגו",               flag: "🇨🇩", group_letter: "K" },
-  { name: "Ghana",                  name_he: "גאנה",                flag: "🇬🇭", group_letter: "K" },
-  { name: "Panama",                 name_he: "פנמה",                flag: "🇵🇦", group_letter: "K" },
+  { name: "Portugal",               name_he: "פורטוגל",           flag: "🇵🇹", group_letter: "K", logo_url: logoUrl("Portugal") },
+  { name: "DR Congo",               name_he: "קונגו",             flag: "🇨🇩", group_letter: "K", logo_url: logoUrl("DR Congo") },
+  { name: "Ghana",                  name_he: "גאנה",              flag: "🇬🇭", group_letter: "K", logo_url: logoUrl("Ghana") },
+  { name: "Panama",                 name_he: "פנמה",              flag: "🇵🇦", group_letter: "K", logo_url: logoUrl("Panama") },
   // Group L
-  { name: "England",                name_he: "אנגליה",              flag: "🏴󠁧󠁢󠁥󠁮󠁧󠁿", group_letter: "L" },
-  { name: "Croatia",                name_he: "קרואטיה",             flag: "🇭🇷", group_letter: "L" },
-  { name: "Uzbekistan",             name_he: "אוזבקיסטן",           flag: "🇺🇿", group_letter: "L" },
-  { name: "Colombia",               name_he: "קולומביה",            flag: "🇨🇴", group_letter: "L" },
+  { name: "England",                name_he: "אנגליה",            flag: "🏴󠁧󠁢󠁥󠁮󠁧󠁿", group_letter: "L", logo_url: logoUrl("England") },
+  { name: "Croatia",                name_he: "קרואטיה",           flag: "🇭🇷", group_letter: "L", logo_url: logoUrl("Croatia") },
+  { name: "Uzbekistan",             name_he: "אוזבקיסטן",         flag: "🇺🇿", group_letter: "L", logo_url: logoUrl("Uzbekistan") },
+  { name: "Colombia",               name_he: "קולומביה",          flag: "🇨🇴", group_letter: "L", logo_url: logoUrl("Colombia") },
 ];
 
 async function main() {
-  console.log("Clearing existing teams...");
+  console.log("Clearing existing teams…");
   const { error: delError } = await supabase
     .from("teams")
     .delete()
@@ -98,25 +132,30 @@ async function main() {
     process.exit(1);
   }
 
-  console.log(`Seeding ${teams.length} teams...`);
+  console.log(`Seeding ${teams.length} teams with flagcdn.com logos…`);
   const { data, error } = await supabase
     .from("teams")
     .insert(teams)
-    .select("name_he, flag, group_letter");
+    .select("name_he, flag, group_letter, logo_url");
 
   if (error) {
     console.error("Seed failed:", error.message);
     process.exit(1);
   }
 
-  console.log(`✓ Seeded ${data?.length} teams successfully.`);
+  console.log(`✓ Seeded ${data?.length} teams successfully.\n`);
   const byGroup: Record<string, string[]> = {};
   data?.forEach((t) => {
-    byGroup[t.group_letter] = [...(byGroup[t.group_letter] ?? []), `${t.flag} ${t.name_he}`];
+    byGroup[t.group_letter] = [
+      ...(byGroup[t.group_letter] ?? []),
+      `${t.flag} ${t.name_he}`,
+    ];
   });
   Object.entries(byGroup)
     .sort(([a], [b]) => a.localeCompare(b))
     .forEach(([g, names]) => console.log(`  בית ${g}: ${names.join("  ")}`));
+
+  console.log("\n✓ logo_url set to flagcdn.com/w80/{code}.png for all teams.");
 }
 
 main();

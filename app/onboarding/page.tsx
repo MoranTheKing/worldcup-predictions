@@ -22,11 +22,11 @@ export default async function OnboardingPage() {
 
   if (profile?.username && outright) redirect("/dashboard");
 
-  // Load teams and players in parallel
+  // Load teams (with logo_url from DB) and players in parallel
   const [{ data: teams }, { data: players }] = await Promise.all([
     supabase
       .from("teams")
-      .select("id, name, name_he, flag, group_letter")
+      .select("id, name, name_he, flag, logo_url, group_letter")
       .order("name_he", { ascending: true }),
     supabase
       .from("players")
