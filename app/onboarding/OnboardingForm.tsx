@@ -1,8 +1,40 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+
+// ISO 3166-1 alpha-2 codes for flagcdn.com — subdivision codes for England/Scotland
+const COUNTRY_CODE: Record<string, string> = {
+  "Mexico": "mx", "South Africa": "za", "South Korea": "kr", "Czech Republic": "cz",
+  "Canada": "ca", "Bosnia and Herzegovina": "ba", "Qatar": "qa", "Switzerland": "ch",
+  "United States": "us", "Paraguay": "py", "Australia": "au", "Turkiye": "tr",
+  "Brazil": "br", "Morocco": "ma", "Haiti": "ht", "Scotland": "gb-sct",
+  "Germany": "de", "Curaçao": "cw", "Ivory Coast": "ci", "Ecuador": "ec",
+  "Netherlands": "nl", "Japan": "jp", "Sweden": "se", "Tunisia": "tn",
+  "Spain": "es", "Cape Verde": "cv", "Saudi Arabia": "sa", "Uruguay": "uy",
+  "Belgium": "be", "Egypt": "eg", "Iran": "ir", "New Zealand": "nz",
+  "France": "fr", "Senegal": "sn", "Iraq": "iq", "Norway": "no",
+  "Argentina": "ar", "Algeria": "dz", "Austria": "at", "Jordan": "jo",
+  "Portugal": "pt", "DR Congo": "cd", "Ghana": "gh", "Panama": "pa",
+  "England": "gb-eng", "Croatia": "hr", "Uzbekistan": "uz", "Colombia": "co",
+};
+
+function FlagImg({ name, size = 24 }: { name: string; size?: number }) {
+  const code = COUNTRY_CODE[name];
+  if (!code) return null;
+  return (
+    <Image
+      src={`https://flagcdn.com/w40/${code}.png`}
+      alt={name}
+      width={size}
+      height={size * 0.67}
+      className="rounded-sm object-cover flex-shrink-0"
+      unoptimized
+    />
+  );
+}
 
 type Team = { id: number; name: string; name_he: string; flag: string; group_letter: string };
 
@@ -211,8 +243,11 @@ function TeamPicker({
         onClick={() => setOpen((o) => !o)}
         className="w-full flex items-center justify-between px-4 py-3 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm outline-none focus:ring-2 focus:ring-zinc-400"
       >
-        <span className={value ? "text-zinc-900 dark:text-zinc-50" : "text-zinc-400"}>
-          {value ? label : "-- בחר קבוצה --"}
+        <span className="flex items-center gap-2">
+          {value && <FlagImg name={teams.find((t) => String(t.id) === value)?.name ?? ""} />}
+          <span className={value ? "text-zinc-900 dark:text-zinc-50" : "text-zinc-400"}>
+            {value ? label : "-- בחר קבוצה --"}
+          </span>
         </span>
         <span className="text-zinc-400 text-xs">{open ? "▲" : "▼"}</span>
       </button>
@@ -237,7 +272,7 @@ function TeamPicker({
               <li className="px-4 py-3 text-sm text-zinc-400 text-center">לא נמצאה קבוצה</li>
             )}
             {filtered.map((t) => {
-              const displayLabel = `${t.flag} ${t.name_he ?? t.name}`;
+              const displayLabel = t.name_he ?? t.name;
               return (
                 <li key={t.id}>
                   <button
@@ -251,7 +286,7 @@ function TeamPicker({
                       String(t.id) === value ? "bg-zinc-100 dark:bg-zinc-800 font-medium" : ""
                     }`}
                   >
-                    <span className="text-xl leading-none">{t.flag}</span>
+                    <FlagImg name={t.name} size={20} />
                     <span className="text-zinc-900 dark:text-zinc-50">{t.name_he ?? t.name}</span>
                   </button>
                 </li>
