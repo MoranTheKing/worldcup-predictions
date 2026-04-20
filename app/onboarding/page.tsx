@@ -22,15 +22,23 @@ export default async function OnboardingPage() {
 
   if (profile?.username && outright) redirect("/dashboard");
 
-  const { data: teams } = await supabase
-    .from("teams")
-    .select("id, name, name_he, flag, group_letter")
-    .order("name_he", { ascending: true });
+  // Load teams and players in parallel
+  const [{ data: teams }, { data: players }] = await Promise.all([
+    supabase
+      .from("teams")
+      .select("id, name, name_he, flag, group_letter")
+      .order("name_he", { ascending: true }),
+    supabase
+      .from("players")
+      .select("id, name, team_id, position")
+      .order("name", { ascending: true }),
+  ]);
 
   return (
     <OnboardingForm
       userId={user.id}
       teams={teams ?? []}
+      players={players ?? []}
       existingUsername={profile?.username ?? ""}
       hasOutright={!!outright}
     />
