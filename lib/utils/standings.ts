@@ -22,11 +22,12 @@ export type TournamentMatch = {
   away_team_score: number | null;
 };
 
-export type StandingStatus = "qualified" | "third_qualified" | "pending" | "eliminated";
+export type StandingStatus = "qualified" | "pending" | "eliminated";
 
 export type TeamStanding = {
   team: TournamentTeam;
   rank: number;
+  lockedRank: number | null;
   played: number;
   won: number;
   drawn: number;
@@ -65,10 +66,13 @@ type ScenarioRank = {
 };
 
 type TeamScenarioState = {
+  bestPossibleRank: number;
+  worstPossibleRank: number;
   canReachTop2: boolean;
   canFinishThird: boolean;
   guaranteedAtLeastThird: boolean;
   guaranteedTop2: boolean;
+  minThirdPlacePoints: number | null;
   maxPossiblePoints: number;
   maxThirdPlacePoints: number | null;
 };
@@ -273,6 +277,7 @@ function buildStandingEntry(team: TournamentTeam, matches: TournamentMatch[]): T
   return {
     team,
     rank: 0,
+    lockedRank: null,
     played: stats.played || team.played_count,
     won: stats.won,
     drawn: stats.drawn,
@@ -394,8 +399,11 @@ function buildScenarioSummary(
       {
         canReachTop2: false,
         canFinishThird: false,
+        bestPossibleRank: Number.POSITIVE_INFINITY,
+        worstPossibleRank: Number.NEGATIVE_INFINITY,
         guaranteedAtLeastThird: true,
         guaranteedTop2: true,
+        minThirdPlacePoints: null,
         maxPossiblePoints: currentPointsById.get(teamId) ?? 0,
         maxThirdPlacePoints: null,
       },
@@ -413,6 +421,8 @@ function buildScenarioSummary(
       const rank = ranks.get(teamId);
       if (!state || !rank) continue;
 
+      state.bestPossibleRank = Math.min(state.bestPossibleRank, rank.bestRank);
+      state.worstPossibleRank = Math.max(state.worstPossibleRank, rank.worstRank);
       state.maxPossiblePoints = Math.max(state.maxPossiblePoints, rank.points);
       state.canReachTop2 ||= rank.bestRank <= 2;
       state.guaranteedTop2 &&= rank.worstRank <= 2;
@@ -422,6 +432,7 @@ function buildScenarioSummary(
       state.canFinishThird ||= canBeThird;
 
       if (canBeThird) {
+        state.minThirdPlacePoints = Math.min(state.minThirdPlacePoints ?? Number.POSITIVE_INFINITY, rank.points);
         state.maxThirdPlacePoints = Math.max(state.maxThirdPlacePoints ?? Number.NEGATIVE_INFINITY, rank.points);
         minThirdPlacePoints = Math.min(minThirdPlacePoints, rank.points);
         maxThirdPlacePoints = Math.max(maxThirdPlacePoints, rank.points);
@@ -462,51 +473,45 @@ function determineBestThirdStatus(
   const teamState = summary?.teamStates.get(entry.team.id);
   if (!summary || !teamState) return "pending";
 
-  const threatenedByGroups = countOtherGroupsMatching(
-    groupSummaries,
-    groupLetter,
-    (otherGroup) => otherGroup.maxThirdPlacePoints >= entry.pts,
+  const guaranteedQualified = (
+    teamState.guaranteedAtLeastThird &&
+    teamState.minThirdPlacePoints !== null &&
+    countOtherGroupsMatching(
+      groupSummaries,
+      groupLetter,
+      (otherGroup) => otherGroup.maxThirdPlacePoints >= teamState.minThirdPlacePoints!,
+    ) < THIRD_PLACE_QUALIFIERS
   );
 
-  const guaranteedQualified =
-    teamState.guaranteedAtLeastThird &&
-    threatenedByGroups < THIRD_PLACE_QUALIFIERS;
-
   if (guaranteedQualified) {
-    return "third_qualified";
+    return "qualified";
   }
 
-  if (teamState.maxThirdPlacePoints === null) {
+  if (
+    teamState.maxThirdPlacePoints === null ||
+    countOtherGroupsMatching(
+      groupSummaries,
+      groupLetter,
+      (otherGroup) => otherGroup.minThirdPlacePoints > teamState.maxThirdPlacePoints!,
+    ) >= THIRD_PLACE_QUALIFIERS
+  ) {
     return "eliminated";
   }
 
-  const guaranteedGroupsAbove = countOtherGroupsMatching(
-    groupSummaries,
-    groupLetter,
-    (otherGroup) => otherGroup.minThirdPlacePoints > teamState.maxThirdPlacePoints!,
-  );
-
-  return guaranteedGroupsAbove >= THIRD_PLACE_QUALIFIERS ? "eliminated" : "pending";
+  return "pending";
 }
 
 function determineGroupStatus(
-  entry: TeamStanding,
+  teamId: number,
+  groupLetter: string,
   groupSummaries: Map<string, GroupScenarioSummary>,
-  bestThirdStatuses: Map<number, StandingStatus>,
 ): StandingStatus {
-  const groupLetter = entry.team.group_letter;
-  if (!groupLetter) return "pending";
-
   const summary = groupSummaries.get(groupLetter);
-  const teamState = summary?.teamStates.get(entry.team.id);
+  const teamState = summary?.teamStates.get(teamId);
   if (!summary || !teamState) return "pending";
 
   if (teamState.guaranteedTop2) {
     return "qualified";
-  }
-
-  if (entry.rank === 3 && bestThirdStatuses.get(entry.team.id) === "third_qualified") {
-    return "third_qualified";
   }
 
   const canQualifyViaThird =
@@ -517,6 +522,19 @@ function determineGroupStatus(
       groupLetter,
       (otherGroup) => otherGroup.minThirdPlacePoints > teamState.maxThirdPlacePoints!,
     ) < THIRD_PLACE_QUALIFIERS;
+
+  const guaranteedQualifiedViaThird =
+    teamState.guaranteedAtLeastThird &&
+    teamState.minThirdPlacePoints !== null &&
+    countOtherGroupsMatching(
+      groupSummaries,
+      groupLetter,
+      (otherGroup) => otherGroup.maxThirdPlacePoints >= teamState.minThirdPlacePoints!,
+    ) < THIRD_PLACE_QUALIFIERS;
+
+  if (guaranteedQualifiedViaThird) {
+    return "qualified";
+  }
 
   if (!teamState.canReachTop2 && !canQualifyViaThird) {
     return "eliminated";
@@ -552,6 +570,7 @@ export function buildTournamentStandings(
 ): {
   groupStandings: Record<string, TeamStanding[]>;
   bestThirdStandings: TeamStanding[];
+  eliminatedCount: number;
   teamsRemaining: number;
 } {
   const teamsByGroup = teams.reduce<Record<string, TournamentTeam[]>>((groups, team) => {
@@ -582,26 +601,35 @@ export function buildTournamentStandings(
 
   const bestThirdStandings = buildBestThirdPlaceStandings(initialGroupStandings).map((entry) => ({
     ...entry,
+    lockedRank: null,
     status: determineBestThirdStatus(entry, groupSummaries),
   }));
-
-  const bestThirdStatuses = new Map(bestThirdStandings.map((entry) => [entry.team.id, entry.status]));
 
   const groupStandings = Object.fromEntries(
     Object.entries(initialGroupStandings).map(([letter, standings]) => [
       letter,
       standings.map((entry) => ({
         ...entry,
-        status: determineGroupStatus(entry, groupSummaries, bestThirdStatuses),
+        lockedRank: (() => {
+          const teamState = groupSummaries.get(letter)?.teamStates.get(entry.team.id);
+          return teamState && teamState.bestPossibleRank === teamState.worstPossibleRank
+            ? teamState.bestPossibleRank
+            : null;
+        })(),
+        status: determineGroupStatus(entry.team.id, letter, groupSummaries),
       })),
     ]),
   );
 
-  const eliminatedCount = teams.filter((team) => team.is_eliminated).length;
+  const eliminatedCount = Object.values(groupStandings)
+    .flat()
+    .filter((entry) => entry.status === "eliminated")
+    .length;
 
   return {
     groupStandings,
     bestThirdStandings,
+    eliminatedCount,
     teamsRemaining: teams.length - eliminatedCount,
   };
 }

@@ -128,7 +128,6 @@ export default async function TournamentPage() {
       groupStandings={tournament.groupStandings}
       bestThirdStandings={tournament.bestThirdStandings}
       teamsRemaining={tournament.teamsRemaining}
-      eliminatedCount={teams.filter((team) => team.is_eliminated).length}
     />
   );
 }
