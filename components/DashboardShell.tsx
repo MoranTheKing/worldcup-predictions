@@ -43,7 +43,7 @@ export default function DashboardShell({ username, streak, children }: Props) {
 
   return (
     <div className="wc-page">
-      <aside className="fixed inset-y-0 end-0 z-30 hidden w-[18.5rem] p-4 md:block lg:w-[19.5rem]">
+      <aside className="fixed inset-y-0 right-0 z-30 hidden w-[18.5rem] p-4 md:block lg:w-[19.5rem]">
         <div className="wc-glass flex h-full flex-col overflow-hidden rounded-[2rem]">
           <div className="border-b border-white/10 px-5 pb-5 pt-6">
             <div className="flex items-start justify-between gap-3">
@@ -133,7 +133,7 @@ export default function DashboardShell({ username, streak, children }: Props) {
         </div>
       </header>
 
-      <main className="min-h-screen pb-28 pt-20 md:me-[18.5rem] md:px-4 md:pb-4 md:pt-4 lg:me-[19.5rem]">
+      <main className="min-h-screen pb-28 pt-20 md:mr-[18.5rem] md:px-4 md:pb-4 md:pt-4 lg:mr-[19.5rem]">
         {children}
       </main>
 
