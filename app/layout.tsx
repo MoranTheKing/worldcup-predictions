@@ -1,18 +1,12 @@
 import type { Metadata } from "next";
-import { Heebo, Rubik } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 
-const heebo = Heebo({
-  variable: "--font-heebo",
-  subsets: ["hebrew", "latin"],
+const worldCupDisplay = localFont({
+  src: "../fonts/FWC2026-UltraCondensedMedium.ttf",
+  variable: "--font-brand",
   display: "swap",
-});
-
-const rubik = Rubik({
-  variable: "--font-rubik",
-  subsets: ["hebrew", "latin"],
-  weight: ["700", "900"],
-  display: "swap",
+  weight: "500",
 });
 
 export const metadata: Metadata = {
@@ -26,9 +20,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    // "dark" class forces dark mode globally — all dark: variants + CSS vars active
-    <html lang="he" dir="rtl" className={`${heebo.variable} ${rubik.variable} dark h-full antialiased`}>
-      <body className="min-h-full flex flex-col">{children}</body>
+    <html
+      lang="he"
+      dir="rtl"
+      suppressHydrationWarning
+      className={`${worldCupDisplay.variable} dark h-full`}
+    >
+      <body className="min-h-screen overflow-x-hidden bg-wc-bg font-sans text-wc-fg1 antialiased">
+        {children}
+      </body>
     </html>
   );
 }

@@ -1,135 +1,327 @@
 @import "tailwindcss";
 
-/* ─── Dark mode: class-based (html.dark) ─────────────────────────────────── */
 @variant dark (&:where(.dark, .dark *));
 
-/* ─── Brand Font ──────────────────────────────────────────────────────────── */
-@font-face {
-  font-family: 'FWC2026';
-  src: url('/fonts/FWC2026-UltraCondensedMedium.ttf') format('truetype');
-  font-weight: 500;
-  font-style: normal;
-  font-display: swap;
-}
-
-/* ─── WC 2026 Design Tokens ───────────────────────────────────────────────── */
 :root {
-  /* Backgrounds */
-  --wc-bg:              #060D1A;
-  --wc-surface:         #0D1B2E;
-  --wc-raised:          #142338;
-  --wc-overlay:         rgba(13, 27, 46, 0.92);
+  color-scheme: dark;
 
-  /* Borders */
-  --wc-border:          #1E2F4A;
-  --wc-border2:         #2A4060;
-  --wc-border-glass:    rgba(255, 255, 255, 0.06);
+  --wc-bg: #04030b;
+  --wc-bg-soft: #090716;
+  --wc-surface: #0f1325;
+  --wc-surface-strong: #171d34;
+  --wc-panel: rgba(15, 19, 37, 0.84);
+  --wc-glass: rgba(12, 15, 29, 0.62);
+  --wc-glass-strong: rgba(17, 21, 40, 0.82);
 
-  /* Brand colors */
-  --wc-navy:            #003087;
-  --wc-red:             #C8102E;
-  --wc-green:           #009A3D;
-  --wc-white:           #F0F4FF;
+  --wc-border: rgba(255, 255, 255, 0.1);
+  --wc-border-strong: rgba(255, 255, 255, 0.18);
+  --wc-line: rgba(255, 255, 255, 0.06);
 
-  /* Gamification */
-  --wc-neon:            #00E65A;
-  --wc-neon-dim:        #00B847;
-  --wc-neon-glow:       rgba(0, 230, 90, 0.15);
-  --wc-neon-bg:         rgba(0, 230, 90, 0.08);
+  --wc-violet: #6f3cff;
+  --wc-violet-deep: #3b1698;
+  --wc-magenta: #ff2fa6;
+  --wc-neon: #5fff7b;
+  --wc-neon-deep: #12d961;
+  --wc-amber: #ffb649;
+  --wc-danger: #ff5c82;
+  --wc-text-1: #f7f7ff;
+  --wc-text-2: #b8bed8;
+  --wc-text-3: #7f88aa;
+  --wc-text-inverse: #07100a;
 
-  --wc-purple:          #7C3AED;
-  --wc-purple-dim:      #6D28D9;
-  --wc-purple-glow:     rgba(124, 58, 237, 0.25);
-  --wc-purple-bg:       rgba(124, 58, 237, 0.10);
+  --wc-neon-glow: rgba(95, 255, 123, 0.22);
+  --wc-violet-glow: rgba(111, 60, 255, 0.28);
+  --wc-magenta-glow: rgba(255, 47, 166, 0.2);
+  --wc-amber-glow: rgba(255, 182, 73, 0.22);
+  --wc-success-bg: rgba(95, 255, 123, 0.1);
+  --wc-third-bg: rgba(255, 182, 73, 0.12);
+  --wc-danger-bg: rgba(255, 92, 130, 0.12);
 
-  --wc-gold:            #F5C518;
-  --wc-gold-dim:        #E5B008;
-  --wc-gold-glow:       rgba(245, 197, 24, 0.20);
-  --wc-gold-bg:         rgba(245, 197, 24, 0.08);
+  --wc-shadow-card: 0 22px 60px rgba(0, 0, 0, 0.38);
+  --wc-shadow-neon: 0 0 36px rgba(95, 255, 123, 0.12);
+  --wc-shadow-magenta: 0 0 36px rgba(255, 47, 166, 0.1);
+  --wc-shadow-soft: inset 0 1px 0 rgba(255, 255, 255, 0.08);
 
-  --wc-fire:            #FF4D1C;
-  --wc-fire-bg:         rgba(255, 77, 28, 0.10);
-
-  --wc-amber:           #F59E0B;
-  --wc-amber-bg:        rgba(245, 158, 11, 0.10);
-
-  /* Text */
-  --wc-fg1:             #EEF2FF;
-  --wc-fg2:             #8899BB;
-  --wc-fg3:             #4A6080;
-  --wc-fg-inverse:      #060D1A;
-
-  /* Semantic */
-  --wc-success:         #009A3D;
-  --wc-success-bg:      rgba(0, 154, 61, 0.10);
-  --wc-danger:          #C8102E;
-  --wc-danger-bg:       rgba(200, 16, 46, 0.10);
-
-  /* Shadows */
-  --wc-shadow-card:     0 1px 3px rgba(0,0,0,0.5), 0 1px 2px rgba(0,0,0,0.3);
-  --wc-shadow-elevated: 0 4px 16px rgba(0,0,0,0.5);
-  --wc-shadow-neon:     0 0 16px var(--wc-neon-glow), 0 0 4px rgba(0,230,90,0.3);
-  --wc-shadow-purple:   0 0 20px var(--wc-purple-glow);
-  --wc-shadow-gold:     0 0 20px var(--wc-gold-glow);
-
-  /* Radii */
-  --wc-radius-sm:       8px;
-  --wc-radius-md:       12px;
-  --wc-radius-lg:       16px;
-  --wc-radius-xl:       24px;
-
-  /* Typography */
-  --wc-font-body:    'Heebo', Arial, sans-serif;
-  --wc-font-display: 'Rubik', 'Heebo', Arial, sans-serif;
-  --wc-font-latin:   'FWC2026', sans-serif;
+  --wc-radius-sm: 0.875rem;
+  --wc-radius-md: 1.125rem;
+  --wc-radius-lg: 1.5rem;
+  --wc-radius-xl: 2rem;
 }
 
-/* ─── Tailwind v4 theme extensions ───────────────────────────────────────── */
 @theme inline {
-  --font-sans:    var(--font-heebo), 'Heebo', Arial, sans-serif;
-  --font-display: var(--font-rubik), 'Rubik', 'Heebo', Arial, sans-serif;
-  --font-latin:   'FWC2026', sans-serif;
+  --font-sans: "Heebo", "Rubik", "Segoe UI", Arial, sans-serif;
+  --font-display: var(--font-brand), "Heebo", "Rubik", "Segoe UI", sans-serif;
 
-  /* Map WC tokens into Tailwind color scale */
-  --color-wc-bg:          var(--wc-bg);
-  --color-wc-surface:     var(--wc-surface);
-  --color-wc-raised:      var(--wc-raised);
-  --color-wc-border:      var(--wc-border);
-  --color-wc-border2:     var(--wc-border2);
-  --color-wc-neon:        var(--wc-neon);
-  --color-wc-neon-dim:    var(--wc-neon-dim);
-  --color-wc-purple:      var(--wc-purple);
-  --color-wc-gold:        var(--wc-gold);
-  --color-wc-fire:        var(--wc-fire);
-  --color-wc-amber:       var(--wc-amber);
-  --color-wc-red:         var(--wc-red);
-  --color-wc-green:       var(--wc-green);
-  --color-wc-fg1:         var(--wc-fg1);
-  --color-wc-fg2:         var(--wc-fg2);
-  --color-wc-fg3:         var(--wc-fg3);
+  --color-wc-bg: var(--wc-bg);
+  --color-wc-bg-soft: var(--wc-bg-soft);
+  --color-wc-surface: var(--wc-surface);
+  --color-wc-surface-strong: var(--wc-surface-strong);
+  --color-wc-violet: var(--wc-violet);
+  --color-wc-magenta: var(--wc-magenta);
+  --color-wc-neon: var(--wc-neon);
+  --color-wc-amber: var(--wc-amber);
+  --color-wc-danger: var(--wc-danger);
+  --color-wc-fg1: var(--wc-text-1);
+  --color-wc-fg2: var(--wc-text-2);
+  --color-wc-fg3: var(--wc-text-3);
 }
 
-/* ─── Global base ─────────────────────────────────────────────────────────── */
-*, *::before, *::after { box-sizing: border-box; }
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
 
 body {
-  background: var(--wc-bg);
-  color: var(--wc-fg1);
-  font-family: var(--font-sans);
+  background-color: var(--wc-bg);
+  background-image:
+    radial-gradient(circle at top, rgba(255, 47, 166, 0.12), transparent 24%),
+    radial-gradient(circle at 20% 20%, rgba(111, 60, 255, 0.18), transparent 30%),
+    radial-gradient(circle at 80% 0%, rgba(95, 255, 123, 0.12), transparent 20%),
+    linear-gradient(180deg, #070510 0%, #04030b 48%, #020208 100%);
+  color: var(--wc-text-1);
+  font-family: "Heebo", "Rubik", "Segoe UI", Arial, sans-serif;
   direction: rtl;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* ─── Neon pulse animation ────────────────────────────────────────────────── */
-@keyframes neon-pulse {
-  0%, 100% { box-shadow: var(--wc-shadow-neon); }
-  50%       { box-shadow: 0 0 24px var(--wc-neon-glow), 0 0 8px rgba(0,230,90,0.5); }
+a {
+  color: inherit;
+  text-decoration: none;
 }
-.neon-pulse { animation: neon-pulse 2s ease-in-out infinite; }
 
-/* ─── Scrollbar ───────────────────────────────────────────────────────────── */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: var(--wc-bg); }
-::-webkit-scrollbar-thumb { background: var(--wc-border2); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: var(--wc-fg3); }
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+::selection {
+  background: rgba(255, 47, 166, 0.26);
+  color: var(--wc-text-1);
+}
+
+@keyframes neon-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 rgba(95, 255, 123, 0);
+  }
+  50% {
+    box-shadow: 0 0 24px rgba(95, 255, 123, 0.22);
+  }
+}
+
+.wc-page {
+  position: relative;
+  min-height: 100vh;
+  isolation: isolate;
+}
+
+.wc-page::before,
+.wc-page::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  border-radius: 9999px;
+  filter: blur(90px);
+  opacity: 0.55;
+}
+
+.wc-page::before {
+  inset-block-start: 5rem;
+  inset-inline-start: 8%;
+  block-size: 14rem;
+  inline-size: 14rem;
+  background: rgba(111, 60, 255, 0.22);
+}
+
+.wc-page::after {
+  inset-block-end: 8rem;
+  inset-inline-end: 8%;
+  block-size: 12rem;
+  inline-size: 12rem;
+  background: rgba(255, 47, 166, 0.18);
+}
+
+.wc-shell {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 84rem;
+}
+
+.wc-glass {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02)),
+    var(--wc-glass);
+  border: 1px solid var(--wc-border);
+  box-shadow: var(--wc-shadow-card), var(--wc-shadow-soft);
+  backdrop-filter: blur(24px) saturate(180%);
+}
+
+.wc-card {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0)),
+    var(--wc-panel);
+  border: 1px solid var(--wc-border);
+  border-radius: var(--wc-radius-xl);
+  box-shadow: var(--wc-shadow-card), var(--wc-shadow-soft);
+  backdrop-filter: blur(18px) saturate(150%);
+}
+
+.wc-panel {
+  border-radius: var(--wc-radius-lg);
+  border: 1px solid var(--wc-border);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0)),
+    rgba(17, 21, 40, 0.72);
+}
+
+.wc-display {
+  font-family: var(--font-brand), "Heebo", "Rubik", "Segoe UI", sans-serif;
+  letter-spacing: 0.04em;
+}
+
+.wc-kicker {
+  color: var(--wc-neon);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.wc-muted {
+  color: var(--wc-text-2);
+}
+
+.wc-button-primary,
+.wc-button-secondary,
+.wc-button-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  font-weight: 700;
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease,
+    border-color 160ms ease,
+    background-color 160ms ease,
+    color 160ms ease;
+}
+
+.wc-button-primary:hover,
+.wc-button-secondary:hover,
+.wc-button-ghost:hover {
+  transform: translateY(-1px);
+}
+
+.wc-button-primary {
+  color: var(--wc-text-inverse);
+  background: linear-gradient(135deg, var(--wc-neon) 0%, #28ffcf 100%);
+  box-shadow: var(--wc-shadow-neon);
+}
+
+.wc-button-secondary {
+  color: var(--wc-text-1);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--wc-border);
+}
+
+.wc-button-ghost {
+  color: var(--wc-text-2);
+  background: transparent;
+  border: 1px solid transparent;
+}
+
+.wc-input {
+  width: 100%;
+  border-radius: 1rem;
+  border: 1px solid var(--wc-border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--wc-text-1);
+  padding-block: 0.875rem;
+  padding-inline: 1rem;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease,
+    background-color 150ms ease;
+}
+
+.wc-input::placeholder {
+  color: var(--wc-text-3);
+}
+
+.wc-input:focus-visible {
+  outline: none;
+  border-color: rgba(95, 255, 123, 0.48);
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 0 0 4px rgba(95, 255, 123, 0.12);
+}
+
+.wc-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  border-radius: 9999px;
+  border: 1px solid var(--wc-border);
+  background: rgba(255, 255, 255, 0.04);
+  padding-block: 0.45rem;
+  padding-inline: 0.8rem;
+}
+
+.wc-rank-top {
+  background: linear-gradient(90deg, rgba(95, 255, 123, 0.14), transparent 85%);
+  border-inline-start: 3px solid rgba(95, 255, 123, 0.88);
+}
+
+.wc-rank-second {
+  background: linear-gradient(90deg, rgba(95, 255, 123, 0.08), transparent 85%);
+  border-inline-start: 3px solid rgba(95, 255, 123, 0.54);
+}
+
+.wc-rank-third {
+  background: linear-gradient(90deg, rgba(255, 182, 73, 0.14), transparent 85%);
+  border-inline-start: 3px solid rgba(255, 182, 73, 0.9);
+}
+
+.wc-rank-out {
+  border-inline-start: 3px solid transparent;
+}
+
+.wc-bracket-card {
+  border-radius: 1.1rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0)),
+    rgba(10, 12, 24, 0.82);
+  overflow: hidden;
+}
+
+.wc-bracket-final {
+  border-color: rgba(255, 182, 73, 0.3);
+  box-shadow: 0 0 32px rgba(255, 182, 73, 0.16);
+}
+
+::-webkit-scrollbar {
+  width: 0.45rem;
+  height: 0.45rem;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.28);
+}

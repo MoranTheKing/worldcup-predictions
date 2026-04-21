@@ -1,74 +1,65 @@
-// /dashboard — Matches tab (placeholder until api-football.com sync)
-
 export default function DashboardPage() {
   return (
-    <div className="p-4 md:p-8 max-w-5xl">
+    <div className="wc-shell px-4 py-4 md:px-6 md:py-6">
+      <section className="wc-card overflow-hidden p-6">
+        <div className="grid gap-6 lg:grid-cols-[1fr_auto] lg:items-end">
+          <div className="text-start">
+            <p className="wc-kicker">Match Center</p>
+            <h1 className="wc-display mt-3 text-5xl text-wc-fg1">משחקים</h1>
+            <p className="mt-4 max-w-2xl text-sm leading-7 text-wc-fg2">
+              מסך המשחקים יקבל בהמשך לוח חי, כרטיסי תחזית ושכבת gamification מלאה. כרגע חיזקתי
+              את מבנה ה-shell והוויזואל הבסיסי כדי שהמשך הבנייה יהיה עקבי.
+            </p>
+          </div>
 
-      {/* Header */}
-      <div className="mb-6">
-        <h1
-          className="text-2xl md:text-3xl font-black"
-          style={{ fontFamily: "var(--font-display)", color: "var(--wc-fg1)" }}
-        >
-          משחקים
-        </h1>
-        <p className="text-sm mt-1" style={{ color: "var(--wc-fg2)" }}>
-          ניחש תוצאות ואסוף נקודות
-        </p>
-      </div>
-
-      {/* Scoring info */}
-      <div
-        className="rounded-2xl p-4 md:p-5 mb-6"
-        style={{
-          background: "var(--wc-gold-bg)",
-          border: "1px solid rgba(245,197,24,0.2)",
-        }}
-      >
-        <p className="text-sm font-bold mb-2" style={{ color: "var(--wc-gold)" }}>
-          שיטת הניקוד
-        </p>
-        <div
-          className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-xs"
-          style={{ color: "rgba(245,197,24,0.8)" }}
-        >
-          <span>✓ תוצאה נכונה: 2–10 נקודות (לפי שלב)</span>
-          <span>✓ תוצאה מדויקת: 5–20 נקודות</span>
-          <span>✓ ג׳וקר: ×3 על תוצאה מדויקת</span>
-          <span>✓ מכפיל הפתעה: עד ×2 לפי מסלול</span>
+          <div className="grid gap-3 text-start sm:grid-cols-2">
+            <div className="wc-panel p-4">
+              <p className="text-xs uppercase tracking-[0.24em] text-wc-fg3">שלב ראשון</p>
+              <p className="mt-3 text-sm font-bold text-wc-fg1">כרטיסי משחק חיים</p>
+            </div>
+            <div className="wc-panel p-4">
+              <p className="text-xs uppercase tracking-[0.24em] text-wc-fg3">תגמול</p>
+              <p className="mt-3 text-sm font-bold text-wc-fg1">ניקוד, ג׳וקר ומכפיל הפתעה</p>
+            </div>
+          </div>
         </div>
-      </div>
+      </section>
 
-      {/* Skeleton match cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
+      <section className="mt-6 rounded-[1.75rem] border border-[rgba(255,182,73,0.2)] bg-[linear-gradient(135deg,rgba(255,182,73,0.14),rgba(111,60,255,0.08))] p-5">
+        <p className="text-sm font-bold text-wc-amber">שיטת הניקוד</p>
+        <div className="mt-3 grid gap-2 text-sm text-[rgba(255,182,73,0.92)] sm:grid-cols-2">
+          <span>תוצאה נכונה: 2–10 נקודות לפי שלב</span>
+          <span>תוצאה מדויקת: 5–20 נקודות</span>
+          <span>ג׳וקר: כפול 3 על תוצאה מדויקת</span>
+          <span>מכפיל הפתעה: עד כפול 2 לפי מסלול</span>
+        </div>
+      </section>
+
+      <section className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {Array.from({ length: 6 }).map((_, i) => (
-          <div
-            key={i}
-            className="rounded-2xl p-4 flex flex-col gap-3 animate-pulse"
-            style={{ background: "var(--wc-surface)", border: "1px solid var(--wc-border)" }}
-          >
+          <div key={i} className="wc-card flex animate-pulse flex-col gap-4 p-5">
             <div className="flex items-center justify-between">
-              <div className="h-3 w-20 rounded" style={{ background: "var(--wc-raised)" }} />
-              <div className="h-3 w-12 rounded" style={{ background: "var(--wc-raised)" }} />
+              <div className="h-3 w-24 rounded-full bg-white/10" />
+              <div className="h-3 w-12 rounded-full bg-white/10" />
             </div>
             <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2 flex-1">
-                <div className="w-7 h-5 rounded" style={{ background: "var(--wc-raised)" }} />
-                <div className="h-3 w-16 rounded" style={{ background: "var(--wc-raised)" }} />
+              <div className="flex flex-1 items-center gap-2">
+                <div className="h-5 w-8 rounded-md bg-white/10" />
+                <div className="h-3 w-16 rounded-full bg-white/10" />
               </div>
-              <div className="text-xs font-bold" style={{ color: "var(--wc-fg3)" }}>vs</div>
-              <div className="flex items-center gap-2 flex-1 justify-end">
-                <div className="h-3 w-16 rounded" style={{ background: "var(--wc-raised)" }} />
-                <div className="w-7 h-5 rounded" style={{ background: "var(--wc-raised)" }} />
+              <div className="wc-display text-xl text-wc-fg3">VS</div>
+              <div className="flex flex-1 items-center justify-end gap-2">
+                <div className="h-3 w-16 rounded-full bg-white/10" />
+                <div className="h-5 w-8 rounded-md bg-white/10" />
               </div>
             </div>
-            <div className="h-8 rounded-xl" style={{ background: "var(--wc-raised)" }} />
+            <div className="h-11 rounded-2xl bg-white/10" />
           </div>
         ))}
-      </div>
+      </section>
 
-      <p className="text-xs text-center" style={{ color: "var(--wc-fg3)" }}>
-        משחקים יסונכרנו מ-api-football.com עם פתיחת הטורניר — 11 ביוני 2026
+      <p className="mt-6 text-center text-xs text-wc-fg3">
+        המשחקים יסונכרנו מ-api-football.com עם פתיחת הטורניר ב-11 ביוני 2026
       </p>
     </div>
   );
