@@ -135,6 +135,57 @@ Bracket UI:
 - `app/dashboard/tournament/TournamentClient.tsx` renders the knockout bracket
 - `lib/bracket/knockout.ts` builds the display model used by the page
 
+Responsive bracket implementation:
+
+- The winner tree is precomputed in `lib/tournament/knockout-tree.ts`
+- `TournamentClient.tsx` renders that tree into one absolute-positioned canvas
+- A `ResizeObserver` measures the live container width
+- The bracket applies `transform: scale(...)` from the top-left origin so the full tree fits the available viewport width without horizontal scrolling on standard screens
+- Match ordering remains driven by the official placeholder graph even when the UI is scaled down
+
+## Global Elimination Sync
+
+Global elimination persistence now runs inside `syncTournamentState()` and writes directly into `teams.is_eliminated`.
+
+Main files:
+
+- `lib/tournament/elimination.ts`
+- `lib/tournament/knockout-progression.ts`
+- `lib/utils/standings.ts`
+
+Rules persisted to the database:
+
+1. Group-stage elimination
+   All mathematically eliminated 4th-place teams are marked `is_eliminated = true`
+
+2. Best 3rd Place elimination
+   Once the Best 3rd Place table reaches a locked state, ranks `9-12` are marked eliminated in `teams`
+
+3. Knockout elimination
+   Any team that loses a finished knockout match is marked eliminated
+
+4. Semi-final exception
+   Semi-final losers are not eliminated on the semi-final result itself
+   They stay alive until the 3rd-place match is completed
+   The loser of the 3rd-place match is then eliminated, while the winner remains non-eliminated
+
+Operational behavior:
+
+- Dev Tools single-match save calls `syncTournamentState()`
+- Dev Tools bulk save calls `syncTournamentState()`
+- Dev Tools clear calls `syncTournamentState()`
+- Dev Tools randomize calls `syncTournamentState()`
+- The Tournament page counter `teamsRemaining` now reads from the persisted `teams.is_eliminated` flags instead of inferring elimination only from local group-table status
+
+## Group Table 3rd-Place UI
+
+The local group standings table keeps the 3rd-place pill text compact:
+
+- The pill text is always `מקום 3`
+- Green means the team is globally inside the top 8 third-place qualifiers
+- Red means the team is globally outside the top 8 and mathematically out
+- The Tournament parent computes the global Best 3rd Place ranking first and passes those team IDs down to each group table
+
 ## Extra Time And Penalties
 
 Knockout match persistence uses these DB columns on `matches`:

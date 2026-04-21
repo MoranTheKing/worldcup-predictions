@@ -11,6 +11,7 @@ import {
   parseSeedPlaceholder,
 } from "@/lib/tournament/knockout-utils";
 import { buildTournamentStandings, type TournamentMatch } from "@/lib/utils/standings";
+import { getEliminatedTeamIds } from "@/lib/tournament/elimination";
 import {
   calculateThirdPlaceMatchups,
   type GroupLetter,
@@ -174,8 +175,31 @@ export async function syncTournamentState(supabase: SupabaseClient) {
     if (error) throw new Error(error.message);
   }
 
+  const synchronizedMatches = Array.from(matchesByNumber.values()) as TournamentMatch[];
+  const eliminatedTeamIds = getEliminatedTeamIds({
+    groupStandings: tournament.groupStandings,
+    bestThirdStandings: tournament.bestThirdStandings,
+    matches: synchronizedMatches,
+  });
+
+  let updatedTeams = 0;
+  for (const team of teams) {
+    const nextIsEliminated = eliminatedTeamIds.has(team.id);
+    if (team.is_eliminated === nextIsEliminated) continue;
+
+    const { error } = await supabase
+      .from("teams")
+      .update({ is_eliminated: nextIsEliminated })
+      .eq("id", team.id);
+
+    if (error) throw new Error(error.message);
+    updatedTeams += 1;
+  }
+
   return {
     updatedMatches: pendingUpdates.length,
+    updatedTeams,
+    eliminatedTeams: eliminatedTeamIds.size,
     qualifiedThirdPlaceGroups: tournament.bestThirdStandings
       .filter((entry) => entry.status === "qualified")
       .map((entry) => entry.team.group_letter)

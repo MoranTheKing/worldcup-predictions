@@ -700,10 +700,7 @@ export function buildTournamentStandings(
     ]),
   );
 
-  const eliminatedCount = Object.values(groupStandings)
-    .flat()
-    .filter((entry) => entry.status === "eliminated")
-    .length;
+  const eliminatedCount = teams.filter((team) => team.is_eliminated).length;
 
   return {
     groupStandings,

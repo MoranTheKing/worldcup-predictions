@@ -7,7 +7,7 @@ import {
 } from "@/lib/tournament/knockout-tree";
 import type { StandingStatus, TeamStanding } from "@/lib/utils/standings";
 import Image from "next/image";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type Props = {
   groupStandings: Record<string, TeamStanding[]>;
@@ -126,6 +126,8 @@ const MATCH_CARD_HEIGHT = 114;
 const BRACKET_COLUMN_GAP = 78;
 const BRACKET_ROW_GAP = 26;
 const CONNECTOR_COLOR = "rgba(255,255,255,0.16)";
+const BRACKET_HEADER_HEIGHT = 52;
+const THIRD_PLACE_SECTION_HEIGHT = 166;
 
 function getLockedPositionLabel(rank: number) {
   return `${TEXT.lockedPosition} ${rank}`;
@@ -173,14 +175,14 @@ function getGroupStatusDisplay(
   if (entry.rank === 3) {
     if (effectiveStatus === "qualified") {
       return {
-        label: TEXT.thirdQualifiedInGroup,
+        label: getLockedPositionLabel(3),
         pillClassName: QUALIFIED_PILL_CLASS,
       };
     }
 
     if (effectiveStatus === "eliminated") {
       return {
-        label: TEXT.thirdEliminatedInGroup,
+        label: getLockedPositionLabel(3),
         pillClassName: ELIMINATED_PILL_CLASS,
       };
     }
@@ -396,6 +398,8 @@ function KnockoutBracket({
   bracket: ResolvedBracketMatch[];
   knockoutTree: Props["knockoutTree"];
 }) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [containerWidth, setContainerWidth] = useState(0);
   const matchesByNumber = useMemo(
     () => new Map(bracket.map((match) => [match.matchNumber, match])),
     [bracket],
@@ -422,6 +426,27 @@ function KnockoutBracket({
     (knockoutTree.thirdPlaceMatchNumber
       ? matchesByNumber.get(knockoutTree.thirdPlaceMatchNumber)
       : null) ?? bracket.find((match) => match.round === "third_place") ?? null;
+  const totalContentHeight =
+    BRACKET_HEADER_HEIGHT +
+    canvasHeight +
+    (thirdPlaceMatch ? THIRD_PLACE_SECTION_HEIGHT : 0);
+  const scale = containerWidth > 0 ? Math.min(1, containerWidth / canvasWidth) : 1;
+
+  useEffect(() => {
+    const node = containerRef.current;
+    if (!node || typeof ResizeObserver === "undefined") return;
+
+    const observer = new ResizeObserver((entries) => {
+      const nextEntry = entries[0];
+      if (!nextEntry) return;
+      setContainerWidth(nextEntry.contentRect.width);
+    });
+
+    observer.observe(node);
+    setContainerWidth(node.clientWidth);
+
+    return () => observer.disconnect();
+  }, []);
 
   if (winnerTreeNodes.length === 0) {
     return (
@@ -432,8 +457,21 @@ function KnockoutBracket({
   }
 
   return (
-    <div className="mt-6 overflow-x-auto pb-4">
-      <div className="min-w-max" dir="ltr">
+    <div
+      ref={containerRef}
+      className="relative mt-6 overflow-hidden pb-4"
+      style={{ height: totalContentHeight * scale }}
+    >
+      <div
+        dir="ltr"
+        className="absolute left-0 top-0 origin-top-left"
+        style={{
+          width: canvasWidth,
+          height: totalContentHeight,
+          transform: `scale(${scale})`,
+          transformOrigin: "top left",
+        }}
+      >
         <div
           className="grid gap-x-[78px]"
           style={{ gridTemplateColumns: `repeat(${BRACKET_COLUMN_ORDER.length}, ${MATCH_CARD_WIDTH}px)` }}

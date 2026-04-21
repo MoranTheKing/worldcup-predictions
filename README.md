@@ -191,6 +191,25 @@ The app currently uses **emoji as icons** exclusively:
 ## File Index
 
 ```
+
+## Tournament Engine Snapshot
+
+As of April 21, 2026, the live tournament implementation also includes:
+
+- Deterministic group-position locking and a terminal Best 3rd Place lock in `lib/utils/standings.ts`
+- Official FIFA 2026 Annex C best-3rd-place injection into Round of 32 slots through `syncTournamentState()`
+- A placeholder-driven knockout tree in `lib/tournament/knockout-tree.ts`, used by the Tournament page and the Matches board
+- A responsive bracket canvas that scales to the available container width so the full knockout path fits standard screens without horizontal scrolling
+- Global elimination persistence in `teams.is_eliminated`, covering eliminated 4th-place teams, locked bottom-4 third-place teams, and knockout losers with the semi-final / 3rd-place exception
+
+Operational source files:
+
+- `lib/tournament/knockout-progression.ts`
+- `lib/tournament/elimination.ts`
+- `app/dashboard/tournament/TournamentClient.tsx`
+- `app/dashboard/matches/MatchesClient.tsx`
+- `TOURNAMENT_RULES.md`
+- `HANDOFF_2026-04-21.md`
 README.md                    — This file
 SKILL.md                     — Agent skill definition
 colors_and_type.css          — CSS custom properties (colors + typography)

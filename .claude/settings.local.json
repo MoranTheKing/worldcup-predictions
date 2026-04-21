@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "Bash(node -e \"const d=require\\('./fifa_2026_matchups.json'\\); const keys=Object.keys\\(d\\); console.log\\('Total entries:', keys.length\\); console.log\\('First key:', keys[0]\\); const first=d[keys[0]]; console.log\\('First value keys:', Object.keys\\(first\\)\\); console.log\\('First value:', JSON.stringify\\(first\\)\\); console.log\\('Last key:', keys[keys.length-1]\\); console.log\\('Last value:', JSON.stringify\\(d[keys[keys.length-1]]\\)\\);\")",
+      "Bash(node -e \"const fs=require\\('fs'\\); const raw=fs.readFileSync\\('matches_data.json.txt','utf8'\\); const data=JSON.parse\\(raw\\); const r32=data.filter\\(m=>m.match_number>=73&&m.match_number<=88\\); r32.forEach\\(m=>console.log\\(m.match_number, JSON.stringify\\({hp:m.home_placeholder,ap:m.away_placeholder,hid:m.home_team_id,aid:m.away_team_id}\\)\\)\\);\")",
+      "Bash(node -e \"const fs=require\\('fs'\\); const raw=fs.readFileSync\\('matches_data.json.txt','utf8'\\); const data=JSON.parse\\(raw\\); const r32=data.filter\\(m=>m.match_number>=73&&m.match_number<=88\\); console.log\\(JSON.stringify\\(r32[0],null,2\\)\\);\")",
+      "Bash(node -e \"const fs=require\\('fs'\\); const raw=fs.readFileSync\\('matches_data.json.txt','utf8'\\); const data=JSON.parse\\(raw\\); const r32=data.filter\\(m=>m.match_number>=73&&m.match_number<=88\\); r32.forEach\\(m=>console.log\\(m.match_number, m.home, m.away\\)\\);\")",
+      "Bash(node -e \"const d=require\\('./fifa_2026_matchups.json'\\); const keys=Object.keys\\(d\\); const allValueKeys=new Set\\(\\); keys.forEach\\(k=>Object.keys\\(d[k]\\).forEach\\(vk=>allValueKeys.add\\(vk\\)\\)\\); console.log\\('All value keys \\(slot letters\\):', [...allValueKeys].sort\\(\\).join\\(','\\)\\); const first=d[keys[0]]; const allValues=Object.values\\(first\\); console.log\\('First entry values \\(3rd-place groups\\):', allValues.sort\\(\\).join\\(','\\)\\);\")",
+      "Bash(node -e \"const t=require\\('./tsconfig.json'\\); console.log\\(JSON.stringify\\(t.compilerOptions,null,2\\)\\);\")",
+      "Bash(netstat -ano)",
+      "Bash(findstr \":3000\")",
+      "mcp__Claude_in_Chrome__tabs_context_mcp"
+    ]
+  }
+}
