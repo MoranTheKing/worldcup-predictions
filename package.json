@@ -1,0 +1,34 @@
+{
+  "name": "worldcup-predictions",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "call \"%npm_node_execpath%\" ./node_modules/next/dist/bin/next dev",
+    "build": "call \"%npm_node_execpath%\" ./node_modules/next/dist/bin/next build",
+    "start": "call \"%npm_node_execpath%\" ./node_modules/next/dist/bin/next start",
+    "lint": "call \"%npm_node_execpath%\" ./node_modules/eslint/bin/eslint.js .",
+    "seed:teams": "call \"%npm_node_execpath%\" ./node_modules/tsx/dist/cli.mjs scripts/seed-teams.ts",
+    "seed:rankings": "call \"%npm_node_execpath%\" ./node_modules/tsx/dist/cli.mjs scripts/seed-fifa-rankings.ts",
+    "seed:players": "call \"%npm_node_execpath%\" ./node_modules/tsx/dist/cli.mjs scripts/fetch-players.ts",
+    "seed:players:mock": "call \"%npm_node_execpath%\" ./node_modules/tsx/dist/cli.mjs scripts/seed-players-mock.ts"
+  },
+  "dependencies": {
+    "@supabase/ssr": "^0.10.2",
+    "@supabase/supabase-js": "^2.104.0",
+    "next": "16.2.4",
+    "react": "19.2.4",
+    "react-dom": "19.2.4"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "dotenv": "^17.4.2",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.4",
+    "tailwindcss": "^4",
+    "tsx": "^4.21.0",
+    "typescript": "^5"
+  }
+}
