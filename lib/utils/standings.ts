@@ -639,8 +639,12 @@ export function buildTournamentStandings(
       standings.map((entry) => {
         const groupContext = groupContexts.get(letter);
         const teamState = groupContext?.summary.teamStates.get(entry.team.id);
+
+        // All group matches finished → absolute rank is certain.
         const terminalLockedRank =
           groupContext?.isFinalized && entry.played === 3 ? entry.rank : null;
+
+        // Scenario analysis converged → absolute rank is certain even mid-group.
         const scenarioLockedRank =
           terminalLockedRank === null &&
           entry.played === 3 &&
@@ -648,7 +652,20 @@ export function buildTournamentStandings(
           teamState.bestPossibleRank === teamState.worstPossibleRank
             ? teamState.bestPossibleRank
             : null;
-        const lockedRank = terminalLockedRank ?? scenarioLockedRank ?? null;
+
+        // Every team in the group has played all 3 matches → all stats are
+        // immutable and the current tie-breaker order is the final order.
+        // This fires when all matches are at least "live" (scores known) even
+        // if the "finished" status flag hasn't propagated yet.
+        const allPlayed3 = standings.every((s) => s.played === 3);
+        const allPlayedLockedRank =
+          terminalLockedRank === null &&
+          scenarioLockedRank === null &&
+          allPlayed3
+            ? entry.rank
+            : null;
+
+        const lockedRank = terminalLockedRank ?? scenarioLockedRank ?? allPlayedLockedRank ?? null;
 
         return {
           ...entry,

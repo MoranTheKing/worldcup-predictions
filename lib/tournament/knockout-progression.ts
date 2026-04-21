@@ -6,10 +6,16 @@ import {
   determineKnockoutLoserId,
   determineKnockoutWinnerId,
   getRoundOf32AssignedTeamId,
+  makeMatchSideKey,
   parseReferencePlaceholder,
   parseSeedPlaceholder,
 } from "@/lib/tournament/knockout-utils";
 import { buildTournamentStandings, type TournamentMatch } from "@/lib/utils/standings";
+import {
+  calculateThirdPlaceMatchups,
+  type GroupLetter,
+  ALL_GROUPS,
+} from "@/lib/utils/thirdPlaceAllocations";
 
 type ProgressionMatchRow = TournamentMatchRecord;
 
@@ -102,6 +108,26 @@ export async function syncTournamentState(supabase: SupabaseClient) {
     bestThirdStandings: tournament.bestThirdStandings,
     matches: matches as TournamentMatch[],
   });
+
+  // Annex C: once all 8 best-3rd-place teams are mathematically determined,
+  // use the official FIFA slot assignment table to place each team precisely.
+  const qualifiedThirdGroups = tournament.bestThirdStandings
+    .slice(0, 8)
+    .filter((e) => e.isLocked && e.status === "qualified")
+    .map((e) => e.team.group_letter)
+    .filter((g): g is GroupLetter => g !== null && ALL_GROUPS.includes(g as GroupLetter));
+
+  if (qualifiedThirdGroups.length === 8) {
+    const r32Matches = matches.filter((m) => m.match_number >= 73 && m.match_number <= 88);
+    const annexCAssignments = calculateThirdPlaceMatchups(
+      r32Matches,
+      qualifiedThirdGroups,
+      tournament.groupStandings,
+    );
+    for (const [matchNumber, teamId] of annexCAssignments) {
+      roundOf32Assignments.set(makeMatchSideKey(matchNumber, "away"), teamId);
+    }
+  }
 
   const matchesByNumber = new Map(matches.map((match) => [match.match_number, { ...match }]));
   const context: ResolutionContext = { matchesByNumber, roundOf32Assignments };

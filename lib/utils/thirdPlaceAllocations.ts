@@ -1,22 +1,21 @@
 /**
- * FIFA 2026 - 3rd-place qualifier allocator.
+ * FIFA 2026 Annex C — 3rd-place qualifier slot allocator.
  *
- * 12 group stage groups (A..L). The 8 best 3rd-placed teams advance.
- * Which 8 groups provide the 3rd-place qualifier depends on match results.
- * C(12, 8) = 495 possible subsets → FIFA publishes an "Annex C" style table
- * that maps every subset to a fixed assignment of those 8 groups to the
- * 8 Round-of-32 "third-place" slots (3RD-1 ... 3RD-8).
+ * 12 groups (A..L). Top 8 best-3rd-place teams advance to the Round of 32.
+ * Which 8 groups provide those teams determines the exact R32 slot assignment
+ * via FIFA's published Annex C table (C(12,8) = 495 cases).
  *
- * This module encodes:
- *   - the type surface
- *   - a deterministic lookup function
- *   - a proof-of-concept subset of the table (5-10 rows)
+ * JSON format  (fifa_2026_matchups.json):
+ *   key  = sorted 8-letter subset of qualifying groups, e.g. "ABCDEFGH"
+ *   value = { [winner_group]: [third_place_group] }
+ *           read: "the R32 match where group X's winner plays receives the
+ *                  3rd-place team from group Y"
  *
- * TODO(full-annex-c): replace FULL_ALLOCATION_TABLE with the complete
- * 495-row mapping from FIFA's published Annex C. Each row is
- *   [sorted 8-group subset, ordered slot→group assignment].
- * Paste the JSON into FULL_ALLOCATION_TABLE without touching anything else.
+ * The 8 R32 slots where a 3rd-place team always appears are:
+ *   A, B, D, E, G, I, K, L  (group-winner letters, per FIFA bracket)
  */
+
+import FIFA_MATCHUPS from "@/fifa_2026_matchups.json";
 
 export type GroupLetter =
   | "A" | "B" | "C" | "D" | "E" | "F"
@@ -26,125 +25,85 @@ export const ALL_GROUPS: readonly GroupLetter[] = [
   "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L",
 ] as const;
 
+/** Numeric slot index 1–8 used by the provisional bracket2026 seed notation. */
 export type ThirdPlaceSlot = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 
-export const THIRD_PLACE_SLOTS: readonly ThirdPlaceSlot[] = [1, 2, 3, 4, 5, 6, 7, 8] as const;
+/** The 8 fixed slot keys present in every Annex C entry. */
+export const ANNEX_C_SLOT_KEYS = ["A", "B", "D", "E", "G", "I", "K", "L"] as const;
 
 /**
- * Allocation = for each of the 8 slots, which group's 3rd-placed team fills it.
- * Example: { 1: "A", 2: "B", ... } means 3RD-1 = team that finished 3rd in group A.
- */
-export type ThirdPlaceAllocation = Record<ThirdPlaceSlot, GroupLetter>;
-
-type AllocationRow = {
-  /** Sorted array of exactly 8 distinct group letters. */
-  subset: GroupLetter[];
-  /** Slot → group assignment for this subset. */
-  allocation: ThirdPlaceAllocation;
-};
-
-/**
- * Canonical key for a subset: the 8 letters sorted alphabetically, joined.
- * e.g. ["C","A","B","D","E","F","G","H"] → "ABCDEFGH".
+ * Canonical lookup key for a qualifying subset: 8 letters sorted alphabetically.
+ * e.g. ["C","A","B","D","E","F","G","H"] → "ABCDEFGH"
  */
 export function subsetKey(groups: readonly GroupLetter[]): string {
   return [...groups].sort().join("");
 }
 
-function row(key: string, slots: [GroupLetter, GroupLetter, GroupLetter, GroupLetter, GroupLetter, GroupLetter, GroupLetter, GroupLetter]): AllocationRow {
-  const [s1, s2, s3, s4, s5, s6, s7, s8] = slots;
-  return {
-    subset: key.split("") as GroupLetter[],
-    allocation: { 1: s1, 2: s2, 3: s3, 4: s4, 5: s5, 6: s6, 7: s7, 8: s8 },
-  };
+type AnnexCMap = Record<string, Record<string, string>>;
+const MATCHUPS = FIFA_MATCHUPS as AnnexCMap;
+
+/**
+ * Look up the Annex C allocation for the given 8 qualifying group letters.
+ * Returns a mapping  { winner_group → 3rd_place_group }  or null when the
+ * subset is not found in the table (should not happen with a complete table).
+ */
+export function lookupAnnexC(
+  qualifyingGroups: readonly GroupLetter[],
+): Record<string, GroupLetter> | null {
+  if (qualifyingGroups.length !== 8) return null;
+  const key = subsetKey(qualifyingGroups);
+  const entry = MATCHUPS[key];
+  if (!entry) return null;
+  return entry as Record<string, GroupLetter>;
 }
 
 /**
- * Proof-of-concept subset of the 495-row FIFA Annex C mapping.
+ * Given the 8 qualifying groups and the current group standings, compute
+ * the exact team-id that should fill each 3rd-place slot in the Round of 32.
  *
- * The exact slot ordering in each row below is a plausible layout consistent
- * with FIFA's historical 3rd-place assignment pattern (earlier letters tend to
- * fill lower slot numbers), but it is NOT a substitute for the official table.
+ * Returns  Map<match_number, team_id>  — one entry per R32 match whose away
+ * side is a "3rd-place" placeholder resolvable via Annex C.
  *
- * TODO(full-annex-c): overwrite this constant with the complete 495-row
- * mapping provided by product/FIFA.
+ * Falls back silently (returns empty map) if:
+ *   - fewer than 8 qualifying groups provided
+ *   - subset not in the JSON table
+ *   - a slot's home_placeholder doesn't match the "1X" pattern
+ *   - the resolved 3rd-place team is not yet findable in standings
  */
-const SAMPLE_ALLOCATION_TABLE: readonly AllocationRow[] = [
-  row("ABCDEFGH", ["A", "B", "C", "D", "E", "F", "G", "H"]),
-  row("ABCDEFGI", ["A", "B", "C", "D", "E", "F", "G", "I"]),
-  row("ABCDEFGJ", ["A", "B", "C", "D", "E", "F", "G", "J"]),
-  row("ABCDEFGK", ["A", "B", "C", "D", "E", "F", "G", "K"]),
-  row("ABCDEFGL", ["A", "B", "C", "D", "E", "F", "G", "L"]),
-  row("ABCDEFHI", ["A", "B", "C", "D", "E", "F", "H", "I"]),
-  row("ABCDEFHJ", ["A", "B", "C", "D", "E", "F", "H", "J"]),
-  row("ABCDEFHK", ["A", "B", "C", "D", "E", "F", "H", "K"]),
-  row("EFGHIJKL", ["E", "F", "G", "H", "I", "J", "K", "L"]),
-] as const;
+export function calculateThirdPlaceMatchups(
+  r32Matches: ReadonlyArray<{
+    match_number: number;
+    home_placeholder: string | null | undefined;
+    away_placeholder: string | null | undefined;
+  }>,
+  qualifyingGroups: readonly GroupLetter[],
+  groupStandings: Record<string, ReadonlyArray<{ rank: number; team: { id: string } }>>,
+): Map<number, string> {
+  const result = new Map<number, string>();
 
-/**
- * The full 495-row table lives here once pasted. Until then we fall back to
- * the sample table above and, for any subset not present, a deterministic
- * alphabetical assignment (slot N = Nth group in sorted subset).
- */
-export const FULL_ALLOCATION_TABLE: readonly AllocationRow[] = SAMPLE_ALLOCATION_TABLE;
+  const allocation = lookupAnnexC(qualifyingGroups);
+  if (!allocation) return result;
 
-const ALLOCATION_INDEX: Map<string, ThirdPlaceAllocation> = new Map(
-  FULL_ALLOCATION_TABLE.map((r) => [subsetKey(r.subset), r.allocation]),
-);
+  for (const match of r32Matches) {
+    const awayPlaceholder = match.away_placeholder ?? "";
+    // Only process slots that are 3rd-place placeholders ("3X/Y/Z...")
+    if (!/^3[A-L]/i.test(awayPlaceholder)) continue;
 
-export class InvalidThirdPlaceSubsetError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "InvalidThirdPlaceSubsetError";
-  }
-}
+    const homePlaceholder = match.home_placeholder ?? "";
+    // Determine the slot key from the home placeholder, e.g. "1A" → "A"
+    const slotMatch = homePlaceholder.match(/^1([A-L])$/i);
+    if (!slotMatch) continue;
 
-function validateSubset(groups: readonly GroupLetter[]): GroupLetter[] {
-  if (groups.length !== 8) {
-    throw new InvalidThirdPlaceSubsetError(
-      `Expected exactly 8 groups, received ${groups.length}`,
-    );
-  }
+    const slotKey = slotMatch[1].toUpperCase();
+    const thirdPlaceGroup = allocation[slotKey] as GroupLetter | undefined;
+    if (!thirdPlaceGroup) continue;
 
-  const sorted = [...groups].sort();
-  const unique = new Set(sorted);
-  if (unique.size !== 8) {
-    throw new InvalidThirdPlaceSubsetError(`Groups must be distinct: ${groups.join(",")}`);
+    const standings = groupStandings[thirdPlaceGroup];
+    const thirdEntry = standings?.find((e) => e.rank === 3);
+    if (!thirdEntry) continue;
+
+    result.set(match.match_number, thirdEntry.team.id);
   }
 
-  for (const g of sorted) {
-    if (!ALL_GROUPS.includes(g)) {
-      throw new InvalidThirdPlaceSubsetError(`Unknown group letter: ${g}`);
-    }
-  }
-
-  return sorted;
-}
-
-function fallbackAllocation(sortedSubset: GroupLetter[]): ThirdPlaceAllocation {
-  return {
-    1: sortedSubset[0], 2: sortedSubset[1], 3: sortedSubset[2], 4: sortedSubset[3],
-    5: sortedSubset[4], 6: sortedSubset[5], 7: sortedSubset[6], 8: sortedSubset[7],
-  };
-}
-
-/**
- * Given the 8 groups whose 3rd-placed team qualified, return the 8 slot
- * assignments per FIFA Annex C. Falls back to an alphabetical mapping when the
- * subset has not yet been populated in FULL_ALLOCATION_TABLE.
- */
-export function allocateThirdPlaces(groups: readonly GroupLetter[]): ThirdPlaceAllocation {
-  const sortedSubset = validateSubset(groups);
-  return ALLOCATION_INDEX.get(subsetKey(sortedSubset)) ?? fallbackAllocation(sortedSubset);
-}
-
-/**
- * True if the given subset is covered by the official lookup table (as
- * opposed to returning the alphabetical fallback). Useful for UI that wants
- * to surface "bracket pairings not yet official" warnings while the full
- * table is still incomplete.
- */
-export function isSubsetCovered(groups: readonly GroupLetter[]): boolean {
-  const sortedSubset = validateSubset(groups);
-  return ALLOCATION_INDEX.has(subsetKey(sortedSubset));
+  return result;
 }
