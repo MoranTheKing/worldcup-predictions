@@ -38,6 +38,16 @@ function translatePosition(pos: string | null): string {
   return pos;
 }
 
+// ── Input focus/blur helpers ───────────────────────────────────────────────────
+function onInputFocus(e: React.FocusEvent<HTMLInputElement>) {
+  e.target.style.borderColor = "var(--wc-neon)";
+  e.target.style.boxShadow   = "0 0 0 3px var(--wc-neon-glow)";
+}
+function onInputBlur(e: React.FocusEvent<HTMLInputElement>) {
+  e.target.style.borderColor = "var(--wc-border)";
+  e.target.style.boxShadow   = "none";
+}
+
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export default function ProfileClient({
@@ -144,20 +154,39 @@ export default function ProfileClient({
   return (
     <div className="p-4 md:p-8">
       <div className="mb-6">
-        <h1 className="text-xl md:text-2xl font-bold text-zinc-900 dark:text-zinc-50">הפרופיל שלי</h1>
-        <p className="text-sm text-zinc-500 mt-0.5">נהל את הכינוי וניחושי האלופים שלך</p>
+        <h1
+          className="text-xl md:text-2xl font-bold"
+          style={{ fontFamily: "var(--font-display)", color: "var(--wc-fg1)" }}
+        >
+          הפרופיל שלי
+        </h1>
+        <p className="text-sm mt-0.5" style={{ color: "var(--wc-fg2)" }}>
+          נהל את הכינוי וניחושי האלופים שלך
+        </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-3xl">
 
         {/* ── Nickname card ─────────────────────────────────────────────────── */}
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5">
+        <div
+          className="rounded-2xl p-5"
+          style={{
+            background: "var(--wc-surface)",
+            border: "1px solid var(--wc-border)",
+          }}
+        >
           <div className="flex items-center justify-between mb-4">
-            <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wide">כינוי</p>
+            <p
+              className="text-xs font-semibold uppercase tracking-wide"
+              style={{ color: "var(--wc-fg3)" }}
+            >
+              כינוי
+            </p>
             {!editingNickname && (
               <button
                 onClick={() => { setEditingNickname(true); setNicknameError(null); }}
-                className="text-xs text-emerald-600 hover:text-emerald-700 font-medium"
+                className="text-xs font-medium"
+                style={{ color: "var(--wc-neon)" }}
               >
                 ✏️ ערוך
               </button>
@@ -171,21 +200,53 @@ export default function ProfileClient({
                 type="text"
                 value={nicknameValue}
                 onChange={(e) => setNicknameValue(e.target.value)}
+                onFocus={onInputFocus}
+                onBlur={onInputBlur}
                 maxLength={20}
-                className="w-full px-3 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-transparent text-sm outline-none focus:ring-2 focus:ring-emerald-400"
+                className="w-full text-sm"
+                style={{
+                  background: "var(--wc-raised)",
+                  border: "1.5px solid var(--wc-border)",
+                  borderRadius: 12,
+                  color: "var(--wc-fg1)",
+                  padding: "10px 14px",
+                  outline: "none",
+                }}
               />
-              {nicknameError && <p className="text-xs text-red-500">{nicknameError}</p>}
+              {nicknameError && (
+                <p
+                  className="text-xs"
+                  style={{
+                    background: "var(--wc-danger-bg)",
+                    color: "var(--wc-danger)",
+                    borderRadius: 8,
+                    padding: "6px 10px",
+                  }}
+                >
+                  {nicknameError}
+                </p>
+              )}
               <div className="flex gap-2">
                 <button
                   onClick={saveNickname}
                   disabled={nicknameSaving}
-                  className="flex-1 py-2 rounded-xl bg-emerald-600 text-white text-xs font-medium hover:bg-emerald-700 disabled:opacity-50"
+                  className="flex-1 py-2 rounded-xl text-xs font-medium disabled:opacity-50"
+                  style={{
+                    background: "var(--wc-neon)",
+                    color: "var(--wc-fg-inverse)",
+                    boxShadow: "0 0 16px var(--wc-neon-glow)",
+                  }}
                 >
                   {nicknameSaving ? "שומר..." : "שמור"}
                 </button>
                 <button
                   onClick={() => { setEditingNickname(false); setNicknameValue(username); setNicknameError(null); }}
-                  className="flex-1 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 text-xs font-medium"
+                  className="flex-1 py-2 rounded-xl text-xs font-medium"
+                  style={{
+                    background: "var(--wc-raised)",
+                    border: "1px solid var(--wc-border)",
+                    color: "var(--wc-fg2)",
+                  }}
                 >
                   בטל
                 </button>
@@ -193,13 +254,23 @@ export default function ProfileClient({
             </div>
           ) : (
             <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-base font-bold text-white">
+              <div
+                className="w-11 h-11 rounded-full flex items-center justify-center text-base font-bold"
+                style={{
+                  background: "linear-gradient(135deg, var(--wc-neon), #009A3D)",
+                  color: "var(--wc-fg-inverse)",
+                }}
+              >
                 {username.charAt(0).toUpperCase()}
               </div>
               <div>
-                <p className="font-bold text-zinc-900 dark:text-zinc-50">{username} {streakBadge}</p>
+                <p className="font-bold" style={{ color: "var(--wc-fg1)" }}>
+                  {username} {streakBadge}
+                </p>
                 {streak !== 0 && (
-                  <p className="text-xs text-zinc-500">{streak > 0 ? `+${streak}` : streak} רצף</p>
+                  <p className="text-xs" style={{ color: "var(--wc-fg2)" }}>
+                    {streak > 0 ? `+${streak}` : streak} רצף
+                  </p>
                 )}
               </div>
             </div>
@@ -207,34 +278,80 @@ export default function ProfileClient({
         </div>
 
         {/* ── Jokers card ───────────────────────────────────────────────────── */}
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5">
-          <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-3">ג׳וקרים</p>
+        <div
+          className="rounded-2xl p-5"
+          style={{
+            background: "var(--wc-surface)",
+            border: "1px solid var(--wc-border)",
+          }}
+        >
+          <p
+            className="text-xs font-semibold uppercase tracking-wide mb-3"
+            style={{ color: "var(--wc-fg3)" }}
+          >
+            ג׳וקרים
+          </p>
           <div className="flex gap-3">
-            <div className="flex-1 bg-zinc-50 dark:bg-zinc-800 rounded-xl py-3 text-center">
-              <p className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">{jokersGroups}</p>
-              <p className="text-xs text-zinc-500 mt-0.5">שלב הבתים</p>
+            <div
+              className="flex-1 rounded-xl py-3 text-center"
+              style={{
+                background: "var(--wc-purple-bg)",
+                border: "1px solid rgba(124,58,237,0.25)",
+                boxShadow: "0 0 12px rgba(124,58,237,0.12)",
+              }}
+            >
+              <p className="text-2xl font-bold" style={{ color: "var(--wc-purple)" }}>
+                {jokersGroups}
+              </p>
+              <p className="text-xs mt-0.5" style={{ color: "var(--wc-fg2)" }}>שלב הבתים</p>
             </div>
-            <div className="flex-1 bg-zinc-50 dark:bg-zinc-800 rounded-xl py-3 text-center">
-              <p className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">{jokersKnockouts}</p>
-              <p className="text-xs text-zinc-500 mt-0.5">נוקאאוט</p>
+            <div
+              className="flex-1 rounded-xl py-3 text-center"
+              style={{
+                background: "var(--wc-purple-bg)",
+                border: "1px solid rgba(124,58,237,0.25)",
+                boxShadow: "0 0 12px rgba(124,58,237,0.12)",
+              }}
+            >
+              <p className="text-2xl font-bold" style={{ color: "var(--wc-purple)" }}>
+                {jokersKnockouts}
+              </p>
+              <p className="text-xs mt-0.5" style={{ color: "var(--wc-fg2)" }}>נוקאאוט</p>
             </div>
           </div>
-          <p className="text-xs text-zinc-400 mt-2 text-center">ג׳וקר = ×3 על תוצאה מדויקת</p>
+          <p className="text-xs mt-2 text-center" style={{ color: "var(--wc-fg3)" }}>
+            ג׳וקר = ×3 על תוצאה מדויקת
+          </p>
         </div>
 
         {/* ── Outright predictions card (spans 2 cols on desktop) ───────────── */}
-        <div className="md:col-span-2 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800">
+        <div
+          className="md:col-span-2 rounded-2xl"
+          style={{
+            background: "var(--wc-surface)",
+            border: "1px solid var(--wc-border)",
+          }}
+        >
           {/* Header */}
-          <div className="px-5 py-3 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
-            <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wide">ניחושי אלופים</p>
+          <div
+            className="px-5 py-3 flex items-center justify-between"
+            style={{ borderBottom: "1px solid var(--wc-border)" }}
+          >
+            <p
+              className="text-xs font-semibold uppercase tracking-wide"
+              style={{ color: "var(--wc-fg3)" }}
+            >
+              ניחושי אלופים
+            </p>
             {isLocked ? (
-              <span className="flex items-center gap-1 text-xs text-zinc-400">
+              <span className="flex items-center gap-1 text-xs" style={{ color: "var(--wc-fg3)" }}>
                 🔒 נעול — הטורניר התחיל
               </span>
             ) : !editingOutright ? (
               <button
                 onClick={() => { setEditingOutright(true); setOutrightError(null); }}
-                className="text-xs text-emerald-600 hover:text-emerald-700 font-medium"
+                className="text-xs font-medium"
+                style={{ color: "var(--wc-neon)" }}
               >
                 ✏️ ערוך
               </button>
@@ -245,7 +362,9 @@ export default function ProfileClient({
             /* ── Edit mode ───────────────────────────────────────────────── */
             <div className="p-5 flex flex-col gap-4">
               <div>
-                <p className="text-xs font-medium text-zinc-500 mb-1.5">🏆 זוכה הטורניר</p>
+                <p className="text-xs font-medium mb-1.5" style={{ color: "var(--wc-fg2)" }}>
+                  🏆 זוכה הטורניר
+                </p>
                 <TeamPicker
                   teams={sortedTeams}
                   value={winnerId}
@@ -255,7 +374,9 @@ export default function ProfileClient({
               </div>
 
               <div>
-                <p className="text-xs font-medium text-zinc-500 mb-1.5">⚽ מלך השערים</p>
+                <p className="text-xs font-medium mb-1.5" style={{ color: "var(--wc-fg2)" }}>
+                  ⚽ מלך השערים
+                </p>
                 {hasPlayers ? (
                   <PlayerPicker
                     players={sortedPlayers}
@@ -268,19 +389,46 @@ export default function ProfileClient({
                     type="text"
                     value={topScorerText}
                     onChange={(e) => setTopScorerText(e.target.value)}
+                    onFocus={onInputFocus}
+                    onBlur={onInputBlur}
                     placeholder="שם השחקן"
-                    className="w-full px-3 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-transparent text-sm outline-none focus:ring-2 focus:ring-emerald-400 placeholder:text-zinc-400"
+                    className="w-full text-sm"
+                    style={{
+                      background: "var(--wc-raised)",
+                      border: "1.5px solid var(--wc-border)",
+                      borderRadius: 12,
+                      color: "var(--wc-fg1)",
+                      padding: "10px 14px",
+                      outline: "none",
+                    }}
                   />
                 )}
               </div>
 
-              {outrightError && <p className="text-xs text-red-500">{outrightError}</p>}
+              {outrightError && (
+                <p
+                  className="text-xs"
+                  style={{
+                    background: "var(--wc-danger-bg)",
+                    color: "var(--wc-danger)",
+                    borderRadius: 8,
+                    padding: "6px 10px",
+                  }}
+                >
+                  {outrightError}
+                </p>
+              )}
 
               <div className="flex gap-2">
                 <button
                   onClick={saveOutright}
                   disabled={outrightSaving}
-                  className="flex-1 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 disabled:opacity-50"
+                  className="flex-1 py-2.5 rounded-xl text-sm font-medium disabled:opacity-50"
+                  style={{
+                    background: "var(--wc-neon)",
+                    color: "var(--wc-fg-inverse)",
+                    boxShadow: "0 0 16px var(--wc-neon-glow)",
+                  }}
                 >
                   {outrightSaving ? "שומר..." : "שמור ניחושים"}
                 </button>
@@ -293,7 +441,12 @@ export default function ProfileClient({
                     setTopScorerText(outrightTopScorerName ?? "");
                     setOutrightError(null);
                   }}
-                  className="flex-1 py-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 text-sm font-medium"
+                  className="flex-1 py-2.5 rounded-xl text-sm font-medium"
+                  style={{
+                    background: "var(--wc-raised)",
+                    border: "1px solid var(--wc-border)",
+                    color: "var(--wc-fg2)",
+                  }}
                 >
                   בטל
                 </button>
@@ -301,11 +454,17 @@ export default function ProfileClient({
             </div>
           ) : (
             /* ── Display mode ────────────────────────────────────────────── */
-            <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x sm:divide-x-reverse divide-zinc-100 dark:divide-zinc-800">
-              <div className="px-5 py-4 flex items-center justify-between gap-4">
+            <div
+              className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x sm:divide-x-reverse"
+              style={{ borderColor: "var(--wc-border)" }}
+            >
+              <div
+                className="px-5 py-4 flex items-center justify-between gap-4"
+                style={{ borderColor: "var(--wc-border)" }}
+              >
                 <div>
-                  <p className="text-xs text-zinc-500 mb-1">זוכה הטורניר</p>
-                  <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+                  <p className="text-xs mb-1" style={{ color: "var(--wc-fg2)" }}>זוכה הטורניר</p>
+                  <p className="text-sm font-semibold" style={{ color: "var(--wc-fg1)" }}>
                     {displayWinner ?? "—"}
                   </p>
                 </div>
@@ -315,10 +474,13 @@ export default function ProfileClient({
                   <span className="text-2xl flex-shrink-0">🏆</span>
                 )}
               </div>
-              <div className="px-5 py-4 flex items-center justify-between gap-4">
+              <div
+                className="px-5 py-4 flex items-center justify-between gap-4"
+                style={{ borderColor: "var(--wc-border)" }}
+              >
                 <div>
-                  <p className="text-xs text-zinc-500 mb-1">מלך השערים</p>
-                  <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+                  <p className="text-xs mb-1" style={{ color: "var(--wc-fg2)" }}>מלך השערים</p>
+                  <p className="text-sm font-semibold" style={{ color: "var(--wc-fg1)" }}>
                     {outrightTopScorerName ?? "—"}
                   </p>
                 </div>
@@ -329,8 +491,11 @@ export default function ProfileClient({
 
           {/* Lock explanation when matches are loaded */}
           {!isLocked && !editingOutright && firstMatchTime && (
-            <div className="px-5 py-2 border-t border-zinc-100 dark:border-zinc-800">
-              <p className="text-xs text-zinc-400">
+            <div
+              className="px-5 py-2"
+              style={{ borderTop: "1px solid var(--wc-border)" }}
+            >
+              <p className="text-xs" style={{ color: "var(--wc-fg3)" }}>
                 ניתן לערוך עד:{" "}
                 {new Date(firstMatchTime).toLocaleString("he-IL", {
                   day: "numeric", month: "long", year: "numeric",
@@ -381,38 +546,80 @@ function TeamPicker({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm outline-none focus:ring-2 focus:ring-emerald-400"
+        className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm outline-none"
+        style={{
+          background: "var(--wc-raised)",
+          border: "1.5px solid var(--wc-border)",
+          borderRadius: 12,
+          color: "var(--wc-fg1)",
+        }}
       >
         <span className="flex items-center gap-2">
           {selectedTeam?.logo_url && (
             <Image src={selectedTeam.logo_url} alt="" width={20} height={13} className="rounded-sm flex-shrink-0" unoptimized />
           )}
-          <span className={value ? "text-zinc-900 dark:text-zinc-50" : "text-zinc-400"}>
+          <span style={{ color: value ? "var(--wc-fg1)" : "var(--wc-fg3)" }}>
             {value ? label : "-- בחר קבוצה --"}
           </span>
         </span>
-        <span className="text-zinc-400 text-xs">{open ? "▲" : "▼"}</span>
+        <span className="text-xs" style={{ color: "var(--wc-fg3)" }}>{open ? "▲" : "▼"}</span>
       </button>
       {open && (
-        <div className="absolute z-50 mt-1 w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-lg overflow-hidden">
-          <div className="p-2 border-b border-zinc-100 dark:border-zinc-800">
-            <input autoFocus type="text" placeholder="חיפוש..." value={search}
+        <div
+          className="absolute z-50 mt-1 w-full overflow-hidden"
+          style={{
+            background: "var(--wc-surface)",
+            border: "1px solid var(--wc-border)",
+            boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
+            borderRadius: 12,
+          }}
+        >
+          <div className="p-2" style={{ borderBottom: "1px solid var(--wc-border)" }}>
+            <input
+              autoFocus
+              type="text"
+              placeholder="חיפוש..."
+              value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg bg-zinc-50 dark:bg-zinc-800 text-sm outline-none placeholder:text-zinc-400"
+              className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+              style={{
+                background: "var(--wc-raised)",
+                border: "1px solid var(--wc-border)",
+                color: "var(--wc-fg1)",
+              }}
             />
           </div>
           <ul className="max-h-48 overflow-y-auto">
-            {filtered.length === 0 && <li className="px-4 py-3 text-sm text-zinc-400 text-center">לא נמצאה קבוצה</li>}
+            {filtered.length === 0 && (
+              <li className="px-4 py-3 text-sm text-center" style={{ color: "var(--wc-fg3)" }}>
+                לא נמצאה קבוצה
+              </li>
+            )}
             {filtered.map((t) => {
-              const dl = t.name_he ?? t.name;
+              const dl         = t.name_he ?? t.name;
+              const isSelected = String(t.id) === value;
               return (
                 <li key={t.id}>
-                  <button type="button"
+                  <button
+                    type="button"
                     onClick={() => { onChange(String(t.id), dl); setOpen(false); setSearch(""); }}
-                    className={`w-full text-right px-4 py-2 text-sm flex items-center gap-2 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors ${String(t.id) === value ? "bg-zinc-100 dark:bg-zinc-800 font-medium" : ""}`}
+                    className="w-full text-right px-4 py-2 text-sm flex items-center gap-2 transition-colors"
+                    style={
+                      isSelected
+                        ? { background: "var(--wc-neon-bg)", color: "var(--wc-neon)", fontWeight: 500 }
+                        : { color: "var(--wc-fg1)" }
+                    }
+                    onMouseEnter={(e) => {
+                      if (!isSelected) (e.currentTarget as HTMLButtonElement).style.background = "var(--wc-raised)";
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isSelected) (e.currentTarget as HTMLButtonElement).style.background = "transparent";
+                    }}
                   >
-                    {t.logo_url && <Image src={t.logo_url} alt="" width={18} height={12} className="rounded-sm flex-shrink-0" unoptimized />}
-                    <span className="text-zinc-900 dark:text-zinc-50">{dl}</span>
+                    {t.logo_url && (
+                      <Image src={t.logo_url} alt="" width={18} height={12} className="rounded-sm flex-shrink-0" unoptimized />
+                    )}
+                    <span>{dl}</span>
                   </button>
                 </li>
               );
@@ -455,43 +662,95 @@ function PlayerPicker({
 
   return (
     <div ref={ref} className="relative flex flex-col gap-1.5">
-      <button type="button" onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm outline-none focus:ring-2 focus:ring-emerald-400"
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm outline-none"
+        style={{
+          background: "var(--wc-raised)",
+          border: "1.5px solid var(--wc-border)",
+          borderRadius: 12,
+          color: "var(--wc-fg1)",
+        }}
       >
-        <span className={value ? "text-zinc-900 dark:text-zinc-50" : "text-zinc-400"}>
+        <span style={{ color: value ? "var(--wc-fg1)" : "var(--wc-fg3)" }}>
           {value ? value.name : "-- בחר שחקן --"}
         </span>
-        <span className="text-zinc-400 text-xs">{open ? "▲" : "▼"}</span>
+        <span className="text-xs" style={{ color: "var(--wc-fg3)" }}>{open ? "▲" : "▼"}</span>
       </button>
 
       {winnerPlayers.length > 0 && (
-        <button type="button" onClick={() => { setShowAll((s) => !s); setSearch(""); }}
-          className="text-xs text-zinc-400 underline text-center">
+        <button
+          type="button"
+          onClick={() => { setShowAll((s) => !s); setSearch(""); }}
+          className="text-xs underline text-center"
+          style={{ color: "var(--wc-fg3)" }}
+        >
           {showAll ? `שחקני הנבחרת הזוכה (${winnerPlayers.length})` : `כל השחקנים (${players.length})`}
         </button>
       )}
 
       {open && (
-        <div className="absolute z-50 top-11 w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-lg overflow-hidden">
-          <div className="p-2 border-b border-zinc-100 dark:border-zinc-800">
-            <input autoFocus type="text" placeholder="חיפוש שחקן..." value={search}
+        <div
+          className="absolute z-50 top-11 w-full overflow-hidden"
+          style={{
+            background: "var(--wc-surface)",
+            border: "1px solid var(--wc-border)",
+            boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
+            borderRadius: 12,
+          }}
+        >
+          <div className="p-2" style={{ borderBottom: "1px solid var(--wc-border)" }}>
+            <input
+              autoFocus
+              type="text"
+              placeholder="חיפוש שחקן..."
+              value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg bg-zinc-50 dark:bg-zinc-800 text-sm outline-none placeholder:text-zinc-400"
+              className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+              style={{
+                background: "var(--wc-raised)",
+                border: "1px solid var(--wc-border)",
+                color: "var(--wc-fg1)",
+              }}
             />
           </div>
           <ul className="max-h-48 overflow-y-auto">
-            {filtered.length === 0 && <li className="px-4 py-3 text-sm text-zinc-400 text-center">לא נמצא שחקן</li>}
-            {filtered.map((p) => (
-              <li key={p.id}>
-                <button type="button"
-                  onClick={() => { onChange(p); setOpen(false); setSearch(""); }}
-                  className={`w-full text-right px-4 py-2 text-sm flex items-center justify-between hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors ${value?.id === p.id ? "bg-zinc-100 dark:bg-zinc-800 font-medium" : ""}`}
-                >
-                  <span className="text-zinc-900 dark:text-zinc-50">{p.name}</span>
-                  {p.position && <span className="text-xs text-zinc-400">{translatePosition(p.position)}</span>}
-                </button>
+            {filtered.length === 0 && (
+              <li className="px-4 py-3 text-sm text-center" style={{ color: "var(--wc-fg3)" }}>
+                לא נמצא שחקן
               </li>
-            ))}
+            )}
+            {filtered.map((p) => {
+              const isSelected = value?.id === p.id;
+              return (
+                <li key={p.id}>
+                  <button
+                    type="button"
+                    onClick={() => { onChange(p); setOpen(false); setSearch(""); }}
+                    className="w-full text-right px-4 py-2 text-sm flex items-center justify-between transition-colors"
+                    style={
+                      isSelected
+                        ? { background: "var(--wc-neon-bg)", color: "var(--wc-neon)", fontWeight: 500 }
+                        : { color: "var(--wc-fg1)" }
+                    }
+                    onMouseEnter={(e) => {
+                      if (!isSelected) (e.currentTarget as HTMLButtonElement).style.background = "var(--wc-raised)";
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isSelected) (e.currentTarget as HTMLButtonElement).style.background = "transparent";
+                    }}
+                  >
+                    <span>{p.name}</span>
+                    {p.position && (
+                      <span className="text-xs" style={{ color: "var(--wc-fg3)" }}>
+                        {translatePosition(p.position)}
+                      </span>
+                    )}
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}

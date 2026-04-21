@@ -48,6 +48,16 @@ function FlagImg({ team, size = 24 }: { team: Team; size?: number }) {
   );
 }
 
+// ── Input focus/blur helpers ───────────────────────────────────────────────────
+function onInputFocus(e: React.FocusEvent<HTMLInputElement>) {
+  e.target.style.borderColor = "var(--wc-neon)";
+  e.target.style.boxShadow   = "0 0 0 3px var(--wc-neon-glow)";
+}
+function onInputBlur(e: React.FocusEvent<HTMLInputElement>) {
+  e.target.style.borderColor = "var(--wc-border)";
+  e.target.style.boxShadow   = "none";
+}
+
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export default function OnboardingForm({
@@ -154,41 +164,68 @@ export default function OnboardingForm({
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-zinc-50 dark:bg-zinc-950 px-4 py-12">
+    <div
+      className="flex min-h-screen flex-col items-center justify-center px-4 py-12"
+      style={{ background: "var(--wc-bg)" }}
+    >
 
       {/* Progress bar */}
       <div className="flex items-center gap-2 mb-8">
         {STEPS.map((label, i) => (
           <div key={i} className="flex items-center gap-2">
-            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
-              i < step
-                ? "bg-green-500 text-white"
-                : i === step
-                ? "bg-zinc-900 text-white dark:bg-zinc-50 dark:text-zinc-900"
-                : "bg-zinc-200 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-500"
-            }`}>
+            <div
+              className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors"
+              style={
+                i < step
+                  ? { background: "var(--wc-neon)", color: "var(--wc-fg-inverse)" }
+                  : i === step
+                  ? { background: "var(--wc-fg1)", color: "var(--wc-bg)" }
+                  : { background: "var(--wc-border)", color: "var(--wc-fg3)" }
+              }
+            >
               {i < step ? "✓" : i + 1}
             </div>
-            <span className={`text-xs hidden sm:block ${
-              i === step ? "text-zinc-900 dark:text-zinc-50 font-medium" : "text-zinc-400"
-            }`}>
+            <span
+              className="text-xs hidden sm:block"
+              style={
+                i === step
+                  ? { color: "var(--wc-fg1)", fontWeight: 500 }
+                  : { color: "var(--wc-fg3)" }
+              }
+            >
               {label}
             </span>
             {i < STEPS.length - 1 && (
-              <div className={`w-6 h-px ${i < step ? "bg-green-500" : "bg-zinc-200 dark:bg-zinc-700"}`} />
+              <div
+                className="w-6 h-px"
+                style={{ background: i < step ? "var(--wc-neon)" : "var(--wc-border)" }}
+              />
             )}
           </div>
         ))}
       </div>
 
-      <div className="w-full max-w-sm bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-zinc-200 dark:border-zinc-800 p-6">
+      <div
+        className="w-full max-w-sm rounded-2xl shadow-sm p-6"
+        style={{
+          background: "var(--wc-surface)",
+          border: "1px solid var(--wc-border)",
+        }}
+      >
 
         {/* ── Step 0 — Nickname ─────────────────────────────────────────── */}
         {step === 0 && (
           <div className="flex flex-col gap-4">
             <div>
-              <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-50">👋 ברוך הבא!</h2>
-              <p className="text-sm text-zinc-500 mt-1">בחר כינוי שיופיע בטבלאות הניקוד</p>
+              <h2
+                className="text-xl font-bold"
+                style={{ fontFamily: "var(--font-display)", color: "var(--wc-fg1)" }}
+              >
+                👋 ברוך הבא!
+              </h2>
+              <p className="text-sm mt-1" style={{ color: "var(--wc-fg2)" }}>
+                בחר כינוי שיופיע בטבלאות הניקוד
+              </p>
             </div>
             <input
               type="text"
@@ -196,14 +233,41 @@ export default function OnboardingForm({
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleUsername()}
+              onFocus={onInputFocus}
+              onBlur={onInputBlur}
               maxLength={20}
-              className="w-full px-4 py-3 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-transparent text-sm outline-none focus:ring-2 focus:ring-zinc-400 placeholder:text-zinc-400"
+              className="w-full text-sm"
+              style={{
+                background: "var(--wc-raised)",
+                border: "1.5px solid var(--wc-border)",
+                borderRadius: 12,
+                color: "var(--wc-fg1)",
+                padding: "10px 14px",
+                outline: "none",
+              }}
             />
-            {error && <p className="text-sm text-red-500 text-center">{error}</p>}
+            {error && (
+              <p
+                className="text-sm text-center"
+                style={{
+                  background: "var(--wc-danger-bg)",
+                  color: "var(--wc-danger)",
+                  borderRadius: 8,
+                  padding: "8px 12px",
+                }}
+              >
+                {error}
+              </p>
+            )}
             <button
               onClick={handleUsername}
               disabled={loading}
-              className="w-full py-3 rounded-xl bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 font-medium text-sm hover:bg-zinc-700 transition-colors disabled:opacity-50"
+              className="w-full py-3 rounded-xl font-medium text-sm disabled:opacity-50 transition-colors"
+              style={{
+                background: "var(--wc-neon)",
+                color: "var(--wc-fg-inverse)",
+                boxShadow: "0 0 16px var(--wc-neon-glow)",
+              }}
             >
               {loading ? "שומר..." : "המשך ←"}
             </button>
@@ -214,8 +278,15 @@ export default function OnboardingForm({
         {step === 1 && (
           <div className="flex flex-col gap-4">
             <div>
-              <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-50">🏆 זוכה הטורניר</h2>
-              <p className="text-sm text-zinc-500 mt-1">איזו קבוצה תזכה במונדיאל 2026?</p>
+              <h2
+                className="text-xl font-bold"
+                style={{ fontFamily: "var(--font-display)", color: "var(--wc-fg1)" }}
+              >
+                🏆 זוכה הטורניר
+              </h2>
+              <p className="text-sm mt-1" style={{ color: "var(--wc-fg2)" }}>
+                איזו קבוצה תזכה במונדיאל 2026?
+              </p>
             </div>
 
             {teams.length === 0 ? (
@@ -231,7 +302,19 @@ export default function OnboardingForm({
               />
             )}
 
-            {error && <p className="text-sm text-red-500 text-center">{error}</p>}
+            {error && (
+              <p
+                className="text-sm text-center"
+                style={{
+                  background: "var(--wc-danger-bg)",
+                  color: "var(--wc-danger)",
+                  borderRadius: 8,
+                  padding: "8px 12px",
+                }}
+              >
+                {error}
+              </p>
+            )}
             <button
               onClick={() => {
                 if (!winnerId) { setError("בחר קבוצה זוכה"); return; }
@@ -240,7 +323,12 @@ export default function OnboardingForm({
                 setStep(2);
               }}
               disabled={loading || teams.length === 0}
-              className="w-full py-3 rounded-xl bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 font-medium text-sm hover:bg-zinc-700 transition-colors disabled:opacity-50"
+              className="w-full py-3 rounded-xl font-medium text-sm disabled:opacity-50 transition-colors"
+              style={{
+                background: "var(--wc-neon)",
+                color: "var(--wc-fg-inverse)",
+                boxShadow: "0 0 16px var(--wc-neon-glow)",
+              }}
             >
               המשך ←
             </button>
@@ -251,8 +339,13 @@ export default function OnboardingForm({
         {step === 2 && (
           <div className="flex flex-col gap-4">
             <div>
-              <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-50">⚽ מלך השערים</h2>
-              <p className="text-sm text-zinc-500 mt-1">
+              <h2
+                className="text-xl font-bold"
+                style={{ fontFamily: "var(--font-display)", color: "var(--wc-fg1)" }}
+              >
+                ⚽ מלך השערים
+              </h2>
+              <p className="text-sm mt-1" style={{ color: "var(--wc-fg2)" }}>
                 {hasPlayerData
                   ? "שחקני הנבחרת הזוכה שבחרת מוצגים ראשונים"
                   : "מי יהיה מלך השערים של המונדיאל?"}
@@ -272,26 +365,54 @@ export default function OnboardingForm({
                 placeholder="לדוגמה: Kylian Mbappé"
                 value={topScorerText}
                 onChange={(e) => setTopScorerText(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-transparent text-sm outline-none focus:ring-2 focus:ring-zinc-400 placeholder:text-zinc-400"
+                onFocus={onInputFocus}
+                onBlur={onInputBlur}
+                className="w-full text-sm"
+                style={{
+                  background: "var(--wc-raised)",
+                  border: "1.5px solid var(--wc-border)",
+                  borderRadius: 12,
+                  color: "var(--wc-fg1)",
+                  padding: "10px 14px",
+                  outline: "none",
+                }}
               />
             )}
 
-            <p className="text-xs text-zinc-400 text-center">
+            <p className="text-xs text-center" style={{ color: "var(--wc-fg3)" }}>
               🔥 בשוויון נקודות — מי שמלך השערים שלו הבקיע יותר, הוא מנצח!
             </p>
 
-            {error && <p className="text-sm text-red-500 text-center">{error}</p>}
+            {error && (
+              <p
+                className="text-sm text-center"
+                style={{
+                  background: "var(--wc-danger-bg)",
+                  color: "var(--wc-danger)",
+                  borderRadius: 8,
+                  padding: "8px 12px",
+                }}
+              >
+                {error}
+              </p>
+            )}
 
             <button
               onClick={handleOutright}
               disabled={loading}
-              className="w-full py-3 rounded-xl bg-green-600 text-white font-medium text-sm hover:bg-green-700 transition-colors disabled:opacity-50"
+              className="w-full py-3 rounded-xl font-medium text-sm disabled:opacity-50 transition-colors"
+              style={{
+                background: "var(--wc-neon)",
+                color: "var(--wc-fg-inverse)",
+                boxShadow: "0 0 16px var(--wc-neon-glow)",
+              }}
             >
               {loading ? "שומר..." : "✓ סיום ויציאה לדאשבורד"}
             </button>
             <button
               onClick={() => { setError(null); setStep(1); }}
-              className="text-sm text-zinc-400 underline text-center"
+              className="text-sm underline text-center"
+              style={{ color: "var(--wc-fg3)" }}
             >
               חזרה
             </button>
@@ -338,35 +459,60 @@ function TeamPicker({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between px-4 py-3 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm outline-none focus:ring-2 focus:ring-zinc-400"
+        className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm outline-none"
+        style={{
+          background: "var(--wc-raised)",
+          border: "1.5px solid var(--wc-border)",
+          borderRadius: 12,
+          color: "var(--wc-fg1)",
+        }}
       >
         <span className="flex items-center gap-2">
           {selectedTeam && <FlagImg team={selectedTeam} />}
-          <span className={value ? "text-zinc-900 dark:text-zinc-50" : "text-zinc-400"}>
+          <span style={{ color: value ? "var(--wc-fg1)" : "var(--wc-fg3)" }}>
             {value ? label : "-- בחר קבוצה --"}
           </span>
         </span>
-        <span className="text-zinc-400 text-xs">{open ? "▲" : "▼"}</span>
+        <span className="text-xs" style={{ color: "var(--wc-fg3)" }}>{open ? "▲" : "▼"}</span>
       </button>
 
       {open && (
-        <div className="absolute z-50 mt-1 w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-lg overflow-hidden">
-          <div className="p-2 border-b border-zinc-100 dark:border-zinc-800">
+        <div
+          className="absolute z-50 mt-1 w-full overflow-hidden"
+          style={{
+            background: "var(--wc-surface)",
+            border: "1px solid var(--wc-border)",
+            boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
+            borderRadius: 12,
+          }}
+        >
+          <div
+            className="p-2"
+            style={{ borderBottom: "1px solid var(--wc-border)" }}
+          >
             <input
               autoFocus
               type="text"
               placeholder="חיפוש..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg bg-zinc-50 dark:bg-zinc-800 text-sm outline-none placeholder:text-zinc-400"
+              className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+              style={{
+                background: "var(--wc-raised)",
+                border: "1px solid var(--wc-border)",
+                color: "var(--wc-fg1)",
+              }}
             />
           </div>
           <ul className="max-h-52 overflow-y-auto">
             {filtered.length === 0 && (
-              <li className="px-4 py-3 text-sm text-zinc-400 text-center">לא נמצאה קבוצה</li>
+              <li className="px-4 py-3 text-sm text-center" style={{ color: "var(--wc-fg3)" }}>
+                לא נמצאה קבוצה
+              </li>
             )}
             {filtered.map((t) => {
               const displayLabel = t.name_he ?? t.name;
+              const isSelected   = String(t.id) === value;
               return (
                 <li key={t.id}>
                   <button
@@ -376,12 +522,21 @@ function TeamPicker({
                       setOpen(false);
                       setSearch("");
                     }}
-                    className={`w-full text-right px-4 py-2.5 text-sm flex items-center gap-2 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors ${
-                      String(t.id) === value ? "bg-zinc-100 dark:bg-zinc-800 font-medium" : ""
-                    }`}
+                    className="w-full text-right px-4 py-2.5 text-sm flex items-center gap-2 transition-colors"
+                    style={
+                      isSelected
+                        ? { background: "var(--wc-neon-bg)", color: "var(--wc-neon)", fontWeight: 500 }
+                        : { color: "var(--wc-fg1)" }
+                    }
+                    onMouseEnter={(e) => {
+                      if (!isSelected) (e.currentTarget as HTMLButtonElement).style.background = "var(--wc-raised)";
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isSelected) (e.currentTarget as HTMLButtonElement).style.background = "transparent";
+                    }}
                   >
                     <FlagImg team={t} size={20} />
-                    <span className="text-zinc-900 dark:text-zinc-50">{displayLabel}</span>
+                    <span>{displayLabel}</span>
                   </button>
                 </li>
               );
@@ -429,15 +584,21 @@ function PlayerPicker({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between px-4 py-3 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm outline-none focus:ring-2 focus:ring-zinc-400"
+        className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm outline-none"
+        style={{
+          background: "var(--wc-raised)",
+          border: "1.5px solid var(--wc-border)",
+          borderRadius: 12,
+          color: "var(--wc-fg1)",
+        }}
       >
         <span className="flex items-center gap-2">
           <Image src="/avatar-player.svg" alt="" width={20} height={20} className="opacity-50" />
-          <span className={value ? "text-zinc-900 dark:text-zinc-50" : "text-zinc-400"}>
+          <span style={{ color: value ? "var(--wc-fg1)" : "var(--wc-fg3)" }}>
             {value ? value.name : "-- בחר שחקן --"}
           </span>
         </span>
-        <span className="text-zinc-400 text-xs">{open ? "▲" : "▼"}</span>
+        <span className="text-xs" style={{ color: "var(--wc-fg3)" }}>{open ? "▲" : "▼"}</span>
       </button>
 
       {/* Toggle: winner team ↔ all players */}
@@ -445,7 +606,8 @@ function PlayerPicker({
         <button
           type="button"
           onClick={() => { setShowAll((s) => !s); setSearch(""); }}
-          className="text-xs text-zinc-400 underline text-center"
+          className="text-xs underline text-center"
+          style={{ color: "var(--wc-fg3)" }}
         >
           {showAll
             ? `הצג שחקני הנבחרת הזוכה בלבד (${winnerPlayers.length})`
@@ -455,19 +617,42 @@ function PlayerPicker({
 
       {/* Dropdown */}
       {open && (
-        <div className="absolute z-50 top-12 w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-lg overflow-hidden">
-          <div className="p-2 border-b border-zinc-100 dark:border-zinc-800">
+        <div
+          className="absolute z-50 top-12 w-full overflow-hidden"
+          style={{
+            background: "var(--wc-surface)",
+            border: "1px solid var(--wc-border)",
+            boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
+            borderRadius: 12,
+          }}
+        >
+          <div
+            className="p-2"
+            style={{ borderBottom: "1px solid var(--wc-border)" }}
+          >
             <input
               autoFocus
               type="text"
               placeholder="חיפוש שם שחקן..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg bg-zinc-50 dark:bg-zinc-800 text-sm outline-none placeholder:text-zinc-400"
+              className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+              style={{
+                background: "var(--wc-raised)",
+                border: "1px solid var(--wc-border)",
+                color: "var(--wc-fg1)",
+              }}
             />
           </div>
 
-          <div className="px-4 py-1.5 text-xs text-zinc-400 bg-zinc-50 dark:bg-zinc-800/50 border-b border-zinc-100 dark:border-zinc-800">
+          <div
+            className="px-4 py-1.5 text-xs"
+            style={{
+              color: "var(--wc-fg3)",
+              background: "var(--wc-raised)",
+              borderBottom: "1px solid var(--wc-border)",
+            }}
+          >
             {showAll || winnerPlayers.length === 0
               ? `כל השחקנים (${filtered.length})`
               : `שחקני הנבחרת הזוכה (${filtered.length})`}
@@ -475,27 +660,43 @@ function PlayerPicker({
 
           <ul className="max-h-56 overflow-y-auto">
             {filtered.length === 0 && (
-              <li className="px-4 py-3 text-sm text-zinc-400 text-center">לא נמצא שחקן</li>
-            )}
-            {filtered.map((p) => (
-              <li key={p.id}>
-                <button
-                  type="button"
-                  onClick={() => { onChange(p); setOpen(false); setSearch(""); }}
-                  className={`w-full text-right px-4 py-2.5 text-sm flex items-center justify-between hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors ${
-                    value?.id === p.id ? "bg-zinc-100 dark:bg-zinc-800 font-medium" : ""
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <Image src="/avatar-player.svg" alt="" width={18} height={18} className="opacity-40" />
-                    <span className="text-zinc-900 dark:text-zinc-50">{p.name}</span>
-                  </div>
-                  {p.position && (
-                    <span className="text-xs text-zinc-400 mr-1">{translatePosition(p.position)}</span>
-                  )}
-                </button>
+              <li className="px-4 py-3 text-sm text-center" style={{ color: "var(--wc-fg3)" }}>
+                לא נמצא שחקן
               </li>
-            ))}
+            )}
+            {filtered.map((p) => {
+              const isSelected = value?.id === p.id;
+              return (
+                <li key={p.id}>
+                  <button
+                    type="button"
+                    onClick={() => { onChange(p); setOpen(false); setSearch(""); }}
+                    className="w-full text-right px-4 py-2.5 text-sm flex items-center justify-between transition-colors"
+                    style={
+                      isSelected
+                        ? { background: "var(--wc-neon-bg)", color: "var(--wc-neon)", fontWeight: 500 }
+                        : { color: "var(--wc-fg1)" }
+                    }
+                    onMouseEnter={(e) => {
+                      if (!isSelected) (e.currentTarget as HTMLButtonElement).style.background = "var(--wc-raised)";
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isSelected) (e.currentTarget as HTMLButtonElement).style.background = "transparent";
+                    }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Image src="/avatar-player.svg" alt="" width={18} height={18} className="opacity-40" />
+                      <span>{p.name}</span>
+                    </div>
+                    {p.position && (
+                      <span className="text-xs mr-1" style={{ color: "var(--wc-fg3)" }}>
+                        {translatePosition(p.position)}
+                      </span>
+                    )}
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}
