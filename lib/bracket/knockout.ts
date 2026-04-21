@@ -53,15 +53,16 @@ export function resolveKnockoutBracket({
   });
 
   function resolveTeamId(match: TournamentMatch, side: "home" | "away"): string | null {
-    const explicitTeamId = side === "home" ? match.home_team_id : match.away_team_id;
-    if (explicitTeamId) return explicitTeamId;
+    const placeholder = side === "home" ? match.home_placeholder : match.away_placeholder;
 
     const seededAssignment = getRoundOf32AssignedTeamId(roundOf32Assignments, match.match_number, side);
     if (seededAssignment) return seededAssignment;
 
-    const placeholder = side === "home" ? match.home_placeholder : match.away_placeholder;
     const reference = parseReferencePlaceholder(placeholder);
-    if (!reference) return null;
+    if (!reference) {
+      const explicitTeamId = side === "home" ? match.home_team_id : match.away_team_id;
+      return explicitTeamId;
+    }
 
     const upstream = matchesByNumber.get(reference.matchNumber);
     if (!upstream) return null;

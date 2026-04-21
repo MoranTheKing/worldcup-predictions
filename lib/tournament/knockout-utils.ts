@@ -182,16 +182,16 @@ export function buildRoundOf32Assignments({
     if (getMatchStageKind(match.stage) !== "round_of_32") continue;
 
     for (const side of ["home", "away"] as const) {
-      const teamId = side === "home" ? match.home_team_id : match.away_team_id;
-      if (teamId) {
+      const placeholder = side === "home" ? match.home_placeholder : match.away_placeholder;
+      const seedOptions = parseSeedPlaceholder(placeholder);
+      if (!seedOptions) {
+        const teamId = side === "home" ? match.home_team_id : match.away_team_id;
+        if (!teamId) continue;
+
         assignments.set(makeMatchSideKey(match.match_number, side), teamId);
         usedTeamIds.add(teamId);
         continue;
       }
-
-      const placeholder = side === "home" ? match.home_placeholder : match.away_placeholder;
-      const seedOptions = parseSeedPlaceholder(placeholder);
-      if (!seedOptions) continue;
 
       const candidates = seedOptions
         .map((seed) => {

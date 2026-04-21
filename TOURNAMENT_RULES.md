@@ -94,6 +94,10 @@ Database trigger path:
 - `syncTournamentState()` runs after dev match saves, bulk saves, clear, and randomize flows
 - Once the Best 3rd Place table reaches a terminal locked state, `syncTournamentState()` computes Annex C assignments and persists them back into `matches`
 
+Official Round of 32 winners that receive Annex C 3rd-place crossings in the live bracket seed are:
+
+- `1A`, `1D`, `1E`, `1G`, `1I`, `1L`, `1B`, `1K`
+
 JSON status:
 
 - The model expects `C(12,8) = 495` subsets
@@ -110,15 +114,21 @@ Knockout progression is driven by:
 
 Resolution order for a knockout side:
 
-1. Persisted `home_team_id` / `away_team_id` from the DB
-2. Seeded Round of 32 assignment from `buildRoundOf32Assignments()`
-3. Placeholder references like `Winner Match 73` or `Loser Match 101`
+1. Seeded Round of 32 assignment from `buildRoundOf32Assignments()`
+2. Placeholder references like `Winner Match 74` or `Loser Match 101`
+3. Persisted `home_team_id` / `away_team_id` only when the side has no resolvable placeholder
 
 Winner and loser propagation:
 
 - `parseReferencePlaceholder()` parses `Winner Match N` and `Loser Match N`
 - `resolveParticipantId()` recursively resolves upstream participants
 - `determineKnockoutWinnerId()` and `determineKnockoutLoserId()` advance teams into later rounds
+
+Official non-sequential crossings:
+
+- The 2026 FIFA bracket is not a simple `Winner 73 vs Winner 74`, `Winner 75 vs Winner 76` ladder
+- Round of 16, quarter-final, semi-final, third-place, and final crossings must be read from the explicit placeholder graph stored in `matches.home_placeholder` and `matches.away_placeholder`
+- The app must always follow those placeholders dynamically instead of assuming downstream pairing by match-number adjacency
 
 Bracket UI:
 
@@ -150,12 +160,16 @@ Relevant code:
 - `lib/tournament/matches.ts`
 - `lib/tournament/knockout-utils.ts`
 
-## Current Seed Caveat
+## Official Knockout Seed Source
 
-The current Round of 32 seed data in `matches` and `matches_data.json.txt` still mixes official Annex C winner-group slots with older placeholder-based slots.
+The official knockout placeholder graph now lives in:
 
-What this means today:
+- `matches_data.json`
+- `matches_data.json.txt`
+- `matches` rows `73-104`
 
-- Official Annex C-mapped winner placeholders are now injected into the DB correctly
-- Remaining non-official 3rd-place placeholder slots still depend on `buildRoundOf32Assignments()` fallback logic
-- If the product later wants a fully official World Cup 2026 Round of 32 layout, the placeholder seed data will need to be aligned with the Annex C winner-group keys in addition to the current injection fix
+These sources must stay identical.
+
+Important rule:
+
+- future bracket seeding must preserve the official non-sequential FIFA crossings exactly as encoded in the placeholder graph
