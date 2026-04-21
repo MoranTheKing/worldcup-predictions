@@ -623,7 +623,30 @@ export function buildTournamentStandings(
       }),
   ) as Record<string, TeamStanding[]>;
 
+  // Terminal state: all 12 groups are done when every group is finalized
+  // (no scheduled/live matches) OR every team in every group has played === 3
+  // (all match scores are known even if some are still "live").
+  // In either case the best-3rd-place ranking is immutable — skip scenario
+  // analysis and assign status directly from rank.
+  const allGroupsFinalized =
+    groupContexts.size === 12 &&
+    [...groupContexts.values()].every((ctx) => ctx.isFinalized);
+
+  const allGroupsAllTeamsPlayed3 =
+    Object.values(initialGroupStandings).length === 12 &&
+    Object.values(initialGroupStandings).every((standings) =>
+      standings.every((e) => e.played === 3),
+    );
+
+  const isTerminalGroupStage = allGroupsFinalized || allGroupsAllTeamsPlayed3;
+
   const bestThirdStandings = buildBestThirdPlaceStandings(initialGroupStandings).map((entry) => {
+    if (isTerminalGroupStage) {
+      // All group matches decided: top-8 are in, bottom-4 are out. No exceptions.
+      const status: StandingStatus = entry.rank <= 8 ? "qualified" : "eliminated";
+      return { ...entry, lockedRank: null, isLocked: true, status };
+    }
+
     const status = determineBestThirdStatus(entry, groupSummaries);
     return {
       ...entry,
