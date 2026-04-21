@@ -121,22 +121,40 @@ const teams = [
 ];
 
 async function main() {
-  console.log("Clearing existing teams…");
-  const { error: delError } = await supabase
-    .from("teams")
-    .delete()
-    .not("id", "is", null);
+  // Try update-in-place first (preserves FKs from outright_bets/players)
+  console.log(`Upserting ${teams.length} teams (update if exists, insert if new)…`);
 
-  if (delError) {
-    console.error("Delete failed:", delError.message);
-    process.exit(1);
+  // First check if any teams exist
+  const { data: existing } = await supabase.from("teams").select("id").limit(1);
+  const hasExisting = (existing?.length ?? 0) > 0;
+
+  let data: typeof teams | null = null;
+  let error: { message: string } | null = null;
+
+  if (hasExisting) {
+    // Update each team by name match
+    const results = await Promise.all(
+      teams.map((t) =>
+        supabase
+          .from("teams")
+          .update({ name_he: t.name_he, flag: t.flag, group_letter: t.group_letter, logo_url: t.logo_url })
+          .eq("name", t.name)
+          .select("name_he, flag, group_letter, logo_url")
+      )
+    );
+    const allData = results.flatMap((r) => r.data ?? []);
+    const firstErr = results.find((r) => r.error)?.error ?? null;
+    data = allData as typeof teams;
+    error = firstErr;
+  } else {
+    // Fresh insert
+    const res = await supabase
+      .from("teams")
+      .insert(teams)
+      .select("name_he, flag, group_letter, logo_url");
+    data = res.data as typeof teams;
+    error = res.error;
   }
-
-  console.log(`Seeding ${teams.length} teams with flagcdn.com logos…`);
-  const { data, error } = await supabase
-    .from("teams")
-    .insert(teams)
-    .select("name_he, flag, group_letter, logo_url");
 
   if (error) {
     console.error("Seed failed:", error.message);
