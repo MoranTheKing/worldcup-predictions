@@ -1,4 +1,5 @@
 // /dashboard/leagues — League management (placeholder)
+// Pure server component — no event handlers
 
 export default function LeaguesPage() {
   return (
@@ -15,28 +16,33 @@ export default function LeaguesPage() {
         </p>
       </div>
 
-      {/* Action cards */}
+      {/* Action cards — no JS hover, pure CSS via style tag */}
+      <style>{`
+        .league-card {
+          background: var(--wc-surface);
+          border: 1px solid var(--wc-border);
+          border-radius: 16px;
+          padding: 20px;
+          display: flex;
+          align-items: flex-start;
+          gap: 16px;
+          text-align: right;
+          transition: border-color 150ms, background 150ms;
+          cursor: pointer;
+          width: 100%;
+        }
+        .league-card:hover {
+          background: var(--wc-raised);
+          border-color: var(--wc-neon);
+        }
+      `}</style>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
         {[
           { icon: "➕", title: "יצירת ליגה חדשה", sub: "קבל קוד הצטרפות ייחודי לשתף עם חברים" },
           { icon: "🔑", title: "הצטרפות לליגה",   sub: "הזן קוד הצטרפות שקיבלת מחבר" },
         ].map(({ icon, title, sub }) => (
-          <button
-            key={title}
-            className="rounded-2xl px-5 py-5 flex items-start gap-4 text-right transition-all duration-150"
-            style={{
-              background: "var(--wc-surface)",
-              border: "1px solid var(--wc-border)",
-            }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLElement).style.borderColor = "var(--wc-neon)";
-              (e.currentTarget as HTMLElement).style.background  = "var(--wc-raised)";
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLElement).style.borderColor = "var(--wc-border)";
-              (e.currentTarget as HTMLElement).style.background  = "var(--wc-surface)";
-            }}
-          >
+          <button key={title} className="league-card">
             <span className="text-3xl mt-0.5">{icon}</span>
             <div>
               <p className="text-sm font-bold" style={{ color: "var(--wc-fg1)" }}>{title}</p>
@@ -49,10 +55,7 @@ export default function LeaguesPage() {
       {/* Empty state */}
       <div
         className="rounded-2xl p-10 flex flex-col items-center gap-3 text-center"
-        style={{
-          background: "var(--wc-surface)",
-          border: "1.5px dashed var(--wc-border)",
-        }}
+        style={{ background: "var(--wc-surface)", border: "1.5px dashed var(--wc-border)" }}
       >
         <span className="text-5xl">🏅</span>
         <p className="text-base font-semibold" style={{ color: "var(--wc-fg2)" }}>
