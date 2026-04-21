@@ -124,8 +124,11 @@ export async function syncTournamentState(supabase: SupabaseClient) {
       qualifiedThirdGroups,
       tournament.groupStandings,
     );
-    for (const [matchNumber, teamId] of annexCAssignments) {
-      roundOf32Assignments.set(makeMatchSideKey(matchNumber, "away"), teamId);
+    for (const assignment of annexCAssignments) {
+      roundOf32Assignments.set(
+        makeMatchSideKey(assignment.matchNumber, assignment.side),
+        assignment.teamId,
+      );
     }
   }
 
