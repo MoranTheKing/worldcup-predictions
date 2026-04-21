@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  body { margin: 0; background: #060D1A; font-family: 'Heebo', sans-serif; padding: 20px; }
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .swatch { border-radius: 10px; overflow: hidden; }
+  .color { height: 72px; position: relative; display: flex; align-items: flex-end; padding: 8px; }
+  .glow-label { font-size: 10px; color: rgba(255,255,255,0.5); }
+  .info { padding: 8px; background: #0D1B2E; border: 1px solid #1E2F4A; border-top: none; border-radius: 0 0 10px 10px; }
+  .name { font-size: 11px; font-weight: 600; color: #EEF2FF; }
+  .hex { font-size: 10px; color: #8899BB; margin-top: 2px; font-family: monospace; }
+</style></head><body>
+<div class="grid">
+  <div class="swatch">
+    <div class="color" style="background:#00E65A; box-shadow: 0 0 20px rgba(0,230,90,0.4); border-radius:10px 10px 0 0;">
+      <span class="glow-label">glow</span>
+    </div>
+    <div class="info"><div class="name">neon green</div><div class="hex">#00E65A</div></div>
+  </div>
+  <div class="swatch">
+    <div class="color" style="background:#7C3AED; box-shadow: 0 0 20px rgba(124,58,237,0.4); border-radius:10px 10px 0 0;">
+      <span class="glow-label">glow</span>
+    </div>
+    <div class="info"><div class="name">purple (Joker)</div><div class="hex">#7C3AED</div></div>
+  </div>
+  <div class="swatch">
+    <div class="color" style="background:#F5C518; box-shadow: 0 0 20px rgba(245,197,24,0.4); border-radius:10px 10px 0 0;">
+      <span class="glow-label">glow</span>
+    </div>
+    <div class="info"><div class="name">gold (Trophy)</div><div class="hex">#F5C518</div></div>
+  </div>
+  <div class="swatch">
+    <div class="color" style="background:#FF4D1C; box-shadow: 0 0 20px rgba(255,77,28,0.4); border-radius:10px 10px 0 0;">
+      <span class="glow-label">glow</span>
+    </div>
+    <div class="info"><div class="name">fire (Streak 🔥)</div><div class="hex">#FF4D1C</div></div>
+  </div>
+  <div class="swatch">
+    <div class="color" style="background:rgba(0,230,90,0.08); border:1px solid rgba(0,230,90,0.2); border-radius:10px 10px 0 0;"></div>
+    <div class="info"><div class="name">neon bg tint</div><div class="hex">rgba(0,230,90,.08)</div></div>
+  </div>
+  <div class="swatch">
+    <div class="color" style="background:rgba(124,58,237,0.10); border:1px solid rgba(124,58,237,0.25); border-radius:10px 10px 0 0;"></div>
+    <div class="info"><div class="name">purple bg tint</div><div class="hex">rgba(124,58,237,.10)</div></div>
+  </div>
+  <div class="swatch">
+    <div class="color" style="background:rgba(245,197,24,0.08); border:1px solid rgba(245,197,24,0.25); border-radius:10px 10px 0 0;"></div>
+    <div class="info"><div class="name">gold bg tint</div><div class="hex">rgba(245,197,24,.08)</div></div>
+  </div>
+  <div class="swatch">
+    <div class="color" style="background:#F59E0B; border-radius:10px 10px 0 0;"></div>
+    <div class="info"><div class="name">amber (3rd place)</div><div class="hex">#F59E0B</div></div>
+  </div>
+</div>
+</body></html>

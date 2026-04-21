@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מונדיאל 2026 — UI Kit</title>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@900&family=Heebo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  @font-face {
+    font-family: 'FWC2026';
+    src: url('../fonts/FWC2026-UltraCondensedMedium.ttf') format('truetype');
+    font-weight: 500; font-display: swap;
+  }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:       #060D1A;
+  --surface:  #0D1B2E;
+  --raised:   #142338;
+  --border:   #1E2F4A;
+  --border2:  #2A4060;
+  --fg1:      #EEF2FF;
+  --fg2:      #8899BB;
+  --fg3:      #4A6080;
+  --green:    #00E65A;
+  --green-dim:#00B847;
+  --green-bg: rgba(0,230,90,0.08);
+  --green-glow: rgba(0,230,90,0.15);
+  --purple:   #7C3AED;
+  --purple-bg:rgba(124,58,237,0.10);
+  --purple-glow:rgba(124,58,237,0.25);
+  --gold:     #F5C518;
+  --gold-bg:  rgba(245,197,24,0.08);
+  --fire:     #FF4D1C;
+  --fire-bg:  rgba(255,77,28,0.10);
+  --red:      #C8102E;
+  --red-wc:   #009A3D;
+  --amber:    #F59E0B;
+  --amber-bg: rgba(245,158,11,0.10);
+  --glass:    rgba(6,13,26,0.85);
+  --glass-border: rgba(255,255,255,0.06);
+}
+html, body { height: 100%; background: var(--bg); font-family: 'Heebo', sans-serif; direction: rtl; color: var(--fg1); }
+#root { height: 100%; }
+
+/* Phone frame */
+.phone-container { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: var(--bg); }
+.phone { width: 390px; height: 844px; background: var(--bg); border-radius: 44px; overflow: hidden; position: relative; border: 1.5px solid var(--border2); box-shadow: 0 0 60px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.04) inset; display: flex; flex-direction: column; }
+.phone-notch { height: 50px; background: var(--bg); display: flex; align-items: center; justify-content: space-between; padding: 0 24px; flex-shrink: 0; }
+.phone-time { font-size: 15px; font-weight: 700; color: var(--fg1); }
+.phone-status { display: flex; gap: 6px; align-items: center; }
+.phone-screen { flex: 1; overflow: hidden; display: flex; flex-direction: column; position: relative; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+// ─── Design tokens ────────────────────────────────────────────────────────────
+const T = {
+  bg: '#060D1A', surface: '#0D1B2E', raised: '#142338',
+  border: '#1E2F4A', border2: '#2A4060',
+  fg1: '#EEF2FF', fg2: '#8899BB', fg3: '#4A6080',
+  green: '#00E65A', greenDim: '#00B847',
+  greenBg: 'rgba(0,230,90,0.08)', greenGlow: 'rgba(0,230,90,0.15)',
+  purple: '#7C3AED', purpleBg: 'rgba(124,58,237,0.10)',
+  purpleGlow: 'rgba(124,58,237,0.25)',
+  gold: '#F5C518', goldBg: 'rgba(245,197,24,0.08)',
+  fire: '#FF4D1C', fireBg: 'rgba(255,77,28,0.10)',
+  red: '#C8102E', amber: '#F59E0B',
+  amberBg: 'rgba(245,158,11,0.10)',
+  glass: 'rgba(6,13,26,0.85)',
+};
+
+// ─── Sample data ──────────────────────────────────────────────────────────────
+const MATCHES = [
+  { id: 1, home: 'ארה״ב', away: 'מקסיקו', group: 'A', time: '21:00', homeScore: null, awayScore: null },
+  { id: 2, home: 'ברזיל', away: 'צרפת', group: 'B', time: '19:00', homeScore: 2, awayScore: 1, joker: true },
+  { id: 3, home: 'גרמניה', away: 'יפן', group: 'C', time: '17:00', homeScore: 1, awayScore: null },
+  { id: 4, home: 'ספרד', away: 'מרוקו', group: 'D', time: '23:00', homeScore: null, awayScore: null },
+  { id: 5, home: 'אנגליה', away: 'שוויץ', group: 'E', time: '18:00', homeScore: 3, awayScore: 0 },
+  { id: 6, home: 'ארגנטינה', away: 'פורטוגל', group: 'F', time: '22:00', homeScore: null, awayScore: null },
+];
+
+const GROUPS = {
+  A: [
+    { rank:1, name:'ברזיל',     pts:7, played:3, gd:4 },
+    { rank:2, name:'פורטוגל',   pts:6, played:3, gd:2 },
+    { rank:3, name:'אנגליה',    pts:4, played:3, gd:0 },
+    { rank:4, name:'אורוגוואי', pts:0, played:3, gd:-6 },
+  ],
+  B: [
+    { rank:1, name:'צרפת',      pts:9, played:3, gd:5 },
+    { rank:2, name:'ספרד',      pts:6, played:3, gd:3 },
+    { rank:3, name:'גרמניה',    pts:3, played:3, gd:-2 },
+    { rank:4, name:'יפן',       pts:0, played:3, gd:-6 },
+  ],
+  C: [
+    { rank:1, name:'ארגנטינה',  pts:7, played:3, gd:5 },
+    { rank:2, name:'מרוקו',     pts:4, played:3, gd:0 },
+    { rank:3, name:'ארה״ב',     pts:4, played:3, gd:-1 },
+    { rank:4, name:'מקסיקו',    pts:1, played:3, gd:-4 },
+  ],
+};
+
+const FLAG_COLORS = {
+  'ארה״ב': 'linear-gradient(#B22234 33%,#fff 33%,#fff 66%,#3C3B6E 66%)',
+  'מקסיקו': 'linear-gradient(#006847 33%,#fff 33%,#fff 66%,#CE1126 66%)',
+  'ברזיל': 'linear-gradient(#009C3B,#FFDF00)',
+  'צרפת': 'linear-gradient(to right,#002395 33%,#fff 33%,#fff 66%,#ED2939 66%)',
+  'גרמניה': 'linear-gradient(#000 33%,#D00 33%,#D00 66%,#FFD700 66%)',
+  'יפן': '#BC002D',
+  'ספרד': 'linear-gradient(#c60b1e 28%,#ffc400 28%,#ffc400 72%,#c60b1e 72%)',
+  'מרוקו': '#006233',
+  'אנגליה': '#CF101A',
+  'שוויץ': '#D52B1E',
+  'ארגנטינה': 'linear-gradient(#74ACDF 33%,#fff 33%,#fff 66%,#74ACDF 66%)',
+  'פורטוגל': 'linear-gradient(to right,#006600 33%,#FF0000 33%)',
+  'אורוגוואי': '#0038A8',
+};
+
+// ─── Micro components ─────────────────────────────────────────────────────────
+
+function Flag({ team, size = [26, 17] }) {
+  const [w, h] = size;
+  return (
+    <div style={{
+      width: w, height: h, borderRadius: 3, flexShrink: 0,
+      background: FLAG_COLORS[team] || '#1E2F4A',
+      border: '1px solid rgba(255,255,255,0.1)',
+    }} />
+  );
+}
+
+function Avatar({ letter, size = 36 }) {
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: '50%',
+      background: 'linear-gradient(135deg, #00E65A, #009A3D)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontSize: size * 0.38, fontWeight: 700, color: '#060D1A', flexShrink: 0,
+    }}>{letter}</div>
+  );
+}
+
+function Pill({ children, color = T.green, bg = T.greenBg, border = 'rgba(0,230,90,0.25)' }) {
+  return (
+    <span style={{
+      background: bg, color, border: `1px solid ${border}`,
+      borderRadius: 9999, padding: '2px 10px',
+      fontSize: 11, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4,
+    }}>{children}</span>
+  );
+}
+
+// ─── SCREEN: Login ────────────────────────────────────────────────────────────
+
+function LoginScreen({ onNav }) {
+  const [email, setEmail] = useState('');
+  const [pass, setPass] = useState('');
+  const inputStyle = {
+    fontFamily: 'Heebo, sans-serif', fontSize: 14,
+    background: T.raised, border: `1.5px solid ${T.border}`,
+    borderRadius: 12, color: T.fg1, padding: '12px 14px', outline: 'none', width: '100%',
+  };
+  return (
+    <div style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding: '0 28px', background: T.bg }}>
+      <div style={{ textAlign:'center', marginBottom: 32 }}>
+        <div style={{ fontSize: 52, marginBottom: 8 }}>⚽</div>
+        <div style={{ fontFamily:"'Rubik', sans-serif", fontWeight:900, fontSize: 28, color: T.fg1, letterSpacing: -0.5 }}>מונדיאל 2026</div>
+        <div style={{ fontSize: 13, color: T.fg2, marginTop: 4 }}>משחק תחזיות</div>
+      </div>
+
+      <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 20, padding: 24, width: '100%', display:'flex', flexDirection:'column', gap: 12 }}>
+        {/* Google button */}
+        <button onClick={() => onNav('dashboard')} style={{
+          fontFamily:'Heebo', fontSize: 14, fontWeight: 600,
+          background: T.raised, border: `1px solid ${T.border}`,
+          borderRadius: 12, color: T.fg1, padding: '12px 16px',
+          display:'flex', alignItems:'center', justifyContent:'center', gap: 10, cursor:'pointer', width:'100%',
+        }}>
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M17.64 9.205c0-.639-.057-1.252-.164-1.841H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615Z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18Z" fill="#34A853"/><path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332Z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58Z" fill="#EA4335"/></svg>
+          המשך עם Google
+        </button>
+
+        <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+          <div style={{ flex:1, height:1, background: T.border }} />
+          <span style={{ fontSize:12, color: T.fg3 }}>או</span>
+          <div style={{ flex:1, height:1, background: T.border }} />
+        </div>
+
+        <input style={inputStyle} type="email" placeholder="אימייל"
+          value={email} onChange={e=>setEmail(e.target.value)}
+          onFocus={e=>{e.target.style.borderColor=T.green;e.target.style.boxShadow=`0 0 0 3px ${T.greenGlow}`;}}
+          onBlur={e=>{e.target.style.borderColor=T.border;e.target.style.boxShadow='none';}}
+        />
+        <input style={inputStyle} type="password" placeholder="סיסמה"
+          value={pass} onChange={e=>setPass(e.target.value)}
+          onFocus={e=>{e.target.style.borderColor=T.green;e.target.style.boxShadow=`0 0 0 3px ${T.greenGlow}`;}}
+          onBlur={e=>{e.target.style.borderColor=T.border;e.target.style.boxShadow='none';}}
+        />
+
+        <button onClick={() => onNav('dashboard')} style={{
+          fontFamily:'Heebo', fontSize: 14, fontWeight: 700,
+          background: T.green, color: T.bg, borderRadius: 12,
+          padding: '13px', border:'none', cursor:'pointer', width:'100%',
+          transition: 'all 150ms',
+        }} onMouseEnter={e=>e.target.style.opacity='.85'} onMouseLeave={e=>e.target.style.opacity='1'}>
+          התחברות
+        </button>
+      </div>
+
+      <p style={{ fontSize: 13, color: T.fg3, marginTop: 20, textAlign:'center' }}>
+        אין לך חשבון?{' '}
+        <span style={{ color: T.green, fontWeight: 600, cursor:'pointer', textDecoration:'underline' }}
+          onClick={() => onNav('signup')}>
+          הרשמה
+        </span>
+      </p>
+    </div>
+  );
+}
+
+// ─── SCREEN: Signup ───────────────────────────────────────────────────────────
+
+function SignupScreen({ onNav }) {
+  const inputStyle = {
+    fontFamily: 'Heebo, sans-serif', fontSize: 14,
+    background: T.raised, border: `1.5px solid ${T.border}`,
+    borderRadius: 12, color: T.fg1, padding: '12px 14px', outline: 'none', width: '100%',
+  };
+  return (
+    <div style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding: '0 28px', background: T.bg }}>
+      <div style={{ textAlign:'center', marginBottom: 32 }}>
+        <div style={{ fontSize: 52, marginBottom: 8 }}>⚽</div>
+        <div style={{ fontFamily:"'Rubik', sans-serif", fontWeight:900, fontSize: 28, color: T.fg1 }}>הרשמה</div>
+        <div style={{ fontSize: 13, color: T.fg2, marginTop: 4 }}>מונדיאל 2026 — תחזיות</div>
+      </div>
+
+      <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 20, padding: 24, width:'100%', display:'flex', flexDirection:'column', gap: 12 }}>
+        <button style={{ fontFamily:'Heebo', fontSize:14, fontWeight:600, background:T.raised, border:`1px solid ${T.border}`, borderRadius:12, color:T.fg1, padding:'12px 16px', display:'flex', alignItems:'center', justifyContent:'center', gap:10, cursor:'pointer', width:'100%' }}>
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M17.64 9.205c0-.639-.057-1.252-.164-1.841H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615Z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18Z" fill="#34A853"/><path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332Z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58Z" fill="#EA4335"/></svg>
+          המשך עם Google
+        </button>
+        <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+          <div style={{ flex:1, height:1, background:T.border }} />
+          <span style={{ fontSize:12, color:T.fg3 }}>או</span>
+          <div style={{ flex:1, height:1, background:T.border }} />
+        </div>
+        <input style={inputStyle} type="email" placeholder="אימייל" />
+        <input style={inputStyle} type="password" placeholder="סיסמה (לפחות 6 תווים)" />
+        <button onClick={() => onNav('dashboard')} style={{ fontFamily:'Heebo', fontSize:14, fontWeight:700, background:T.green, color:T.bg, borderRadius:12, padding:'13px', border:'none', cursor:'pointer', width:'100%' }}>
+          יצירת חשבון
+        </button>
+      </div>
+      <p style={{ fontSize:13, color:T.fg3, marginTop:20, textAlign:'center' }}>
+        יש לך חשבון?{' '}
+        <span style={{ color:T.green, fontWeight:600, cursor:'pointer', textDecoration:'underline' }} onClick={() => onNav('login')}>התחברות</span>
+      </p>
+    </div>
+  );
+}
+
+// ─── SCREEN: Dashboard (Matches) ──────────────────────────────────────────────
+
+function MatchCard({ match, onToggleJoker }) {
+  const [homeScore, setHomeScore] = useState(match.homeScore);
+  const [awayScore, setAwayScore] = useState(match.awayScore);
+  const [joker, setJoker] = useState(match.joker || false);
+  const filled = homeScore !== null && awayScore !== null;
+
+  const scoreInputStyle = (val) => ({
+    fontFamily: 'Secular One, sans-serif', fontSize: 22, textAlign:'center',
+    background: T.raised, borderRadius: 10, color: filled ? T.green : T.fg1,
+    border: `1.5px solid ${joker ? T.purple : filled ? T.green : T.border}`,
+    padding: '8px 4px', width: 52, outline:'none',
+    boxShadow: joker ? `0 0 8px ${T.purpleGlow}` : filled ? `0 0 8px ${T.greenGlow}` : 'none',
+  });
+
+  return (
+    <div style={{
+      background: T.surface,
+      border: `1px solid ${joker ? T.purple : filled ? 'rgba(0,230,90,0.3)' : T.border}`,
+      borderRadius: 16, padding: '14px 16px',
+      boxShadow: joker ? `0 0 16px ${T.purpleGlow}` : filled ? `0 0 8px ${T.greenGlow}` : 'none',
+      transition: 'all 200ms',
+    }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom: 10 }}>
+        <span style={{ fontSize:11, color: T.fg3, fontWeight:600 }}>בית {match.group}</span>
+        <div style={{ display:'flex', alignItems:'center', gap: 6 }}>
+          <span style={{ fontSize:11, color: T.fg3 }}>{match.time}</span>
+          {joker && <Pill color={T.purple} bg={T.purpleBg} border="rgba(124,58,237,0.3)">⚡ ג׳וקר</Pill>}
+        </div>
+      </div>
+
+      <div style={{ display:'flex', alignItems:'center', gap: 8, marginBottom: 10 }}>
+        <Flag team={match.home} />
+        <span style={{ fontSize:13, fontWeight:700, color: T.fg1, flex:1 }}>{match.home}</span>
+        <input style={scoreInputStyle(homeScore !== null)} type="number" value={homeScore ?? ''} min={0} max={20}
+          placeholder="?" onChange={e=>setHomeScore(e.target.value===''?null:Number(e.target.value))} />
+        <span style={{ fontSize:16, color: T.fg3, fontWeight:700 }}>—</span>
+        <input style={scoreInputStyle(awayScore !== null)} type="number" value={awayScore ?? ''} min={0} max={20}
+          placeholder="?" onChange={e=>setAwayScore(e.target.value===''?null:Number(e.target.value))} />
+        <span style={{ fontSize:13, fontWeight:700, color: T.fg1, flex:1, textAlign:'left' }}>{match.away}</span>
+        <Flag team={match.away} />
+      </div>
+
+      <button onClick={() => setJoker(j => !j)} style={{
+        fontFamily:'Heebo', fontSize:11, fontWeight:700, width:'100%',
+        padding:'7px', borderRadius:8, border:'none', cursor:'pointer',
+        background: joker ? T.purpleBg : T.raised,
+        color: joker ? T.purple : T.fg3,
+        border: `1px solid ${joker ? 'rgba(124,58,237,0.3)' : T.border}`,
+        transition:'all 150ms',
+      }}>
+        {joker ? '⚡ ג׳וקר פעיל — ×3' : '+ הפעל ג׳וקר'}
+      </button>
+    </div>
+  );
+}
+
+function MatchesTab() {
+  return (
+    <div style={{ flex:1, overflowY:'auto', padding:'16px', paddingBottom: 80 }}>
+      {/* Header */}
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ fontFamily:"'Rubik', sans-serif", fontWeight:900, fontSize: 24, color: T.fg1 }}>משחקים</div>
+        <div style={{ fontSize: 12, color: T.fg2, marginTop: 2 }}>לוח המשחקים של מונדיאל 2026</div>
+      </div>
+
+      {/* Scoring info */}
+      <div style={{ background: T.goldBg, border:`1px solid rgba(245,197,24,0.2)`, borderRadius: 14, padding: '12px 14px', marginBottom: 16 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, color: T.gold, marginBottom: 6 }}>שיטת הניקוד</div>
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:4, fontSize:11, color:'rgba(245,197,24,0.8)' }}>
+          <span>✓ תוצאה נכונה: 2–10 נקודות</span>
+          <span>✓ תוצאה מדויקת: 5–20 נקודות</span>
+          <span>✓ ג׳וקר: ×3 על תוצאה מדויקת</span>
+          <span>✓ מכפיל הפתעה: עד ×2</span>
+        </div>
+      </div>
+
+      {/* Match cards */}
+      <div style={{ display:'flex', flexDirection:'column', gap: 10 }}>
+        {MATCHES.map(m => <MatchCard key={m.id} match={m} />)}
+      </div>
+    </div>
+  );
+}
+
+// ─── SCREEN: Tournament ───────────────────────────────────────────────────────
+
+function GroupTable({ letter, teams }) {
+  const rankStyle = (rank) => {
+    if (rank === 1) return { borderRight: `3px solid ${T.green}`, background:'rgba(0,230,90,0.04)' };
+    if (rank === 2) return { borderRight: `3px solid ${T.greenDim}`, background:'rgba(0,184,71,0.03)' };
+    if (rank === 3) return { borderRight: `3px solid ${T.amber}`, background:T.amberBg };
+    return { borderRight: `3px solid transparent` };
+  };
+  const rankColor = r => r===1?T.green:r===2?T.greenDim:r===3?T.amber:T.fg3;
+
+  return (
+    <div style={{ background:T.surface, border:`1px solid ${T.border}`, borderRadius:14, overflow:'hidden', marginBottom:12 }}>
+      <div style={{ background:T.raised, borderBottom:`1px solid ${T.border}`, padding:'10px 14px', display:'flex', alignItems:'center', gap:8 }}>
+        <span style={{ fontFamily:"'Rubik', sans-serif", fontWeight:900, fontSize:14, color:T.green }}>⬡</span>
+        <span style={{ fontFamily:"'Rubik', sans-serif", fontWeight:900, fontSize:14, color:T.fg1 }}>בית {letter}</span>
+      </div>
+      <table style={{ width:'100%', borderCollapse:'collapse', fontSize:11 }}>
+        <thead>
+          <tr style={{ borderBottom:`1px solid ${T.border}` }}>
+            <th style={{ padding:'7px 10px', textAlign:'right', color:T.fg3, fontWeight:700, fontSize:10 }}>#</th>
+            <th style={{ padding:'7px 6px', textAlign:'right', color:T.fg3, fontWeight:700, fontSize:10 }}>קבוצה</th>
+            <th style={{ padding:'7px 6px', textAlign:'center', color:T.fg3, fontWeight:700, fontSize:10 }}>מ</th>
+            <th style={{ padding:'7px 6px', textAlign:'center', color:T.fg3, fontWeight:700, fontSize:10 }}>הפ</th>
+            <th style={{ padding:'7px 10px', textAlign:'center', color:T.fg3, fontWeight:700, fontSize:10 }}>נק׳</th>
+          </tr>
+        </thead>
+        <tbody>
+          {teams.map(t => (
+            <tr key={t.rank} style={{ borderBottom:`1px solid rgba(30,47,74,0.4)`, ...rankStyle(t.rank) }}>
+              <td style={{ padding:'9px 10px', fontWeight:700, color:rankColor(t.rank), fontSize:12 }}>{t.rank}</td>
+              <td style={{ padding:'9px 6px' }}>
+                <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                  <Flag team={t.name} size={[18,12]} />
+                  <span style={{ fontWeight:600, color:T.fg1 }}>{t.name}</span>
+                </div>
+              </td>
+              <td style={{ padding:'9px 6px', textAlign:'center', color:T.fg2 }}>{t.played}</td>
+              <td style={{ padding:'9px 6px', textAlign:'center', color:t.gd>0?T.green:t.gd<0?'#F87171':T.fg2 }}>{t.gd>0?'+':''}{t.gd}</td>
+              <td style={{ padding:'9px 10px', textAlign:'center', fontWeight:700, color:T.fg1 }}>{t.pts}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function TournamentTab() {
+  const [tab, setTab] = useState('groups');
+  const tabs = [
+    { id:'groups', label:'שלב הבתים' },
+    { id:'knockout', label:'נוקאאוט' },
+  ];
+
+  return (
+    <div style={{ flex:1, overflowY:'auto', padding:'16px', paddingBottom:80 }}>
+      <div style={{ fontFamily:"'Rubik', sans-serif", fontWeight:900, fontSize:24, color:T.fg1, marginBottom:4 }}>טורניר 2026</div>
+      <div style={{ fontSize:12, color:T.fg2, marginBottom:14 }}>19 יוני – 19 יולי 2026</div>
+
+      {/* Tab switcher */}
+      <div style={{ display:'flex', gap:4, background:T.raised, borderRadius:12, padding:4, marginBottom:16, width:'fit-content' }}>
+        {tabs.map(t => (
+          <button key={t.id} onClick={() => setTab(t.id)} style={{
+            fontFamily:'Heebo', fontSize:12, fontWeight:700,
+            padding:'7px 16px', borderRadius:9, border:'none', cursor:'pointer',
+            background: tab===t.id ? T.surface : 'transparent',
+            color: tab===t.id ? T.fg1 : T.fg3,
+            boxShadow: tab===t.id ? '0 1px 3px rgba(0,0,0,0.3)' : 'none',
+            transition:'all 150ms',
+          }}>{t.label}</button>
+        ))}
+      </div>
+
+      {tab === 'groups' && (
+        <>
+          {/* Legend */}
+          <div style={{ display:'flex', gap:14, marginBottom:14, flexWrap:'wrap' }}>
+            {[{c:T.green,l:'עוברים (1–2)'},{c:T.amber,l:'מועמד (3)'},{c:T.fg3,l:'נפלטים (4)'}].map(({c,l})=>(
+              <div key={l} style={{ display:'flex', alignItems:'center', gap:5, fontSize:11, color:T.fg2 }}>
+                <div style={{ width:10, height:10, borderRadius:2, background:c }} />
+                {l}
+              </div>
+            ))}
+          </div>
+          {Object.entries(GROUPS).map(([letter, teams]) => (
+            <GroupTable key={letter} letter={letter} teams={teams} />
+          ))}
+        </>
+      )}
+
+      {tab === 'knockout' && (
+        <div style={{ overflowX:'auto', paddingBottom:8 }}>
+          <div style={{ display:'flex', gap:10, minWidth:'max-content' }}>
+            {[
+              { label:'32 הטובים', count:8, mh:50, mt:0 },
+              { label:'16 הטובים', count:4, mh:114, mt:32 },
+              { label:'רבע גמר', count:2, mh:242, mt:96 },
+              { label:'חצי גמר', count:1, mh:498, mt:224 },
+            ].map(({ label, count, mh, mt }) => (
+              <div key={label} style={{ display:'flex', flexDirection:'column', width:120 }}>
+                <div style={{ fontSize:9, fontWeight:700, color:T.fg3, textAlign:'center', marginBottom:6, letterSpacing:'0.06em', textTransform:'uppercase' }}>{label}</div>
+                <div style={{ display:'flex', flexDirection:'column', gap: mh-42, paddingTop: mt }}>
+                  {Array.from({length:count}).map((_,i)=>(
+                    <div key={i} style={{ border:`1px solid ${T.border}`, borderRadius:8, overflow:'hidden' }}>
+                      {['TBD','TBD'].map((t,j)=>(
+                        <div key={j} style={{ padding:'7px 10px', background:T.surface, borderBottom: j===0?`1px solid ${T.border}`:'none', fontSize:11, fontWeight:600, color:T.fg3 }}>— TBD —</div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+
+            {/* Final */}
+            <div style={{ display:'flex', flexDirection:'column', width:120 }}>
+              <div style={{ fontSize:9, fontWeight:700, color:T.gold, textAlign:'center', marginBottom:6, letterSpacing:'0.06em', textTransform:'uppercase' }}>גמר</div>
+              <div style={{ marginTop:476, border:`1px solid ${T.gold}`, borderRadius:8, overflow:'hidden', boxShadow:`0 0 16px ${T.goldBg}` }}>
+                <div style={{ background:T.gold, padding:'4px', textAlign:'center', fontSize:10, fontWeight:700, color:T.bg }}>🏆 גמר</div>
+                {['TBD','TBD'].map((t,j)=>(
+                  <div key={j} style={{ padding:'7px 10px', background:T.surface, borderBottom:j===0?`1px solid rgba(245,197,24,0.2)`:'none', fontSize:11, color:T.fg3 }}>— TBD —</div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div style={{ marginTop:16, background:T.goldBg, border:`1px solid rgba(245,197,24,0.2)`, borderRadius:14, padding:'14px', textAlign:'center' }}>
+            <div style={{ fontSize:24, marginBottom:4 }}>🏆</div>
+            <div style={{ fontFamily:"'Rubik', sans-serif", fontWeight:900, fontSize:16, color:T.gold }}>גביע העולם 2026</div>
+            <div style={{ fontSize:11, color:'rgba(245,197,24,0.6)', marginTop:2 }}>הגמר — 19 ביולי · ניו יורק</div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── SCREEN: Leagues ──────────────────────────────────────────────────────────
+
+function LeaguesTab() {
+  return (
+    <div style={{ flex:1, overflowY:'auto', padding:'16px', paddingBottom:80 }}>
+      <div style={{ fontFamily:"'Rubik', sans-serif", fontWeight:900, fontSize:24, color:T.fg1, marginBottom:4 }}>הליגות שלי</div>
+      <div style={{ fontSize:12, color:T.fg2, marginBottom:16 }}>התחרה מול חברים בליגות פרטיות</div>
+
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:14 }}>
+        {[{icon:'➕',title:'יצירת ליגה',sub:'הזמן חברים עם קוד'},{icon:'🔑',title:'הצטרפות',sub:'הזן קוד הצטרפות'}].map(({icon,title,sub})=>(
+          <button key={title} style={{ fontFamily:'Heebo', background:T.surface, border:`1px solid ${T.border}`, borderRadius:16, padding:'16px 14px', display:'flex', flexDirection:'column', alignItems:'flex-start', gap:6, cursor:'pointer', textAlign:'right', transition:'all 150ms' }}
+            onMouseEnter={e=>e.currentTarget.style.borderColor=T.green}
+            onMouseLeave={e=>e.currentTarget.style.borderColor=T.border}>
+            <span style={{ fontSize:28 }}>{icon}</span>
+            <div style={{ fontSize:13, fontWeight:700, color:T.fg1 }}>{title}</div>
+            <div style={{ fontSize:11, color:T.fg2 }}>{sub}</div>
+          </button>
+        ))}
+      </div>
+
+      <div style={{ background:T.surface, border:`1.5px dashed ${T.border}`, borderRadius:16, padding:'32px 16px', display:'flex', flexDirection:'column', alignItems:'center', gap:8, textAlign:'center' }}>
+        <span style={{ fontSize:40 }}>🏅</span>
+        <div style={{ fontSize:14, fontWeight:600, color:T.fg2 }}>עדיין לא הצטרפת לאף ליגה</div>
+        <div style={{ fontSize:12, color:T.fg3, maxWidth:240 }}>הניחושים שלך חלים על כל הליגות — מנחש פעם אחת, מתחרה בכולן</div>
+      </div>
+    </div>
+  );
+}
+
+// ─── SCREEN: Profile ──────────────────────────────────────────────────────────
+
+function ProfileTab() {
+  const [editing, setEditing] = useState(false);
+  const [nickname, setNickname] = useState('מוראן');
+  const streak = 4;
+  const streakBadge = streak >= 3 ? '🔥' : streak <= -5 ? '🐢' : null;
+
+  return (
+    <div style={{ flex:1, overflowY:'auto', padding:'16px', paddingBottom:80 }}>
+      <div style={{ fontFamily:"'Rubik', sans-serif", fontWeight:900, fontSize:24, color:T.fg1, marginBottom:4 }}>הפרופיל שלי</div>
+      <div style={{ fontSize:12, color:T.fg2, marginBottom:16 }}>נהל את הכינוי וניחושי האלופים שלך</div>
+
+      {/* Nickname card */}
+      <div style={{ background:T.surface, border:`1px solid ${T.border}`, borderRadius:16, padding:'16px', marginBottom:12 }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14 }}>
+          <span style={{ fontSize:10, fontWeight:700, color:T.fg3, letterSpacing:'0.08em', textTransform:'uppercase' }}>כינוי</span>
+          {!editing && (
+            <span style={{ fontSize:12, color:T.green, fontWeight:600, cursor:'pointer' }} onClick={()=>setEditing(true)}>✏️ ערוך</span>
+          )}
+        </div>
+        {editing ? (
+          <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+            <input autoFocus style={{ fontFamily:'Heebo', fontSize:14, background:T.raised, border:`1.5px solid ${T.green}`, borderRadius:12, color:T.fg1, padding:'10px 14px', outline:'none', boxShadow:`0 0 0 3px ${T.greenGlow}` }}
+              value={nickname} onChange={e=>setNickname(e.target.value)} />
+            <div style={{ display:'flex', gap:8 }}>
+              <button onClick={()=>setEditing(false)} style={{ flex:1, fontFamily:'Heebo', fontSize:13, fontWeight:700, padding:'9px', background:T.green, color:T.bg, border:'none', borderRadius:10, cursor:'pointer' }}>שמור</button>
+              <button onClick={()=>setEditing(false)} style={{ flex:1, fontFamily:'Heebo', fontSize:13, fontWeight:600, padding:'9px', background:T.raised, color:T.fg2, border:`1px solid ${T.border}`, borderRadius:10, cursor:'pointer' }}>בטל</button>
+            </div>
+          </div>
+        ) : (
+          <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+            <Avatar letter={nickname.charAt(0)} size={44} />
+            <div>
+              <div style={{ fontSize:16, fontWeight:700, color:T.fg1 }}>{nickname} {streakBadge}</div>
+              <div style={{ fontSize:12, color:T.fire }}>+{streak} רצף 🔥</div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Jokers card */}
+      <div style={{ background:T.surface, border:`1px solid ${T.border}`, borderRadius:16, padding:'16px', marginBottom:12 }}>
+        <div style={{ fontSize:10, fontWeight:700, color:T.fg3, letterSpacing:'0.08em', textTransform:'uppercase', marginBottom:12 }}>ג׳וקרים</div>
+        <div style={{ display:'flex', gap:10 }}>
+          {[{label:'שלב הבתים', count:3},{label:'נוקאאוט', count:2}].map(({label,count})=>(
+            <div key={label} style={{ flex:1, background:T.purpleBg, border:`1px solid rgba(124,58,237,0.25)`, borderRadius:12, padding:'14px 8px', textAlign:'center', boxShadow:`0 0 12px rgba(124,58,237,0.12)` }}>
+              <div style={{ fontFamily:"'Rubik', sans-serif", fontWeight:900, fontSize:30, color:T.purple }}>{count}</div>
+              <div style={{ fontSize:11, color:T.purple, fontWeight:600, marginTop:2 }}>⚡ {label}</div>
+            </div>
+          ))}
+        </div>
+        <div style={{ fontSize:11, color:T.fg3, textAlign:'center', marginTop:8 }}>ג׳וקר = ×3 על תוצאה מדויקת</div>
+      </div>
+
+      {/* Outright predictions */}
+      <div style={{ background:T.surface, border:`1px solid ${T.border}`, borderRadius:16, overflow:'hidden' }}>
+        <div style={{ padding:'12px 16px', borderBottom:`1px solid ${T.border}`, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+          <span style={{ fontSize:10, fontWeight:700, color:T.fg3, letterSpacing:'0.08em', textTransform:'uppercase' }}>ניחושי אלופים</span>
+          <span style={{ fontSize:12, color:T.green, fontWeight:600, cursor:'pointer' }}>✏️ ערוך</span>
+        </div>
+        {[{label:'זוכה הטורניר', value:'ברזיל', icon:'🏆'},{label:'מלך השערים', value:'ויניסיוס ג׳וניור', icon:'⚽'}].map(({label,value,icon})=>(
+          <div key={label} style={{ padding:'14px 16px', borderBottom:`1px solid rgba(30,47,74,0.4)`, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+            <div>
+              <div style={{ fontSize:11, color:T.fg3, marginBottom:3 }}>{label}</div>
+              <div style={{ fontSize:14, fontWeight:700, color:T.fg1 }}>{value}</div>
+            </div>
+            <span style={{ fontSize:28 }}>{icon}</span>
+          </div>
+        ))}
+        <div style={{ padding:'10px 16px' }}>
+          <span style={{ fontSize:11, color:T.fg3, textDecoration:'underline', cursor:'pointer' }}>עריכת ניחושי אלופים (עד תחילת הטורניר)</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Bottom Navigation ────────────────────────────────────────────────────────
+
+const NAV_ITEMS = [
+  { id:'matches', icon:'🗓️', label:'משחקים' },
+  { id:'tournament', icon:'🏆', label:'טורניר' },
+  { id:'leagues', icon:'🏅', label:'ליגות' },
+  { id:'profile', icon:'👤', label:'פרופיל' },
+];
+
+function BottomNav({ active, onNav }) {
+  return (
+    <div style={{
+      position:'absolute', bottom:0, left:0, right:0, height:72,
+      background: 'rgba(6,13,26,0.9)',
+      backdropFilter: 'blur(16px) saturate(180%)',
+      borderTop: '1px solid rgba(255,255,255,0.06)',
+      display:'flex', alignItems:'center', zIndex:50,
+      borderRadius: '0 0 44px 44px',
+    }}>
+      {NAV_ITEMS.map(({ id, icon, label }) => {
+        const isActive = active === id;
+        return (
+          <button key={id} onClick={() => onNav(id)} style={{
+            flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:2,
+            padding:'8px 0', background:'transparent', border:'none', cursor:'pointer',
+          }}>
+            <span style={{ fontSize:20, filter: isActive ? 'drop-shadow(0 0 5px rgba(0,230,90,0.7))' : 'none', transition:'filter 200ms' }}>{icon}</span>
+            <span style={{ fontSize:10, fontWeight:700, color: isActive ? T.green : T.fg3, transition:'color 150ms' }}>{label}</span>
+            {isActive && <div style={{ width:4, height:4, borderRadius:'50%', background:T.green, boxShadow:`0 0 6px ${T.green}` }} />}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── Header ───────────────────────────────────────────────────────────────────
+
+function DashboardHeader({ username, streak }) {
+  const streakBadge = streak >= 3 ? '🔥' : streak <= -5 ? '🐢' : null;
+  return (
+    <div style={{
+      padding:'12px 16px', display:'flex', justifyContent:'space-between', alignItems:'center',
+      background: T.bg, borderBottom:`1px solid ${T.border}`, flexShrink:0,
+    }}>
+      <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+        <span style={{ fontSize:18 }}>⚽</span>
+        <div>
+          <div style={{ fontSize:10, color:T.fg3 }}>שלום,</div>
+          <div style={{ fontSize:14, fontWeight:700, color:T.fg1 }}>{username} {streakBadge}</div>
+        </div>
+      </div>
+      <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+        {streak > 0 && (
+          <Pill color={T.fire} bg={T.fireBg} border="rgba(255,77,28,0.25)">🔥 +{streak} רצף</Pill>
+        )}
+        <Avatar letter={username.charAt(0)} size={30} />
+      </div>
+    </div>
+  );
+}
+
+// ─── APP ROOT ─────────────────────────────────────────────────────────────────
+
+function App() {
+  const saved = (() => { try { return localStorage.getItem('wc2026_screen') || 'login'; } catch(e) { return 'login'; } })();
+  const savedTab = (() => { try { return localStorage.getItem('wc2026_tab') || 'matches'; } catch(e) { return 'matches'; } })();
+  const [screen, setScreen] = useState(saved);
+  const [tab, setTab] = useState(savedTab);
+
+  const navigate = (s) => {
+    setScreen(s);
+    try { localStorage.setItem('wc2026_screen', s); } catch(e){}
+  };
+  const navTab = (t) => {
+    setTab(t);
+    try { localStorage.setItem('wc2026_tab', t); } catch(e){}
+  };
+
+  const isDashboard = !['login','signup'].includes(screen);
+
+  useEffect(() => {
+    if (['matches','tournament','leagues','profile'].includes(screen)) {
+      setTab(screen);
+    }
+  }, [screen]);
+
+  return (
+    <div className="phone-container">
+      <div className="phone">
+        {/* Status bar */}
+        <div className="phone-notch">
+          <span className="phone-time">9:41</span>
+          <div className="phone-status">
+            <svg width="16" height="11" viewBox="0 0 16 11" fill={T.fg1}><rect x="0" y="3" width="3" height="8" rx="1"/><rect x="4.5" y="2" width="3" height="9" rx="1"/><rect x="9" y="0" width="3" height="11" rx="1"/><rect x="13.5" y="0" width="2.5" height="11" rx="1" fillOpacity=".3"/></svg>
+            <svg width="15" height="11" viewBox="0 0 15 11" fill={T.fg1}><path d="M7.5 2.5 C5.5 2.5 3.7 3.3 2.4 4.6 L1 3.2 C2.7 1.5 5 .5 7.5.5s4.8 1 6.5 2.7L12.6 4.6C11.3 3.3 9.5 2.5 7.5 2.5Z"/><path d="M7.5 5.5c-1.1 0-2.1.4-2.8 1.1L3.3 5.2C4.4 4.1 5.9 3.5 7.5 3.5s3.1.6 4.2 1.7l-1.4 1.4C9.6 5.9 8.6 5.5 7.5 5.5Z"/><circle cx="7.5" cy="9" r="1.5"/></svg>
+            <div style={{ display:'flex', gap:1, alignItems:'center' }}>
+              <div style={{ width:21, height:11, border:`1.5px solid ${T.fg1}`, borderRadius:3, position:'relative', padding:1.5 }}>
+                <div style={{ background:T.green, borderRadius:1, height:'100%', width:'75%' }}/>
+                <div style={{ position:'absolute', right:-3, top:'50%', transform:'translateY(-50%)', width:2, height:5, background:T.fg1, borderRadius:1 }}/>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="phone-screen">
+          {screen === 'login' && <LoginScreen onNav={navigate} />}
+          {screen === 'signup' && <SignupScreen onNav={navigate} />}
+          {isDashboard && (
+            <>
+              <DashboardHeader username="מוראן" streak={4} />
+              {tab === 'matches' && <MatchesTab />}
+              {tab === 'tournament' && <TournamentTab />}
+              {tab === 'leagues' && <LeaguesTab />}
+              {tab === 'profile' && <ProfileTab />}
+              <BottomNav active={tab} onNav={t => { navTab(t); navigate(t); }} />
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Tweaks panel */}
+      <TweaksPanel onNav={navigate} currentScreen={screen} currentTab={tab} />
+    </div>
+  );
+}
+
+// ─── TWEAKS ───────────────────────────────────────────────────────────────────
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "accentColor": "#00E65A",
+  "displayFont": "Rubik",
+  "darkBg": "#060D1A"
+}/*EDITMODE-END*/;
+
+function TweaksPanel({ onNav, currentScreen, currentTab }) {
+  const [visible, setVisible] = useState(false);
+  const tweaks = TWEAK_DEFAULTS;
+
+  useEffect(() => {
+    window.addEventListener('message', (e) => {
+      if (e.data?.type === '__activate_edit_mode') setVisible(true);
+      if (e.data?.type === '__deactivate_edit_mode') setVisible(false);
+    });
+    window.parent.postMessage({ type: '__edit_mode_available' }, '*');
+  }, []);
+
+  if (!visible) return null;
+
+  const screens = [
+    { id:'login', label:'🔐 Login' },
+    { id:'signup', label:'📝 Sign Up' },
+    { id:'matches', label:'🗓️ Matches' },
+    { id:'tournament', label:'🏆 Tournament' },
+    { id:'leagues', label:'🏅 Leagues' },
+    { id:'profile', label:'👤 Profile' },
+  ];
+
+  return (
+    <div style={{
+      position:'fixed', bottom:24, left:24, background:'rgba(13,27,46,0.95)',
+      backdropFilter:'blur(16px)', border:`1px solid ${T.border}`,
+      borderRadius:16, padding:16, width:200, boxShadow:'0 8px 32px rgba(0,0,0,0.5)',
+      fontFamily:'Heebo, sans-serif', zIndex:100,
+    }}>
+      <div style={{ fontSize:12, fontWeight:700, color:T.fg1, marginBottom:12 }}>Tweaks</div>
+      <div style={{ fontSize:10, fontWeight:600, color:T.fg3, textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:6 }}>Navigate to screen</div>
+      <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
+        {screens.map(s => (
+          <button key={s.id} onClick={() => { onNav(s.id); }} style={{
+            fontFamily:'Heebo', fontSize:12, fontWeight:600,
+            background: (currentScreen===s.id||currentTab===s.id) ? T.greenBg : T.raised,
+            color: (currentScreen===s.id||currentTab===s.id) ? T.green : T.fg2,
+            border: `1px solid ${(currentScreen===s.id||currentTab===s.id) ? 'rgba(0,230,90,0.25)' : T.border}`,
+            borderRadius:8, padding:'7px 10px', cursor:'pointer', textAlign:'right', direction:'ltr',
+          }}>{s.label}</button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
