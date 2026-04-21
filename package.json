@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "call \"%npm_node_execpath%\" ./node_modules/next/dist/bin/next dev",
-    "build": "call \"%npm_node_execpath%\" ./node_modules/next/dist/bin/next build",
+    "dev": "call \"%npm_node_execpath%\" ./node_modules/next/dist/bin/next dev --webpack",
+    "build": "call \"%npm_node_execpath%\" ./node_modules/next/dist/bin/next build --webpack",
     "start": "call \"%npm_node_execpath%\" ./node_modules/next/dist/bin/next start",
     "lint": "call \"%npm_node_execpath%\" ./node_modules/eslint/bin/eslint.js .",
     "seed:teams": "call \"%npm_node_execpath%\" ./node_modules/tsx/dist/cli.mjs scripts/seed-teams.ts",
