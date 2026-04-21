@@ -8,6 +8,18 @@ export async function POST() {
   if (blocked) return blocked;
 
   const supabase = createAdminClient();
+
+  // Explicitly wipe resolved team slots from all knockout matches so they
+  // revert to placeholder display before the sync rebuilds them.
+  const { error: knockoutError } = await supabase
+    .from("matches")
+    .update({ home_team_id: null, away_team_id: null })
+    .gte("match_number", 73);
+
+  if (knockoutError) {
+    return NextResponse.json({ error: knockoutError.message }, { status: 500 });
+  }
+
   const { error, count } = await supabase
     .from("matches")
     .update(

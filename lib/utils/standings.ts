@@ -623,12 +623,15 @@ export function buildTournamentStandings(
       }),
   ) as Record<string, TeamStanding[]>;
 
-  const bestThirdStandings = buildBestThirdPlaceStandings(initialGroupStandings).map((entry) => ({
-    ...entry,
-    lockedRank: null,
-    isLocked: false,
-    status: determineBestThirdStatus(entry, groupSummaries),
-  }));
+  const bestThirdStandings = buildBestThirdPlaceStandings(initialGroupStandings).map((entry) => {
+    const status = determineBestThirdStatus(entry, groupSummaries);
+    return {
+      ...entry,
+      lockedRank: null,
+      isLocked: status !== "pending",
+      status,
+    };
+  });
 
   const groupStandings = Object.fromEntries(
     Object.entries(initialGroupStandings).map(([letter, standings]) => [

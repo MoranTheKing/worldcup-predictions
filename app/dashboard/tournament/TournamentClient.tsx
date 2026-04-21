@@ -1,7 +1,6 @@
 "use client";
 
 import type { ResolvedBracketMatch, ResolvedSeed } from "@/lib/bracket/knockout";
-import { getMatchScoreSummary } from "@/lib/tournament/matches";
 import type { TeamStanding } from "@/lib/utils/standings";
 import Image from "next/image";
 import { useMemo, useState } from "react";
@@ -96,34 +95,39 @@ function getLockedPositionLabel(rank: number) {
 }
 
 function getGroupStatusDisplay(entry: TeamStanding): StatusDisplay | null {
-  if (entry.rank === 3 && (entry.status === "qualified" || entry.status === "eliminated")) {
+  if (entry.lockedRank !== null) {
+    let pillClassName: string;
+    if (entry.lockedRank <= 2) {
+      pillClassName = QUALIFIED_PILL_CLASS;
+    } else if (entry.lockedRank === 3) {
+      pillClassName =
+        entry.status === "qualified"
+          ? QUALIFIED_PILL_CLASS
+          : entry.status === "eliminated"
+            ? ELIMINATED_PILL_CLASS
+            : LOCKED_POSITION_PILL_CLASS;
+    } else {
+      pillClassName = ELIMINATED_PILL_CLASS;
+    }
+    return { label: getLockedPositionLabel(entry.lockedRank), pillClassName };
+  }
+
+  if (entry.rank === 3) {
+    if (entry.status === "qualified") {
+      return { label: getLockedPositionLabel(3), pillClassName: QUALIFIED_PILL_CLASS };
+    }
+    if (entry.status === "eliminated") {
+      return { label: getLockedPositionLabel(3), pillClassName: ELIMINATED_PILL_CLASS };
+    }
     return null;
   }
 
-  if (entry.lockedRank !== null) {
-    return {
-      label: getLockedPositionLabel(entry.lockedRank),
-      pillClassName:
-        entry.lockedRank <= 2
-          ? QUALIFIED_PILL_CLASS
-          : entry.lockedRank === 4
-            ? ELIMINATED_PILL_CLASS
-            : LOCKED_POSITION_PILL_CLASS,
-    };
-  }
-
   if (entry.status === "qualified") {
-    return {
-      label: TEXT.qualified,
-      pillClassName: QUALIFIED_PILL_CLASS,
-    };
+    return { label: TEXT.qualified, pillClassName: QUALIFIED_PILL_CLASS };
   }
 
   if (entry.status === "eliminated") {
-    return {
-      label: TEXT.eliminated,
-      pillClassName: ELIMINATED_PILL_CLASS,
-    };
+    return { label: TEXT.eliminated, pillClassName: ELIMINATED_PILL_CLASS };
   }
 
   return null;
@@ -336,7 +340,25 @@ function KnockoutColumn({
 
 function KnockoutMatchCard({ match, highlight = false }: { match: ResolvedBracketMatch; highlight?: boolean }) {
   const isLive = match.liveMatch?.status === "live";
-  const scoreSummary = match.liveMatch ? getMatchScoreSummary(match.liveMatch) : null;
+  const liveMatch = match.liveMatch;
+  const isFinished = liveMatch?.status === "finished";
+
+  const hasPenalties =
+    isFinished &&
+    liveMatch &&
+    liveMatch.home_score === liveMatch.away_score &&
+    liveMatch.home_penalty_score !== null &&
+    liveMatch.home_penalty_score !== undefined &&
+    liveMatch.away_penalty_score !== null &&
+    liveMatch.away_penalty_score !== undefined;
+
+  // null = undecided, true = home wins, false = away wins
+  let homeWins: boolean | null = null;
+  if (isFinished && liveMatch) {
+    homeWins = hasPenalties
+      ? (liveMatch.home_penalty_score ?? 0) > (liveMatch.away_penalty_score ?? 0)
+      : (liveMatch.home_score ?? 0) > (liveMatch.away_score ?? 0);
+  }
 
   return (
     <div className={`wc-bracket-card overflow-hidden text-[11px] leading-tight ${highlight ? "wc-bracket-final" : ""}`}>
@@ -348,22 +370,39 @@ function KnockoutMatchCard({ match, highlight = false }: { match: ResolvedBracke
         }`}
       >
         <span>{`${TEXT.matchLabel} ${match.matchNumber}`}</span>
-        {isLive && (
-          <span className="inline-flex items-center gap-1 text-wc-danger">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-wc-danger shadow-[0_0_6px_rgba(255,92,130,0.9)]" />
-            LIVE
-          </span>
-        )}
+        <span className="inline-flex items-center gap-1">
+          {liveMatch?.is_extra_time && !hasPenalties && (
+            <span className={highlight ? "text-[color:var(--wc-text-inverse)]/70" : "text-wc-fg3"}>ET</span>
+          )}
+          {hasPenalties && (
+            <span className={highlight ? "text-[color:var(--wc-text-inverse)]/70" : "text-wc-fg3"}>PEN</span>
+          )}
+          {isLive && (
+            <span className="inline-flex items-center gap-1 text-wc-danger">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-wc-danger shadow-[0_0_6px_rgba(255,92,130,0.9)]" />
+              LIVE
+            </span>
+          )}
+        </span>
       </div>
 
-      <SeedRow seed={match.home} highlight={highlight} divider />
-      <SeedRow seed={match.away} highlight={highlight} />
-
-      {scoreSummary && (
-        <div className={`border-t px-3 py-2 text-center font-bold ${highlight ? "border-[rgba(255,182,73,0.2)] text-wc-fg1" : "border-white/8 text-wc-fg2"}`}>
-          {scoreSummary.displayScore}
-        </div>
-      )}
+      <SeedRow
+        seed={match.home}
+        highlight={highlight}
+        score={liveMatch?.home_score ?? null}
+        penaltyScore={hasPenalties ? (liveMatch?.home_penalty_score ?? null) : null}
+        isWinner={homeWins === true}
+        isLoser={homeWins === false}
+        divider
+      />
+      <SeedRow
+        seed={match.away}
+        highlight={highlight}
+        score={liveMatch?.away_score ?? null}
+        penaltyScore={hasPenalties ? (liveMatch?.away_penalty_score ?? null) : null}
+        isWinner={homeWins === false}
+        isLoser={homeWins === true}
+      />
     </div>
   );
 }
@@ -371,28 +410,53 @@ function KnockoutMatchCard({ match, highlight = false }: { match: ResolvedBracke
 function SeedRow({
   seed,
   highlight,
+  score,
+  penaltyScore,
+  isWinner,
+  isLoser,
   divider = false,
 }: {
   seed: ResolvedSeed;
   highlight: boolean;
+  score: number | null;
+  penaltyScore: number | null;
+  isWinner: boolean;
+  isLoser: boolean;
   divider?: boolean;
 }) {
-  const baseClass = divider
-    ? `border-b px-3 py-2 font-medium ${highlight ? "border-[rgba(255,182,73,0.2)] bg-[rgba(255,182,73,0.1)] text-wc-fg1" : "border-white/8 text-wc-fg2"}`
-    : `px-3 py-2 font-medium ${highlight ? "bg-[rgba(255,182,73,0.08)] text-wc-fg1" : "text-wc-fg2"}`;
+  const borderClass = divider
+    ? `border-b ${highlight ? "border-[rgba(255,182,73,0.2)]" : "border-white/8"}`
+    : "";
+
+  const bgClass = divider && highlight ? "bg-[rgba(255,182,73,0.1)]" : "";
+
+  const textClass = isWinner
+    ? "font-bold text-wc-fg1"
+    : isLoser
+      ? `opacity-40 font-medium ${highlight ? "text-wc-fg1" : "text-wc-fg2"}`
+      : `font-medium ${highlight ? "text-wc-fg1" : "text-wc-fg2"}`;
 
   return (
-    <div className={`flex items-center justify-between gap-2 ${baseClass}`}>
-      <div className="flex min-w-0 items-center gap-2">
+    <div className={`flex items-center justify-between gap-2 px-3 py-2 ${borderClass} ${bgClass}`}>
+      <div className={`flex min-w-0 items-center gap-2 ${textClass}`}>
         {seed.kind === "team" && seed.team.logo_url ? (
           <Image src={seed.team.logo_url} alt={seed.team.name} width={16} height={11} className="rounded-sm object-cover" unoptimized />
         ) : (
-          <div className="h-[11px] w-4 rounded-sm bg-white/10" />
+          <div className="h-[11px] w-4 shrink-0 rounded-sm bg-white/10" />
         )}
         <span className="truncate">
-          {seed.kind === "team" ? seed.team.name_he ?? seed.team.name : <span className="text-wc-fg3">{seed.labelHe}</span>}
+          {seed.kind === "team" ? (seed.team.name_he ?? seed.team.name) : <span className="text-wc-fg3">{seed.labelHe}</span>}
         </span>
       </div>
+
+      {score !== null && (
+        <div className={`flex shrink-0 items-center gap-1 ${textClass}`}>
+          {penaltyScore !== null && (
+            <span className={isLoser ? "" : "text-wc-fg3"}>({penaltyScore})</span>
+          )}
+          <span className="min-w-[1ch] text-center">{score}</span>
+        </div>
+      )}
     </div>
   );
 }
@@ -458,12 +522,6 @@ function GroupTable({
             {standings.map((entry) => {
               const statusDisplay = getGroupStatusDisplay(entry);
               const isLive = liveTeamIdSet.has(entry.team.id);
-              const teamColorClass =
-                entry.rank === 3 && entry.status === "qualified"
-                  ? "text-wc-neon"
-                  : entry.rank === 3 && entry.status === "eliminated"
-                    ? "text-wc-danger"
-                    : "text-wc-fg1";
 
               return (
                 <tr key={entry.team.id} className={`border-b border-white/6 last:border-0 ${STATUS_META[entry.status].rowClassName}`}>
@@ -484,7 +542,7 @@ function GroupTable({
                       )}
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
-                          <p className={`truncate font-semibold ${teamColorClass}`}>{entry.team.name_he ?? entry.team.name}</p>
+                          <p className="truncate font-semibold text-wc-fg1">{entry.team.name_he ?? entry.team.name}</p>
                           {isLive && <InlineLiveBadge />}
                         </div>
                         <StatusPill display={statusDisplay} />
