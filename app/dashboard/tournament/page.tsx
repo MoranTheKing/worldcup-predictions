@@ -5,6 +5,7 @@ import {
   type TournamentMatch,
 } from "@/lib/utils/standings";
 import { resolveKnockoutBracket } from "@/lib/bracket/knockout";
+import { buildKnockoutWinnerTree } from "@/lib/tournament/knockout-tree";
 import TournamentClient from "./TournamentClient";
 
 export const dynamic = "force-dynamic";
@@ -66,6 +67,12 @@ export default async function TournamentPage() {
     bestThirdStandings: tournament.bestThirdStandings,
     matches: allMatches,
   });
+  const knockoutTree = buildKnockoutWinnerTree(allMatches);
+  const serializedKnockoutTree = {
+    rounds: knockoutTree.rounds,
+    leafCount: knockoutTree.leafCount,
+    thirdPlaceMatchNumber: knockoutTree.thirdPlaceMatchNumber,
+  };
 
   const hasLive = allMatches.some((m) => m.status === "live");
 
@@ -75,6 +82,7 @@ export default async function TournamentPage() {
       bestThirdStandings={tournament.bestThirdStandings}
       teamsRemaining={tournament.teamsRemaining}
       bracket={bracket}
+      knockoutTree={serializedKnockoutTree}
       hasLive={hasLive}
       liveTeamIds={liveGroupTeamIds}
     />

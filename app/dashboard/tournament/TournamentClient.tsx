@@ -1,7 +1,11 @@
 "use client";
 
 import type { ResolvedBracketMatch, ResolvedSeed } from "@/lib/bracket/knockout";
-import type { TeamStanding } from "@/lib/utils/standings";
+import {
+  type KnockoutTreeNode,
+  type WinnerTreeRound,
+} from "@/lib/tournament/knockout-tree";
+import type { StandingStatus, TeamStanding } from "@/lib/utils/standings";
 import Image from "next/image";
 import { useMemo, useState } from "react";
 
@@ -10,6 +14,11 @@ type Props = {
   bestThirdStandings: TeamStanding[];
   teamsRemaining: number;
   bracket: ResolvedBracketMatch[];
+  knockoutTree: {
+    rounds: Record<WinnerTreeRound, KnockoutTreeNode[]>;
+    leafCount: number;
+    thirdPlaceMatchNumber: number | null;
+  };
   hasLive: boolean;
   liveTeamIds: string[];
 };
@@ -37,15 +46,17 @@ const TEXT = {
   lockedPosition: "מקום",
   qualified: "העפלה",
   eliminated: "הדחה",
+  thirdQualifiedInGroup: "מקום 3 - העפלה מובטחת",
+  thirdEliminatedInGroup: "מקום 3 - הדחה ודאית",
   group: "בית",
   team: "נבחרת",
-  played: "מש",
-  won: "נצ",
-  drawn: "ת",
-  lost: "הפ",
+  played: "מש'",
+  won: "נצ'",
+  drawn: "ת'",
+  lost: "הפ'",
   goalsFor: "ז+",
   goalDifference: "הפרש",
-  points: "נק׳",
+  points: "נק'",
   bestThirdTitle: "טבלת המקומות השלישיים",
   status: "סטטוס",
   round32: "32 האחרונות",
@@ -55,17 +66,21 @@ const TEXT = {
   thirdPlace: "משחק המקום השלישי",
   final: "גמר",
   teams32: "32 נבחרות",
-  rounds5: "5 סיבובים",
-  rtlBracket: "Bracket RTL מלא",
+  rounds5: "5 סיבובי הכרעה",
+  rtlBracket: "עץ נוקאאוט RTL",
   matchLabel: "משחק",
   liveBannerTitle: "טבלה בזמן אמת",
-  liveBannerNote: "הניקוד מתעדכן בזמן אמת, ו-LIVE מופיע ליד הנבחרות שמשחקות כרגע.",
+  liveBannerNote: "הניקוד מתעדכן בזמן אמת, ו-LIVE מופיע ליד הנבחרות שמשחקות עכשיו.",
   summary:
-    "הטבלאות מסודרות לפי חוקי ההכרעה הרשמיים של הטורניר, כולל head-to-head רק בין הקבוצות הקשורות לשוויון.",
+    "הבתים, טבלת המקומות השלישיים והנוקאאוט מסונכרנים עכשיו מאותו מקור נתונים, כולל מסלול נוקאאוט רשמי ולא-רציף.",
   groupsNote:
-    "בקבוצות מוצגים רק מקום סופי נעול, סימון LIVE בזמן אמת, וצבע ירוק או אדום לקבוצת מקום שלישי כשמצבה המתמטי נסגר.",
-  thirdNote: "בטבלת המקומות השלישיים נשמרות תוויות הטקסט המפורשות של העפלה או הדחה.",
-  cutoffNote: "קו החיתוך מסמן את המעבר בין 8 העולות ל-4 האחרונות.",
+    "מקומות 1-2 מסומנים לפי מצב הקבוצה, ומקום 3 מקבל סטטוס ירוק או אדום לפי טבלת 12 הקבוצות מהמקום השלישי ברמה הגלובלית.",
+  thirdNote:
+    "הטבלה הגלובלית מדרגת את כל 12 הקבוצות מהמקום השלישי לפי כללי פיפ\"א, והקו מסמן את הגבול בין 8 העולות ל-4 המודחות.",
+  cutoffNote: "מקום 8 מסמן את קו העלייה. מקום 9 ומטה נשארים מחוץ ל-32 האחרונות.",
+  bracketNote:
+    "הנוקאאוט נבנה כעץ אמיתי מתוך Placeholder-ים של Winner Match X, כך שכל משחק מוצג ליד המסלול שאליו הוא מזין.",
+  emptyBracket: "ברגע שיוזנו משחקי הנוקאאוט, העץ המלא יוצג כאן.",
 };
 
 const TABS: { id: Tab; label: string }[] = [
@@ -74,7 +89,23 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "knockout", label: TEXT.tabs.knockout },
 ];
 
-const STATUS_META: Record<TeamStanding["status"], { rowClassName: string }> = {
+const ROUND_LABELS: Record<WinnerTreeRound, string> = {
+  round_of_32: TEXT.round32,
+  round_of_16: TEXT.round16,
+  quarter_final: TEXT.quarterFinal,
+  semi_final: TEXT.semiFinal,
+  final: TEXT.final,
+};
+
+const BRACKET_COLUMN_ORDER: WinnerTreeRound[] = [
+  "final",
+  "semi_final",
+  "quarter_final",
+  "round_of_16",
+  "round_of_32",
+];
+
+const STATUS_META: Record<StandingStatus, { rowClassName: string }> = {
   qualified: {
     rowClassName: "bg-[rgba(95,255,123,0.08)]",
   },
@@ -90,58 +121,118 @@ const QUALIFIED_PILL_CLASS = "bg-[rgba(95,255,123,0.14)] text-wc-neon";
 const ELIMINATED_PILL_CLASS = "bg-[rgba(255,92,130,0.14)] text-wc-danger";
 const LOCKED_POSITION_PILL_CLASS = "bg-white/8 text-wc-fg2";
 
+const MATCH_CARD_WIDTH = 252;
+const MATCH_CARD_HEIGHT = 114;
+const BRACKET_COLUMN_GAP = 78;
+const BRACKET_ROW_GAP = 26;
+const CONNECTOR_COLOR = "rgba(255,255,255,0.16)";
+
 function getLockedPositionLabel(rank: number) {
   return `${TEXT.lockedPosition} ${rank}`;
 }
 
-function getGroupStatusDisplay(entry: TeamStanding): StatusDisplay | null {
+function getEffectiveThirdPlaceStatus(
+  entry: TeamStanding,
+  qualifiedThirdPlaceTeamIds: Set<string>,
+  eliminatedThirdPlaceTeamIds: Set<string>,
+): StandingStatus | null {
+  if (entry.rank !== 3) return null;
+  if (qualifiedThirdPlaceTeamIds.has(entry.team.id)) return "qualified";
+  if (eliminatedThirdPlaceTeamIds.has(entry.team.id)) return "eliminated";
+  return null;
+}
+
+function getEffectiveGroupStatus(
+  entry: TeamStanding,
+  qualifiedThirdPlaceTeamIds: Set<string>,
+  eliminatedThirdPlaceTeamIds: Set<string>,
+): StandingStatus {
+  const thirdPlaceStatus = getEffectiveThirdPlaceStatus(
+    entry,
+    qualifiedThirdPlaceTeamIds,
+    eliminatedThirdPlaceTeamIds,
+  );
+
+  if (thirdPlaceStatus) return thirdPlaceStatus;
+  if (entry.lockedRank !== null && entry.lockedRank <= 2) return "qualified";
+  if (entry.lockedRank !== null && entry.lockedRank >= 4) return "eliminated";
+  return entry.status;
+}
+
+function getGroupStatusDisplay(
+  entry: TeamStanding,
+  qualifiedThirdPlaceTeamIds: Set<string>,
+  eliminatedThirdPlaceTeamIds: Set<string>,
+): StatusDisplay | null {
+  const effectiveStatus = getEffectiveGroupStatus(
+    entry,
+    qualifiedThirdPlaceTeamIds,
+    eliminatedThirdPlaceTeamIds,
+  );
+
+  if (entry.rank === 3) {
+    if (effectiveStatus === "qualified") {
+      return {
+        label: TEXT.thirdQualifiedInGroup,
+        pillClassName: QUALIFIED_PILL_CLASS,
+      };
+    }
+
+    if (effectiveStatus === "eliminated") {
+      return {
+        label: TEXT.thirdEliminatedInGroup,
+        pillClassName: ELIMINATED_PILL_CLASS,
+      };
+    }
+  }
+
   if (entry.lockedRank !== null) {
     let pillClassName: string;
     if (entry.lockedRank <= 2) {
       pillClassName = QUALIFIED_PILL_CLASS;
-    } else if (entry.lockedRank === 3) {
-      pillClassName =
-        entry.status === "qualified"
-          ? QUALIFIED_PILL_CLASS
-          : entry.status === "eliminated"
-            ? ELIMINATED_PILL_CLASS
-            : LOCKED_POSITION_PILL_CLASS;
-    } else {
+    } else if (entry.lockedRank >= 4) {
       pillClassName = ELIMINATED_PILL_CLASS;
+    } else {
+      pillClassName = LOCKED_POSITION_PILL_CLASS;
     }
-    return { label: getLockedPositionLabel(entry.lockedRank), pillClassName };
+
+    return {
+      label: getLockedPositionLabel(entry.lockedRank),
+      pillClassName,
+    };
   }
 
-  if (entry.rank === 3) {
-    if (entry.status === "qualified") {
-      return { label: getLockedPositionLabel(3), pillClassName: QUALIFIED_PILL_CLASS };
-    }
-    if (entry.status === "eliminated") {
-      return { label: getLockedPositionLabel(3), pillClassName: ELIMINATED_PILL_CLASS };
-    }
-    return null;
-  }
-
-  if (entry.status === "qualified") {
+  if (effectiveStatus === "qualified") {
     return { label: TEXT.qualified, pillClassName: QUALIFIED_PILL_CLASS };
   }
 
-  if (entry.status === "eliminated") {
+  if (effectiveStatus === "eliminated") {
     return { label: TEXT.eliminated, pillClassName: ELIMINATED_PILL_CLASS };
   }
 
   return null;
 }
 
-function getBestThirdStatusDisplay(entry: TeamStanding): StatusDisplay | null {
-  if (entry.status === "qualified") {
+function getBestThirdStatusDisplay(
+  entry: TeamStanding,
+  qualifiedThirdPlaceTeamIds: Set<string>,
+  eliminatedThirdPlaceTeamIds: Set<string>,
+): StatusDisplay | null {
+  const effectiveStatus =
+    qualifiedThirdPlaceTeamIds.has(entry.team.id)
+      ? "qualified"
+      : eliminatedThirdPlaceTeamIds.has(entry.team.id)
+        ? "eliminated"
+        : entry.status;
+
+  if (effectiveStatus === "qualified") {
     return {
       label: TEXT.qualified,
       pillClassName: QUALIFIED_PILL_CLASS,
     };
   }
 
-  if (entry.status === "eliminated") {
+  if (effectiveStatus === "eliminated") {
     return {
       label: TEXT.eliminated,
       pillClassName: ELIMINATED_PILL_CLASS,
@@ -156,16 +247,26 @@ export default function TournamentClient({
   bestThirdStandings,
   teamsRemaining,
   bracket,
+  knockoutTree,
   hasLive,
   liveTeamIds,
 }: Props) {
   const [tab, setTab] = useState<Tab>("groups");
   const groupLetters = Object.keys(groupStandings).sort();
   const liveTeamIdSet = useMemo(() => new Set(liveTeamIds), [liveTeamIds]);
+  const qualifiedThirdPlaceTeamIds = useMemo(
+    () => new Set(bestThirdStandings.slice(0, 8).map((entry) => entry.team.id)),
+    [bestThirdStandings],
+  );
+  const eliminatedThirdPlaceTeamIds = useMemo(
+    () => new Set(bestThirdStandings.slice(8).map((entry) => entry.team.id)),
+    [bestThirdStandings],
+  );
 
   return (
     <div className="wc-shell px-4 py-4 md:px-6 md:py-6">
       {hasLive && <LiveTableBanner />}
+
       <section className="wc-card overflow-hidden p-6">
         <div className="grid gap-6 lg:grid-cols-[1fr_auto] lg:items-center">
           <div className="text-start">
@@ -216,6 +317,8 @@ export default function TournamentClient({
                 letter={letter}
                 standings={groupStandings[letter]}
                 liveTeamIdSet={liveTeamIdSet}
+                qualifiedThirdPlaceTeamIds={qualifiedThirdPlaceTeamIds}
+                eliminatedThirdPlaceTeamIds={eliminatedThirdPlaceTeamIds}
               />
             ))}
           </div>
@@ -238,7 +341,12 @@ export default function TournamentClient({
                 <BestThirdHead />
                 <tbody>
                   {bestThirdStandings.map((entry) => (
-                    <BestThirdRow key={entry.team.id} entry={entry} />
+                    <BestThirdRow
+                      key={entry.team.id}
+                      entry={entry}
+                      qualifiedThirdPlaceTeamIds={qualifiedThirdPlaceTeamIds}
+                      eliminatedThirdPlaceTeamIds={eliminatedThirdPlaceTeamIds}
+                    />
                   ))}
                 </tbody>
               </table>
@@ -255,7 +363,11 @@ export default function TournamentClient({
             <span className="wc-badge">{TEXT.rtlBracket}</span>
           </div>
 
-          <KnockoutBracket bracket={bracket} />
+          <div className="mt-4 rounded-[1.5rem] border border-white/10 bg-white/4 p-4 text-sm leading-7 text-wc-fg2">
+            {TEXT.bracketNote}
+          </div>
+
+          <KnockoutBracket bracket={bracket} knockoutTree={knockoutTree} />
         </>
       )}
     </div>
@@ -277,68 +389,181 @@ function LiveTableBanner() {
   );
 }
 
-function KnockoutBracket({ bracket }: { bracket: ResolvedBracketMatch[] }) {
-  const byRound = {
-    round_of_32: bracket.filter((match) => match.round === "round_of_32"),
-    round_of_16: bracket.filter((match) => match.round === "round_of_16"),
-    quarter_final: bracket.filter((match) => match.round === "quarter_final"),
-    semi_final: bracket.filter((match) => match.round === "semi_final"),
-    third_place: bracket.filter((match) => match.round === "third_place"),
-    final: bracket.filter((match) => match.round === "final"),
-  };
+function KnockoutBracket({
+  bracket,
+  knockoutTree,
+}: {
+  bracket: ResolvedBracketMatch[];
+  knockoutTree: Props["knockoutTree"];
+}) {
+  const matchesByNumber = useMemo(
+    () => new Map(bracket.map((match) => [match.matchNumber, match])),
+    [bracket],
+  );
+  const winnerTreeNodes = useMemo(
+    () => BRACKET_COLUMN_ORDER.flatMap((round) => knockoutTree.rounds[round] ?? []),
+    [knockoutTree],
+  );
+  const nodesByMatchNumber = useMemo(
+    () => new Map(winnerTreeNodes.map((node) => [node.matchNumber, node])),
+    [winnerTreeNodes],
+  );
+
+  const canvasWidth =
+    BRACKET_COLUMN_ORDER.length * MATCH_CARD_WIDTH +
+    (BRACKET_COLUMN_ORDER.length - 1) * BRACKET_COLUMN_GAP;
+  const canvasHeight =
+    knockoutTree.leafCount > 0
+      ? knockoutTree.leafCount * MATCH_CARD_HEIGHT +
+        (knockoutTree.leafCount - 1) * BRACKET_ROW_GAP
+      : MATCH_CARD_HEIGHT;
+
+  const thirdPlaceMatch =
+    (knockoutTree.thirdPlaceMatchNumber
+      ? matchesByNumber.get(knockoutTree.thirdPlaceMatchNumber)
+      : null) ?? bracket.find((match) => match.round === "third_place") ?? null;
+
+  if (winnerTreeNodes.length === 0) {
+    return (
+      <div className="mt-6 rounded-[1.75rem] border border-white/10 bg-white/4 p-8 text-center text-sm text-wc-fg3">
+        {TEXT.emptyBracket}
+      </div>
+    );
+  }
 
   return (
     <div className="mt-6 overflow-x-auto pb-4">
-      <div className="flex min-w-max gap-4">
-        <KnockoutColumn label={TEXT.round32} matches={byRound.round_of_32} matchHeight={110} />
-        <KnockoutColumn label={TEXT.round16} matches={byRound.round_of_16} matchHeight={232} offsetTop={56} />
-        <KnockoutColumn label={TEXT.quarterFinal} matches={byRound.quarter_final} matchHeight={474} offsetTop={176} />
-        <KnockoutColumn label={TEXT.semiFinal} matches={byRound.semi_final} matchHeight={958} offsetTop={416} />
-        <div className="flex w-56 shrink-0 flex-col">
-          <p className="wc-display mb-3 text-center text-2xl text-wc-amber">{TEXT.final}</p>
-          <div style={{ marginTop: "910px" }}>
-            {byRound.final.map((match) => (
-              <KnockoutMatchCard key={match.matchNumber} match={match} highlight />
-            ))}
-          </div>
-          {byRound.third_place.length > 0 && (
-            <div className="mt-6">
-              <p className="mb-2 text-center text-xs font-semibold text-wc-fg3">{TEXT.thirdPlace}</p>
-              {byRound.third_place.map((match) => (
-                <KnockoutMatchCard key={match.matchNumber} match={match} />
-              ))}
+      <div className="min-w-max" dir="ltr">
+        <div
+          className="grid gap-x-[78px]"
+          style={{ gridTemplateColumns: `repeat(${BRACKET_COLUMN_ORDER.length}, ${MATCH_CARD_WIDTH}px)` }}
+        >
+          {BRACKET_COLUMN_ORDER.map((round) => (
+            <div key={round} className="text-center">
+              <p className={`wc-display text-2xl ${round === "final" ? "text-wc-amber" : "text-wc-fg2"}`}>
+                {ROUND_LABELS[round]}
+              </p>
             </div>
-          )}
+          ))}
         </div>
+
+        <div className="relative mt-5" style={{ width: canvasWidth, height: canvasHeight }}>
+          {winnerTreeNodes.flatMap((parentNode) =>
+            parentNode.childMatchNumbers.map((childMatchNumber) => {
+              const childNode = nodesByMatchNumber.get(childMatchNumber);
+              if (!childNode) return null;
+
+              return (
+                <BracketConnector
+                  key={`${childMatchNumber}-${parentNode.matchNumber}`}
+                  parent={parentNode}
+                  child={childNode}
+                />
+              );
+            }),
+          )}
+
+          {winnerTreeNodes.map((node) => {
+            const match = matchesByNumber.get(node.matchNumber);
+            if (!match) return null;
+
+            return (
+              <div
+                key={node.matchNumber}
+                className="absolute"
+                style={{
+                  left: getBracketColumnX(node.round),
+                  top: getBracketCardTop(node),
+                  width: MATCH_CARD_WIDTH,
+                  height: MATCH_CARD_HEIGHT,
+                }}
+              >
+                <KnockoutMatchCard match={match} highlight={node.round === "final"} />
+              </div>
+            );
+          })}
+        </div>
+
+        {thirdPlaceMatch && (
+          <div className="mt-6 flex justify-start">
+            <div className="w-[252px]">
+              <p className="mb-3 text-center text-xs font-semibold text-wc-fg3">{TEXT.thirdPlace}</p>
+              <KnockoutMatchCard match={thirdPlaceMatch} />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-function KnockoutColumn({
-  label,
-  matches,
-  matchHeight,
-  offsetTop = 0,
+function getBracketColumnX(round: WinnerTreeRound) {
+  const columnIndex = BRACKET_COLUMN_ORDER.indexOf(round);
+  return columnIndex * (MATCH_CARD_WIDTH + BRACKET_COLUMN_GAP);
+}
+
+function getBracketCardTop(node: KnockoutTreeNode) {
+  const centerY = node.center * (MATCH_CARD_HEIGHT + BRACKET_ROW_GAP) + MATCH_CARD_HEIGHT / 2;
+  return centerY - MATCH_CARD_HEIGHT / 2;
+}
+
+function BracketConnector({
+  parent,
+  child,
 }: {
-  label: string;
-  matches: ResolvedBracketMatch[];
-  matchHeight: number;
-  offsetTop?: number;
+  parent: KnockoutTreeNode;
+  child: KnockoutTreeNode;
 }) {
+  const parentRight = getBracketColumnX(parent.round) + MATCH_CARD_WIDTH;
+  const childLeft = getBracketColumnX(child.round);
+  const parentCenterY = getBracketCardTop(parent) + MATCH_CARD_HEIGHT / 2;
+  const childCenterY = getBracketCardTop(child) + MATCH_CARD_HEIGHT / 2;
+  const middleX = parentRight + (childLeft - parentRight) / 2;
+  const verticalTop = Math.min(parentCenterY, childCenterY);
+  const verticalHeight = Math.abs(parentCenterY - childCenterY);
+
   return (
-    <div className="flex w-56 shrink-0 flex-col">
-      <p className="wc-display mb-3 text-center text-2xl text-wc-fg2">{label}</p>
-      <div className="flex flex-col" style={{ gap: `${matchHeight - 104}px`, paddingTop: `${offsetTop}px` }}>
-        {matches.map((match) => (
-          <KnockoutMatchCard key={match.matchNumber} match={match} />
-        ))}
-      </div>
-    </div>
+    <>
+      <div
+        className="absolute border-t"
+        style={{
+          left: parentRight,
+          top: parentCenterY,
+          width: middleX - parentRight,
+          borderColor: CONNECTOR_COLOR,
+        }}
+      />
+      {verticalHeight > 0 && (
+        <div
+          className="absolute border-l"
+          style={{
+            left: middleX,
+            top: verticalTop,
+            height: verticalHeight,
+            borderColor: CONNECTOR_COLOR,
+          }}
+        />
+      )}
+      <div
+        className="absolute border-t"
+        style={{
+          left: middleX,
+          top: childCenterY,
+          width: childLeft - middleX,
+          borderColor: CONNECTOR_COLOR,
+        }}
+      />
+    </>
   );
 }
 
-function KnockoutMatchCard({ match, highlight = false }: { match: ResolvedBracketMatch; highlight?: boolean }) {
+function KnockoutMatchCard({
+  match,
+  highlight = false,
+}: {
+  match: ResolvedBracketMatch;
+  highlight?: boolean;
+}) {
   const isLive = match.liveMatch?.status === "live";
   const liveMatch = match.liveMatch;
   const isFinished = liveMatch?.status === "finished";
@@ -352,7 +577,6 @@ function KnockoutMatchCard({ match, highlight = false }: { match: ResolvedBracke
     liveMatch.away_penalty_score !== null &&
     liveMatch.away_penalty_score !== undefined;
 
-  // null = undecided, true = home wins, false = away wins
   let homeWins: boolean | null = null;
   if (isFinished && liveMatch) {
     homeWins = hasPenalties
@@ -361,7 +585,10 @@ function KnockoutMatchCard({ match, highlight = false }: { match: ResolvedBracke
   }
 
   return (
-    <div className={`wc-bracket-card overflow-hidden text-[11px] leading-tight ${highlight ? "wc-bracket-final" : ""}`}>
+    <div
+      dir="rtl"
+      className={`wc-bracket-card flex h-full flex-col overflow-hidden text-[11px] leading-tight ${highlight ? "wc-bracket-final" : ""}`}
+    >
       <div
         className={`flex items-center justify-between gap-2 px-3 py-2 text-[10px] font-bold ${
           highlight
@@ -437,7 +664,7 @@ function SeedRow({
       : `font-medium ${highlight ? "text-wc-fg1" : "text-wc-fg2"}`;
 
   return (
-    <div className={`flex items-center justify-between gap-2 px-3 py-2 ${borderClass} ${bgClass}`}>
+    <div className={`flex flex-1 items-center justify-between gap-2 px-3 py-2 ${borderClass} ${bgClass}`}>
       <div className={`flex min-w-0 items-center gap-2 ${textClass}`}>
         {seed.kind === "team" && seed.team.logo_url ? (
           <Image src={seed.team.logo_url} alt={seed.team.name} width={16} height={11} className="rounded-sm object-cover" unoptimized />
@@ -493,10 +720,14 @@ function GroupTable({
   letter,
   standings,
   liveTeamIdSet,
+  qualifiedThirdPlaceTeamIds,
+  eliminatedThirdPlaceTeamIds,
 }: {
   letter: string;
   standings: TeamStanding[];
   liveTeamIdSet: Set<string>;
+  qualifiedThirdPlaceTeamIds: Set<string>;
+  eliminatedThirdPlaceTeamIds: Set<string>;
 }) {
   return (
     <div className="wc-card overflow-hidden">
@@ -507,7 +738,7 @@ function GroupTable({
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-white/8">
-              <th className="ps-4 pe-2 py-2 text-start font-semibold text-wc-fg3">#</th>
+              <th className="py-2 pe-2 ps-4 text-start font-semibold text-wc-fg3">#</th>
               <th className="px-2 py-2 text-start font-semibold text-wc-fg3">{TEXT.team}</th>
               <th className="px-2 py-2 text-center font-semibold text-wc-fg3">{TEXT.played}</th>
               <th className="px-2 py-2 text-center font-semibold text-wc-fg3">{TEXT.won}</th>
@@ -515,17 +746,26 @@ function GroupTable({
               <th className="px-2 py-2 text-center font-semibold text-wc-fg3">{TEXT.lost}</th>
               <th className="px-2 py-2 text-center font-semibold text-wc-fg3">{TEXT.goalsFor}</th>
               <th className="px-2 py-2 text-center font-semibold text-wc-fg3">{TEXT.goalDifference}</th>
-              <th className="ps-2 pe-4 py-2 text-center font-semibold text-wc-fg3">{TEXT.points}</th>
+              <th className="py-2 pe-4 ps-2 text-center font-semibold text-wc-fg3">{TEXT.points}</th>
             </tr>
           </thead>
           <tbody>
             {standings.map((entry) => {
-              const statusDisplay = getGroupStatusDisplay(entry);
+              const statusDisplay = getGroupStatusDisplay(
+                entry,
+                qualifiedThirdPlaceTeamIds,
+                eliminatedThirdPlaceTeamIds,
+              );
+              const rowStatus = getEffectiveGroupStatus(
+                entry,
+                qualifiedThirdPlaceTeamIds,
+                eliminatedThirdPlaceTeamIds,
+              );
               const isLive = liveTeamIdSet.has(entry.team.id);
 
               return (
-                <tr key={entry.team.id} className={`border-b border-white/6 last:border-0 ${STATUS_META[entry.status].rowClassName}`}>
-                  <td className="ps-4 pe-2 py-3 font-semibold text-wc-fg2">{entry.rank}</td>
+                <tr key={entry.team.id} className={`border-b border-white/6 last:border-0 ${STATUS_META[rowStatus].rowClassName}`}>
+                  <td className="py-3 pe-2 ps-4 font-semibold text-wc-fg2">{entry.rank}</td>
                   <td className="px-2 py-3">
                     <div className="flex min-w-0 items-center gap-2">
                       {entry.team.logo_url ? (
@@ -555,7 +795,7 @@ function GroupTable({
                   <td className="px-2 py-3 text-center text-wc-fg2">{entry.lost}</td>
                   <td className="px-2 py-3 text-center text-wc-fg2">{entry.gf}</td>
                   <td className="px-2 py-3 text-center text-wc-fg2">{entry.gd}</td>
-                  <td className="ps-2 pe-4 py-3 text-center font-bold text-wc-fg1">{entry.pts}</td>
+                  <td className="py-3 pe-4 ps-2 text-center font-bold text-wc-fg1">{entry.pts}</td>
                 </tr>
               );
             })}
@@ -582,31 +822,49 @@ function BestThirdHead() {
   return (
     <thead>
       <tr className="border-b border-white/8">
-        <th className="ps-4 pe-2 py-3 text-start font-semibold text-wc-fg3">#</th>
+        <th className="py-3 pe-2 ps-4 text-start font-semibold text-wc-fg3">#</th>
         <th className="px-3 py-3 text-start font-semibold text-wc-fg3">{TEXT.team}</th>
         <th className="px-3 py-3 text-center font-semibold text-wc-fg3">{TEXT.group}</th>
         <th className="px-3 py-3 text-center font-semibold text-wc-fg3">{TEXT.played}</th>
         <th className="px-3 py-3 text-center font-semibold text-wc-fg3">{TEXT.points}</th>
         <th className="px-3 py-3 text-center font-semibold text-wc-fg3">{TEXT.goalDifference}</th>
         <th className="px-3 py-3 text-center font-semibold text-wc-fg3">{TEXT.goalsFor}</th>
-        <th className="ps-2 pe-4 py-3 text-center font-semibold text-wc-fg3">{TEXT.status}</th>
+        <th className="py-3 pe-4 ps-2 text-center font-semibold text-wc-fg3">{TEXT.status}</th>
       </tr>
     </thead>
   );
 }
 
-function BestThirdRow({ entry }: { entry: TeamStanding }) {
-  const statusDisplay = getBestThirdStatusDisplay(entry);
+function BestThirdRow({
+  entry,
+  qualifiedThirdPlaceTeamIds,
+  eliminatedThirdPlaceTeamIds,
+}: {
+  entry: TeamStanding;
+  qualifiedThirdPlaceTeamIds: Set<string>;
+  eliminatedThirdPlaceTeamIds: Set<string>;
+}) {
+  const statusDisplay = getBestThirdStatusDisplay(
+    entry,
+    qualifiedThirdPlaceTeamIds,
+    eliminatedThirdPlaceTeamIds,
+  );
+  const effectiveStatus =
+    qualifiedThirdPlaceTeamIds.has(entry.team.id)
+      ? "qualified"
+      : eliminatedThirdPlaceTeamIds.has(entry.team.id)
+        ? "eliminated"
+        : entry.status;
   const isBelowCutoff = entry.rank > 8;
   const rowAccentClassName = isBelowCutoff
     ? "bg-[linear-gradient(90deg,rgba(255,92,130,0.08),rgba(255,92,130,0.02))]"
-    : "";
+    : "bg-[linear-gradient(90deg,rgba(95,255,123,0.06),rgba(95,255,123,0.01))]";
   const dividerClassName = entry.rank === 9 ? "border-t-2 border-t-[rgba(255,92,130,0.45)]" : "";
   const rankClassName = isBelowCutoff ? "text-wc-danger" : "text-wc-fg2";
 
   return (
-    <tr className={`border-b border-white/6 last:border-0 ${dividerClassName} ${STATUS_META[entry.status].rowClassName} ${rowAccentClassName}`}>
-      <td className={`ps-4 pe-2 py-3 font-semibold ${rankClassName}`}>{entry.rank}</td>
+    <tr className={`border-b border-white/6 last:border-0 ${dividerClassName} ${STATUS_META[effectiveStatus].rowClassName} ${rowAccentClassName}`}>
+      <td className={`py-3 pe-2 ps-4 font-semibold ${rankClassName}`}>{entry.rank}</td>
       <td className="px-3 py-3">
         <div className="flex min-w-0 items-center gap-2">
           {entry.team.logo_url ? (
@@ -629,7 +887,7 @@ function BestThirdRow({ entry }: { entry: TeamStanding }) {
       <td className="px-3 py-3 text-center font-bold text-wc-fg1">{entry.pts}</td>
       <td className="px-3 py-3 text-center text-wc-fg2">{entry.gd}</td>
       <td className="px-3 py-3 text-center text-wc-fg2">{entry.gf}</td>
-      <td className="ps-2 pe-4 py-3 text-center">
+      <td className="py-3 pe-4 ps-2 text-center">
         <StatusPill display={statusDisplay} />
       </td>
     </tr>
@@ -640,7 +898,7 @@ function StatusPill({ display }: { display: StatusDisplay | null }) {
   if (!display) return null;
 
   return (
-    <span className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${display.pillClassName}`}>
+    <span className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold leading-4 ${display.pillClassName}`}>
       {display.label}
     </span>
   );

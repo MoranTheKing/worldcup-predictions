@@ -1,9 +1,11 @@
 "use client";
 
+import { buildKnockoutWinnerTree } from "@/lib/tournament/knockout-tree";
 import {
   formatMatchDateLabel,
   formatMatchTimeLabel,
   getMatchScoreSummary,
+  getMatchStageKind,
   getStageLabelHe,
   getTeamDisplayLogo,
   getTeamDisplayName,
@@ -17,6 +19,24 @@ import { useMemo, useState } from "react";
 export type MatchListRow = MatchWithTeams;
 
 type Filter = "all" | "live" | "scheduled" | "finished";
+
+type KnockoutSortNode = {
+  round: string;
+  order: number;
+  leafStart: number;
+  center: number;
+};
+
+const KNOCKOUT_STAGE_ORDER = {
+  group: -1,
+  round_of_32: 0,
+  round_of_16: 1,
+  quarter_final: 2,
+  semi_final: 3,
+  third_place: 4,
+  final: 5,
+  unknown: 99,
+} as const;
 
 const TEXT: Record<Filter, { label: string; empty: string }> = {
   all: {
@@ -63,6 +83,22 @@ function getStatusMeta(status: string, minute: number | null) {
 
 export default function MatchesClient({ matches }: { matches: MatchListRow[] }) {
   const [filter, setFilter] = useState<Filter>("all");
+  const knockoutTree = useMemo(() => buildKnockoutWinnerTree(matches), [matches]);
+  const knockoutNodesByMatchNumber = useMemo<Map<number, KnockoutSortNode>>(
+    () =>
+      new Map(
+        knockoutTree.nodes.map((node) => [
+          node.matchNumber,
+          {
+            round: node.round,
+            order: node.order,
+            leafStart: node.leafStart,
+            center: node.center,
+          },
+        ]),
+      ),
+    [knockoutTree.nodes],
+  );
 
   const counts = useMemo(
     () => ({
@@ -89,8 +125,13 @@ export default function MatchesClient({ matches }: { matches: MatchListRow[] }) 
       byDate.set(key, bucket);
     }
 
-    return Array.from(byDate.entries());
-  }, [filtered]);
+    return Array.from(byDate.entries()).map(([date, rows]) => [
+      date,
+      [...rows].sort((left, right) =>
+        compareMatches(left, right, knockoutNodesByMatchNumber),
+      ),
+    ] as const);
+  }, [filtered, knockoutNodesByMatchNumber]);
 
   return (
     <div className="wc-shell px-4 py-4 md:px-6 md:py-6">
@@ -99,7 +140,9 @@ export default function MatchesClient({ matches }: { matches: MatchListRow[] }) 
           <p className="wc-kicker">Match Center</p>
           <h1 className="wc-display mt-3 text-5xl text-wc-fg1">משחקים</h1>
           <p className="mt-4 max-w-3xl text-sm leading-7 text-wc-fg2">
-            כל 104 משחקי מונדיאל 2026, מקובצים לפי תאריך ומוצגים בשעון IDT. הסדר במסך הזה נקבע לפי זמן המשחק.
+            כל 104 משחקי מונדיאל 2026, מקובצים לפי תאריך ומוצגים בשעון IDT. בימי נוקאאוט,
+            סדר הכרטיסים בתוך אותו יום נשען גם על מסלול הברקט הרשמי כדי לשמור על הזרימה
+            הלוגית מהסיבוב הראשון ועד הגמר.
           </p>
         </div>
       </section>
@@ -145,6 +188,44 @@ export default function MatchesClient({ matches }: { matches: MatchListRow[] }) 
       )}
     </div>
   );
+}
+
+function compareMatches(
+  left: MatchListRow,
+  right: MatchListRow,
+  knockoutNodesByMatchNumber: Map<number, KnockoutSortNode>,
+) {
+  const timeComparison = left.date_time.localeCompare(right.date_time);
+  if (timeComparison !== 0) return timeComparison;
+
+  const leftStage = getMatchStageKind(left.stage);
+  const rightStage = getMatchStageKind(right.stage);
+  const leftStageOrder = KNOCKOUT_STAGE_ORDER[leftStage];
+  const rightStageOrder = KNOCKOUT_STAGE_ORDER[rightStage];
+
+  if (leftStageOrder !== rightStageOrder) {
+    return leftStageOrder - rightStageOrder;
+  }
+
+  const leftNode = knockoutNodesByMatchNumber.get(left.match_number);
+  const rightNode = knockoutNodesByMatchNumber.get(right.match_number);
+
+  if (leftNode && rightNode) {
+    const leftPathOrder =
+      leftNode.round === "round_of_32" ? leftNode.leafStart : leftNode.center;
+    const rightPathOrder =
+      rightNode.round === "round_of_32" ? rightNode.leafStart : rightNode.center;
+
+    if (leftPathOrder !== rightPathOrder) {
+      return leftPathOrder - rightPathOrder;
+    }
+
+    if (leftNode.order !== rightNode.order) {
+      return leftNode.order - rightNode.order;
+    }
+  }
+
+  return left.match_number - right.match_number;
 }
 
 function MatchCard({ match }: { match: MatchListRow }) {
