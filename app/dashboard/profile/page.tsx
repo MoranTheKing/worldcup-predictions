@@ -14,7 +14,7 @@ type ScorerPlayer = {
 };
 
 type OutrightRow = {
-  predicted_winner_team_id: number | null;
+  predicted_winner_team_id: string | null;
   predicted_top_scorer_player_id: number | null;
   predicted_top_scorer_name: string | null;
   teams: WinnerTeam | WinnerTeam[] | null;

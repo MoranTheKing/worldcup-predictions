@@ -1,5 +1,10 @@
+import {
+  getGroupLetterFromStage,
+  getMatchStageKind,
+} from "@/lib/tournament/matches";
+
 export type TournamentTeam = {
-  id: number;
+  id: string;
   name: string;
   name_he: string | null;
   logo_url: string | null;
@@ -14,12 +19,20 @@ export type TournamentTeam = {
 };
 
 export type TournamentMatch = {
-  id: number;
+  match_number: number;
   stage: string;
-  home_team_id: number | null;
-  away_team_id: number | null;
-  home_team_score: number | null;
-  away_team_score: number | null;
+  date_time: string;
+  home_team_id: string | null;
+  away_team_id: string | null;
+  home_score: number | null;
+  away_score: number | null;
+  is_extra_time?: boolean | null;
+  home_penalty_score?: number | null;
+  away_penalty_score?: number | null;
+  home_placeholder?: string | null;
+  away_placeholder?: string | null;
+  status?: string | null;
+  minute?: number | null;
 };
 
 export type StandingStatus = "qualified" | "pending" | "eliminated";
@@ -28,6 +41,7 @@ export type TeamStanding = {
   team: TournamentTeam;
   rank: number;
   lockedRank: number | null;
+  isLocked: boolean;
   played: number;
   won: number;
   drawn: number;
@@ -55,8 +69,8 @@ type MatchStats = {
 };
 
 type PendingGroupMatch = {
-  homeTeamId: number;
-  awayTeamId: number;
+  homeTeamId: string;
+  awayTeamId: string;
 };
 
 type ScenarioRank = {
@@ -80,51 +94,73 @@ type TeamScenarioState = {
 type GroupScenarioSummary = {
   minThirdPlacePoints: number;
   maxThirdPlacePoints: number;
-  teamStates: Map<number, TeamScenarioState>;
+  teamStates: Map<string, TeamScenarioState>;
+};
+
+type GroupStandingContext = {
+  summary: GroupScenarioSummary;
+  isFinalized: boolean;
 };
 
 const THIRD_PLACE_QUALIFIERS = 8;
 
 function isCompletedGroupMatch(match: TournamentMatch): boolean {
   return (
-    match.stage === "group" &&
+    getMatchStageKind(match.stage) === "group" &&
     match.home_team_id !== null &&
     match.away_team_id !== null &&
-    match.home_team_score !== null &&
-    match.away_team_score !== null
+    (match.status === "live" || match.status === "finished") &&
+    match.home_score !== null &&
+    match.away_score !== null
   );
 }
 
 function isPendingGroupMatch(match: TournamentMatch): boolean {
   return (
-    match.stage === "group" &&
+    getMatchStageKind(match.stage) === "group" &&
     match.home_team_id !== null &&
     match.away_team_id !== null &&
-    (match.home_team_score === null || match.away_team_score === null)
+    match.status === "scheduled"
   );
 }
 
-function compareNames(a: TeamStanding, b: TeamStanding): number {
-  const aName = a.team.name_he ?? a.team.name;
-  const bName = b.team.name_he ?? b.team.name;
-
-  return aName.localeCompare(bName, "he");
+function compareNames(left: TeamStanding, right: TeamStanding): number {
+  const leftName = left.team.name_he ?? left.team.name;
+  const rightName = right.team.name_he ?? right.team.name;
+  return leftName.localeCompare(rightName, "he");
 }
 
-function compareOverallCriteria(a: TeamStanding, b: TeamStanding): number {
-  const goalDifferenceDiff = b.gd - a.gd;
+function compareOverallCriteria(left: TeamStanding, right: TeamStanding): number {
+  const goalDifferenceDiff = right.gd - left.gd;
   if (goalDifferenceDiff !== 0) return goalDifferenceDiff;
 
-  const goalsForDiff = b.gf - a.gf;
+  const goalsForDiff = right.gf - left.gf;
   if (goalsForDiff !== 0) return goalsForDiff;
 
-  const fairPlayDiff = b.fairPlay - a.fairPlay;
+  const fairPlayDiff = right.fairPlay - left.fairPlay;
   if (fairPlayDiff !== 0) return fairPlayDiff;
 
-  const rankingDiff = a.fifaRanking - b.fifaRanking;
+  const rankingDiff = left.fifaRanking - right.fifaRanking;
   if (rankingDiff !== 0) return rankingDiff;
 
-  return compareNames(a, b);
+  return compareNames(left, right);
+}
+
+function compareMiniMetrics(
+  left: TeamStanding,
+  right: TeamStanding,
+  metrics: Map<string, MiniTableMetrics>,
+) {
+  const leftMetrics = metrics.get(left.team.id) ?? { points: 0, goalDifference: 0, goalsFor: 0 };
+  const rightMetrics = metrics.get(right.team.id) ?? { points: 0, goalDifference: 0, goalsFor: 0 };
+
+  const pointsDiff = rightMetrics.points - leftMetrics.points;
+  if (pointsDiff !== 0) return pointsDiff;
+
+  const goalDifferenceDiff = rightMetrics.goalDifference - leftMetrics.goalDifference;
+  if (goalDifferenceDiff !== 0) return goalDifferenceDiff;
+
+  return rightMetrics.goalsFor - leftMetrics.goalsFor;
 }
 
 function groupByComparableKey<T>(
@@ -147,7 +183,7 @@ function groupByComparableKey<T>(
   return groups;
 }
 
-function collectMatchStats(teamId: number, matches: TournamentMatch[]): MatchStats {
+function collectMatchStats(teamId: string, matches: TournamentMatch[]): MatchStats {
   return matches.reduce<MatchStats>(
     (stats, match) => {
       if (!isCompletedGroupMatch(match)) return stats;
@@ -156,8 +192,8 @@ function collectMatchStats(teamId: number, matches: TournamentMatch[]): MatchSta
       const isAway = match.away_team_id === teamId;
       if (!isHome && !isAway) return stats;
 
-      const goalsFor = isHome ? match.home_team_score! : match.away_team_score!;
-      const goalsAgainst = isHome ? match.away_team_score! : match.home_team_score!;
+      const goalsFor = isHome ? match.home_score! : match.away_score!;
+      const goalsAgainst = isHome ? match.away_score! : match.home_score!;
 
       stats.played += 1;
       if (goalsFor > goalsAgainst) stats.won += 1;
@@ -173,9 +209,9 @@ function collectMatchStats(teamId: number, matches: TournamentMatch[]): MatchSta
 function buildHeadToHeadMetrics(
   entries: TeamStanding[],
   matches: TournamentMatch[],
-): Map<number, MiniTableMetrics> {
+): Map<string, MiniTableMetrics> {
   const teamIds = new Set(entries.map((entry) => entry.team.id));
-  const metrics = new Map<number, MiniTableMetrics>(
+  const metrics = new Map<string, MiniTableMetrics>(
     entries.map((entry) => [
       entry.team.id,
       { points: 0, goalDifference: 0, goalsFor: 0 },
@@ -190,8 +226,8 @@ function buildHeadToHeadMetrics(
     const awayMetrics = metrics.get(match.away_team_id!);
     if (!homeMetrics || !awayMetrics) continue;
 
-    const homeGoals = match.home_team_score!;
-    const awayGoals = match.away_team_score!;
+    const homeGoals = match.home_score!;
+    const awayGoals = match.away_score!;
 
     homeMetrics.goalsFor += homeGoals;
     homeMetrics.goalDifference += homeGoals - awayGoals;
@@ -211,47 +247,31 @@ function buildHeadToHeadMetrics(
   return metrics;
 }
 
-function compareHeadToHeadMetrics(
-  left: TeamStanding,
-  right: TeamStanding,
-  metrics: Map<number, MiniTableMetrics>,
-): number {
-  const leftMetrics = metrics.get(left.team.id) ?? { points: 0, goalDifference: 0, goalsFor: 0 };
-  const rightMetrics = metrics.get(right.team.id) ?? { points: 0, goalDifference: 0, goalsFor: 0 };
-
-  const pointsDiff = rightMetrics.points - leftMetrics.points;
-  if (pointsDiff !== 0) return pointsDiff;
-
-  const goalDifferenceDiff = rightMetrics.goalDifference - leftMetrics.goalDifference;
-  if (goalDifferenceDiff !== 0) return goalDifferenceDiff;
-
-  return rightMetrics.goalsFor - leftMetrics.goalsFor;
-}
-
 function resolveTieByHeadToHead(entries: TeamStanding[], matches: TournamentMatch[]): TeamStanding[] {
   if (entries.length <= 1) return entries;
 
   const metrics = buildHeadToHeadMetrics(entries, matches);
   const sorted = [...entries].sort((left, right) => {
-    const comparison = compareHeadToHeadMetrics(left, right, metrics);
-    return comparison !== 0 ? comparison : compareNames(left, right);
+    const headToHeadComparison = compareMiniMetrics(left, right, metrics);
+    return headToHeadComparison !== 0 ? headToHeadComparison : compareNames(left, right);
   });
 
   const tiedGroups = groupByComparableKey(
     sorted,
-    (left, right) => compareHeadToHeadMetrics(left, right, metrics) === 0,
+    (left, right) => compareMiniMetrics(left, right, metrics) === 0,
   );
 
   if (tiedGroups.length === 1) {
     return [...entries].sort(compareOverallCriteria);
   }
 
-  return tiedGroups.flatMap((group) => (
-    group.length === 1 ? group : resolveTieByHeadToHead(group, matches)
-  ));
+  return tiedGroups.flatMap((group) => {
+    if (group.length === 1) return group;
+    return resolveTieByHeadToHead(group, matches);
+  });
 }
 
-function sortEntriesByPoints(
+function sortEntriesByStandings(
   entries: TeamStanding[],
   matches: TournamentMatch[],
   useHeadToHead: boolean,
@@ -266,7 +286,6 @@ function sortEntriesByPoints(
   return pointGroups.flatMap((group) => {
     if (group.length === 1) return group;
     if (!useHeadToHead) return [...group].sort(compareOverallCriteria);
-
     return resolveTieByHeadToHead(group, matches);
   });
 }
@@ -278,6 +297,7 @@ function buildStandingEntry(team: TournamentTeam, matches: TournamentMatch[]): T
     team,
     rank: 0,
     lockedRank: null,
+    isLocked: false,
     played: stats.played || team.played_count,
     won: stats.won,
     drawn: stats.drawn,
@@ -305,8 +325,7 @@ function buildCurrentGroupStandings(
 ): TeamStanding[] {
   const completedMatches = matches.filter((match) => isCompletedGroupMatch(match));
   const baseEntries = teams.map((team) => buildStandingEntry(team, completedMatches));
-  const sorted = sortEntriesByPoints(baseEntries, completedMatches, true);
-
+  const sorted = sortEntriesByStandings(baseEntries, completedMatches, true);
   return withRanks(sorted);
 }
 
@@ -319,17 +338,17 @@ function buildPendingMatches(matches: TournamentMatch[]): PendingGroupMatch[] {
     }));
 }
 
-function clonePoints(pointsById: Map<number, number>): Map<number, number> {
+function clonePoints(pointsById: Map<string, number>): Map<string, number> {
   return new Map(pointsById);
 }
 
 function enumeratePointScenarios(
-  basePointsById: Map<number, number>,
+  basePointsById: Map<string, number>,
   pendingMatches: PendingGroupMatch[],
-): Map<number, number>[] {
-  const scenarios: Map<number, number>[] = [];
+): Map<string, number>[] {
+  const scenarios: Map<string, number>[] = [];
 
-  function walk(index: number, pointsById: Map<number, number>) {
+  function walk(index: number, pointsById: Map<string, number>) {
     if (index >= pendingMatches.length) {
       scenarios.push(clonePoints(pointsById));
       return;
@@ -352,12 +371,11 @@ function enumeratePointScenarios(
   }
 
   walk(0, clonePoints(basePointsById));
-
   return scenarios;
 }
 
-function rankScenario(teamIds: number[], pointsById: Map<number, number>): Map<number, ScenarioRank> {
-  const scenarioRanks = new Map<number, ScenarioRank>();
+function rankScenario(teamIds: string[], pointsById: Map<string, number>): Map<string, ScenarioRank> {
+  const scenarioRanks = new Map<string, ScenarioRank>();
 
   for (const teamId of teamIds) {
     const points = pointsById.get(teamId) ?? 0;
@@ -393,7 +411,7 @@ function buildScenarioSummary(
   const pendingMatches = buildPendingMatches(matches);
   const scenarios = enumeratePointScenarios(currentPointsById, pendingMatches);
 
-  const teamStates = new Map<number, TeamScenarioState>(
+  const teamStates = new Map<string, TeamScenarioState>(
     teamIds.map((teamId) => [
       teamId,
       {
@@ -473,15 +491,14 @@ function determineBestThirdStatus(
   const teamState = summary?.teamStates.get(entry.team.id);
   if (!summary || !teamState) return "pending";
 
-  const guaranteedQualified = (
+  const guaranteedQualified =
     teamState.guaranteedAtLeastThird &&
     teamState.minThirdPlacePoints !== null &&
     countOtherGroupsMatching(
       groupSummaries,
       groupLetter,
       (otherGroup) => otherGroup.maxThirdPlacePoints >= teamState.minThirdPlacePoints!,
-    ) < THIRD_PLACE_QUALIFIERS
-  );
+    ) < THIRD_PLACE_QUALIFIERS;
 
   if (guaranteedQualified) {
     return "qualified";
@@ -502,7 +519,7 @@ function determineBestThirdStatus(
 }
 
 function determineGroupStatus(
-  teamId: number,
+  teamId: string,
   groupLetter: string,
   groupSummaries: Map<string, GroupScenarioSummary>,
 ): StandingStatus {
@@ -559,8 +576,7 @@ export function buildBestThirdPlaceStandings(groupStandings: Record<string, Team
       status: "pending" as StandingStatus,
     }));
 
-  const sorted = sortEntriesByPoints(thirdPlaceEntries, [], false);
-
+  const sorted = sortEntriesByStandings(thirdPlaceEntries, [], false);
   return withRanks(sorted);
 }
 
@@ -580,20 +596,28 @@ export function buildTournamentStandings(
   }, {});
 
   const groupSummaries = new Map<string, GroupScenarioSummary>();
+  const groupContexts = new Map<string, GroupStandingContext>();
   const initialGroupStandings = Object.fromEntries(
     Object.entries(teamsByGroup)
       .sort(([left], [right]) => left.localeCompare(right))
       .map(([letter, groupTeams]) => {
         const groupTeamIds = new Set(groupTeams.map((team) => team.id));
         const groupMatches = matches.filter((match) => (
-          match.stage === "group" &&
+          getGroupLetterFromStage(match.stage) === letter &&
           match.home_team_id !== null &&
           match.away_team_id !== null &&
           groupTeamIds.has(match.home_team_id) &&
           groupTeamIds.has(match.away_team_id)
         ));
 
-        groupSummaries.set(letter, buildScenarioSummary(groupTeams, groupMatches));
+        const summary = buildScenarioSummary(groupTeams, groupMatches);
+        groupSummaries.set(letter, summary);
+        groupContexts.set(letter, {
+          summary,
+          isFinalized: !groupMatches.some(
+            (match) => match.status === "scheduled" || match.status === "live",
+          ),
+        });
 
         return [letter, buildCurrentGroupStandings(groupTeams, groupMatches)];
       }),
@@ -602,22 +626,34 @@ export function buildTournamentStandings(
   const bestThirdStandings = buildBestThirdPlaceStandings(initialGroupStandings).map((entry) => ({
     ...entry,
     lockedRank: null,
+    isLocked: false,
     status: determineBestThirdStatus(entry, groupSummaries),
   }));
 
   const groupStandings = Object.fromEntries(
     Object.entries(initialGroupStandings).map(([letter, standings]) => [
       letter,
-      standings.map((entry) => ({
-        ...entry,
-        lockedRank: (() => {
-          const teamState = groupSummaries.get(letter)?.teamStates.get(entry.team.id);
-          return teamState && teamState.bestPossibleRank === teamState.worstPossibleRank
+      standings.map((entry) => {
+        const groupContext = groupContexts.get(letter);
+        const teamState = groupContext?.summary.teamStates.get(entry.team.id);
+        const terminalLockedRank =
+          groupContext?.isFinalized && entry.played === 3 ? entry.rank : null;
+        const scenarioLockedRank =
+          terminalLockedRank === null &&
+          entry.played === 3 &&
+          teamState &&
+          teamState.bestPossibleRank === teamState.worstPossibleRank
             ? teamState.bestPossibleRank
             : null;
-        })(),
-        status: determineGroupStatus(entry.team.id, letter, groupSummaries),
-      })),
+        const lockedRank = terminalLockedRank ?? scenarioLockedRank ?? null;
+
+        return {
+          ...entry,
+          lockedRank,
+          isLocked: lockedRank !== null,
+          status: determineGroupStatus(entry.team.id, letter, groupSummaries),
+        };
+      }),
     ]),
   );
 

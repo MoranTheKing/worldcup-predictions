@@ -8,6 +8,7 @@
     "start": "call \"%npm_node_execpath%\" ./node_modules/next/dist/bin/next start",
     "lint": "call \"%npm_node_execpath%\" ./node_modules/eslint/bin/eslint.js .",
     "seed:teams": "call \"%npm_node_execpath%\" ./node_modules/tsx/dist/cli.mjs scripts/seed-teams.ts",
+    "seed:matches": "call \"%npm_node_execpath%\" ./node_modules/tsx/dist/cli.mjs scripts/seed-matches.ts",
     "seed:rankings": "call \"%npm_node_execpath%\" ./node_modules/tsx/dist/cli.mjs scripts/seed-fifa-rankings.ts",
     "seed:players": "call \"%npm_node_execpath%\" ./node_modules/tsx/dist/cli.mjs scripts/fetch-players.ts",
     "seed:players:mock": "call \"%npm_node_execpath%\" ./node_modules/tsx/dist/cli.mjs scripts/seed-players-mock.ts"

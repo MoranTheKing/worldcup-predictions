@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
 const NAV_ITEMS = [
-  { href: "/dashboard", icon: "🎯", label: "משחקים" },
+  { href: "/dashboard/matches", icon: "🎯", label: "משחקים" },
   { href: "/dashboard/tournament", icon: "🏆", label: "טורניר" },
   { href: "/dashboard/leagues", icon: "👥", label: "ליגות" },
   { href: "/dashboard/profile", icon: "🧤", label: "פרופיל" },
@@ -22,7 +22,10 @@ export default function DashboardShell({ username, streak, children }: Props) {
   const router = useRouter();
 
   function isActive(href: string) {
-    return href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(href);
+    if (href === "/dashboard/matches") {
+      return pathname === "/dashboard" || pathname.startsWith("/dashboard/matches");
+    }
+    return pathname.startsWith(href);
   }
 
   async function handleSignOut() {

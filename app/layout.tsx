@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 
@@ -9,7 +8,7 @@ const worldCupDisplay = localFont({
   weight: "500",
 });
 
-export const metadata: Metadata = {
+export const metadata = {
   title: "תחזיות מונדיאל 2026",
   description: "משחק תחזיות מונדיאל 2026",
 };

@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import DashboardShell from "@/components/DashboardShell";
+import DevToolsFloatingButton from "@/components/DevToolsFloatingButton";
 
 export default async function DashboardLayout({
   children,
@@ -35,6 +36,7 @@ export default async function DashboardLayout({
       streak={profile.current_streak ?? 0}
     >
       {children}
+      <DevToolsFloatingButton />
     </DashboardShell>
   );
 }

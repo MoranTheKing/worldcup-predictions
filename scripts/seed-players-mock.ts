@@ -130,13 +130,13 @@ async function main() {
     process.exit(1);
   }
 
-  const teamIdByName = new Map<string, number>(
+  const teamIdByName = new Map<string, string>(
     teams.map((t) => [t.name, t.id])
   );
   console.log(`    Loaded ${teams.length} teams.\n`);
 
   // 2. Resolve team_id for each mock player
-  const rows: { id: number; name: string; team_id: number; position: string; goals: number; assists: number }[] = [];
+  const rows: { id: number; name: string; team_id: string; position: string; goals: number; assists: number }[] = [];
   const missing: string[] = [];
 
   for (const p of MOCK_PLAYERS) {

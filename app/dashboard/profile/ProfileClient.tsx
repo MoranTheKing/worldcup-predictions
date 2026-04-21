@@ -7,8 +7,8 @@ import { useEffect, useRef, useState } from "react";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
-type Team   = { id: number; name: string; name_he: string | null; logo_url: string | null };
-type Player = { id: number; name: string; team_id: number | null; position: string | null };
+type Team   = { id: string; name: string; name_he: string | null; logo_url: string | null };
+type Player = { id: number; name: string; team_id: string | null; position: string | null };
 
 interface Props {
   userId:                  string;
@@ -16,7 +16,7 @@ interface Props {
   streak:                  number;
   jokersGroups:            number;
   jokersKnockouts:         number;
-  outrightWinnerId:        number | null;
+  outrightWinnerId:        string | null;
   outrightWinnerName:      string | null;
   outrightWinnerHe:        string | null;
   outrightWinnerLogo:      string | null;
@@ -123,7 +123,7 @@ export default function ProfileClient({
 
     const payload: Record<string, unknown> = {
       user_id:                  userId,
-      predicted_winner_team_id: parseInt(winnerId, 10),
+      predicted_winner_team_id: winnerId,
     };
     if (selectedPlayer) {
       payload.predicted_top_scorer_player_id = selectedPlayer.id;

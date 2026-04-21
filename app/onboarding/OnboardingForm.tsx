@@ -8,7 +8,7 @@ import { useEffect, useRef, useState } from "react";
 // ── Types ──────────────────────────────────────────────────────────────────────
 
 type Team = {
-  id:           number;
+  id:           string;
   name:         string;
   name_he:      string;
   flag:         string;
@@ -19,7 +19,7 @@ type Team = {
 type Player = {
   id:       number;
   name:     string;
-  team_id:  number | null;
+  team_id:  string | null;
   position: string | null;
 };
 
@@ -137,7 +137,7 @@ export default function OnboardingForm({
 
     const payload: Record<string, unknown> = {
       user_id:                  userId,
-      predicted_winner_team_id: parseInt(winnerId, 10),
+      predicted_winner_team_id: winnerId,
     };
 
     if (selectedPlayer) {

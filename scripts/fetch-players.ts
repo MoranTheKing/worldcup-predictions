@@ -80,7 +80,7 @@ interface ApiTeam {
   venue: { id: number; name: string };
 }
 
-async function syncTeamApiIds(dbTeams: { id: number; name: string; api_id: number | null }[]) {
+async function syncTeamApiIds(dbTeams: { id: string; name: string; api_id: number | null }[]) {
   console.log("\n📋  Step 1 — Fetching WC2026 teams from api-football.com…");
 
   const data = await apiFetch(`/teams?league=${WC_LEAGUE}&season=${WC_SEASON}`);
@@ -163,7 +163,7 @@ interface ApiPlayer {
 }
 
 async function fetchPlayersViaLeague(
-  dbTeamByApiId: Map<number, number>  // api_id → our internal id
+  dbTeamByApiId: Map<number, string>  // api_id → our internal id
 ): Promise<{ fetched: number }> {
   console.log("\n⚽  Step 2a — Fetching players via /players?league=1&season=2026…");
 
@@ -203,7 +203,7 @@ async function fetchPlayersViaLeague(
 
   const upsertRows: {
     id: number; name: string; position: string | null;
-    team_id: number; goals: number; assists: number;
+    team_id: string; goals: number; assists: number;
   }[] = [];
 
   for (const [apiTeamId, players] of byTeam) {
@@ -253,7 +253,7 @@ interface ApiSquadPlayer {
 }
 
 async function fetchPlayersViaSquads(
-  dbTeams: { id: number; name: string; api_id: number | null }[]
+  dbTeams: { id: string; name: string; api_id: number | null }[]
 ): Promise<{ fetched: number }> {
   console.log("\n⚽  Step 2b — Fallback: fetching squads per team…");
   console.log("    (League-level player data not yet available — tournament starts June 11)");
@@ -335,7 +335,7 @@ async function main() {
   await syncTeamApiIds(dbTeams);
 
   // Build lookup map for Step 2a
-  const dbTeamByApiId = new Map<number, number>();
+  const dbTeamByApiId = new Map<number, string>();
   for (const t of dbTeams) {
     if (t.api_id) dbTeamByApiId.set(t.api_id, t.id);
   }
