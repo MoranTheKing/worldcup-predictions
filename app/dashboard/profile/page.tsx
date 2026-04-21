@@ -2,6 +2,30 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import ProfileClient from "./ProfileClient";
 
+type WinnerTeam = {
+  name: string;
+  name_he: string | null;
+  logo_url: string | null;
+};
+
+type ScorerPlayer = {
+  id: number;
+  name: string;
+};
+
+type OutrightRow = {
+  predicted_winner_team_id: number | null;
+  predicted_top_scorer_player_id: number | null;
+  predicted_top_scorer_name: string | null;
+  teams: WinnerTeam | WinnerTeam[] | null;
+  players: ScorerPlayer | ScorerPlayer[] | null;
+};
+
+function relationToSingle<T>(value: T | T[] | null | undefined): T | null {
+  if (Array.isArray(value)) return value[0] ?? null;
+  return value ?? null;
+}
+
 export default async function ProfilePage() {
   const supabase = await createClient();
   const {
@@ -43,8 +67,9 @@ export default async function ProfilePage() {
       .order("name", { ascending: true }),
   ]);
 
-  const winnerTeam  = (outright as any)?.teams  as { name: string; name_he: string | null; logo_url: string | null } | null;
-  const scorerPlayer = (outright as any)?.players as { id: number; name: string } | null;
+  const outrightRow = outright as OutrightRow | null;
+  const winnerTeam = relationToSingle(outrightRow?.teams);
+  const scorerPlayer = relationToSingle(outrightRow?.players);
 
   return (
     <ProfileClient
@@ -53,12 +78,12 @@ export default async function ProfilePage() {
       streak={profile?.current_streak ?? 0}
       jokersGroups={profile?.jokers_groups_remaining ?? 1}
       jokersKnockouts={profile?.jokers_knockouts_remaining ?? 1}
-      outrightWinnerId={(outright as any)?.predicted_winner_team_id ?? null}
+      outrightWinnerId={outrightRow?.predicted_winner_team_id ?? null}
       outrightWinnerName={winnerTeam?.name ?? null}
       outrightWinnerHe={winnerTeam?.name_he ?? null}
       outrightWinnerLogo={winnerTeam?.logo_url ?? null}
       outrightTopScorerPlayerId={scorerPlayer?.id ?? null}
-      outrightTopScorerName={outright?.predicted_top_scorer_name ?? scorerPlayer?.name ?? null}
+      outrightTopScorerName={outrightRow?.predicted_top_scorer_name ?? scorerPlayer?.name ?? null}
       firstMatchTime={firstMatch?.date_time ?? null}
       teams={teams ?? []}
       players={players ?? []}

@@ -195,7 +195,6 @@ async function fetchPlayersViaLeague(
   const byTeam = new Map<number, typeof rows>();
   for (const row of rows) {
     const stat     = row.statistics[0];
-    const pos      = stat?.games?.position ?? "";
     const apiTeamId = stat?.team?.id;
     if (!apiTeamId) continue;
     if (!byTeam.has(apiTeamId)) byTeam.set(apiTeamId, []);
