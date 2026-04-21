@@ -22,7 +22,6 @@ export default function DashboardShell({ username, streak, children }: Props) {
   const router   = useRouter();
 
   function isActive(href: string) {
-    // exact match for root dashboard, prefix match for sub-routes
     return href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(href);
   }
 
@@ -37,113 +36,176 @@ export default function DashboardShell({ username, streak, children }: Props) {
   const initial     = username.charAt(0).toUpperCase();
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex">
+    <div className="min-h-screen" style={{ background: "var(--wc-bg)" }}>
 
-      {/* ══ Desktop Sidebar (RTL → fixed right) ══════════════════════════════ */}
-      <aside className="hidden md:flex flex-col fixed top-0 right-0 bottom-0 w-56 lg:w-64 bg-white dark:bg-zinc-900 border-l border-zinc-200 dark:border-zinc-800 z-20">
-
+      {/* ══ Desktop Sidebar (RTL → fixed right) ═══════════════════════════════ */}
+      <aside
+        className="hidden md:flex flex-col fixed top-0 right-0 bottom-0 w-56 lg:w-64 z-20"
+        style={{ background: "var(--wc-surface)", borderLeft: "1px solid var(--wc-border)" }}
+      >
         {/* Branding */}
-        <div className="px-5 py-5 border-b border-zinc-100 dark:border-zinc-800">
-          <div className="flex items-center gap-2.5">
-            <span className="text-2xl">⚽</span>
-            <div>
-              <p className="text-sm font-bold text-zinc-900 dark:text-zinc-50 leading-tight">מונדיאל 2026</p>
-              <p className="text-[11px] text-zinc-400">Predictions</p>
-            </div>
+        <div className="px-5 py-5" style={{ borderBottom: "1px solid var(--wc-border)" }}>
+          <div
+            className="text-lg font-black tracking-tight"
+            style={{ fontFamily: "var(--font-display)", color: "var(--wc-fg1)" }}
+          >
+            ⚽ מונדיאל 2026
           </div>
-        </div>
-
-        {/* User card */}
-        <div className="px-4 py-4 border-b border-zinc-100 dark:border-zinc-800">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-sm font-bold text-white flex-shrink-0">
-              {initial}
-            </div>
-            <div className="min-w-0">
-              <p className="text-sm font-bold text-zinc-900 dark:text-zinc-50 truncate">
-                {username} {streakBadge}
-              </p>
-              {streak !== 0 && (
-                <p className="text-xs text-zinc-500">
-                  {streak > 0 ? `+${streak}` : streak} רצף
-                </p>
-              )}
-            </div>
+          <div className="text-xs mt-0.5" style={{ color: "var(--wc-fg3)" }}>
+            משחק תחזיות
           </div>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-3 py-4 flex flex-col gap-1 overflow-y-auto">
-          {NAV_ITEMS.map(({ href, icon, label }) => (
-            <Link
-              key={href}
-              href={href}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors text-right ${
-                isActive(href)
-                  ? "bg-zinc-900 text-white dark:bg-zinc-50 dark:text-zinc-900"
-                  : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-              }`}
-            >
-              <span className="text-base leading-none">{icon}</span>
-              <span>{label}</span>
-            </Link>
-          ))}
+        <nav className="flex-1 flex flex-col gap-1 p-3 overflow-y-auto">
+          {NAV_ITEMS.map(({ href, icon, label }) => {
+            const active = isActive(href);
+            return (
+              <Link
+                key={href}
+                href={href}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150 text-right"
+                style={{
+                  background: active ? "var(--wc-neon-bg)"  : "transparent",
+                  color:      active ? "var(--wc-neon)"     : "var(--wc-fg2)",
+                  border:     active ? "1px solid rgba(0,230,90,0.2)" : "1px solid transparent",
+                }}
+              >
+                <span className="text-base leading-none">{icon}</span>
+                <span>{label}</span>
+                {active && (
+                  <span
+                    className="mr-auto w-1.5 h-1.5 rounded-full"
+                    style={{ background: "var(--wc-neon)", boxShadow: "0 0 6px var(--wc-neon)" }}
+                  />
+                )}
+              </Link>
+            );
+          })}
         </nav>
 
-        {/* Sign out */}
-        <div className="px-5 py-4 border-t border-zinc-100 dark:border-zinc-800">
+        {/* User + sign out */}
+        <div className="p-4" style={{ borderTop: "1px solid var(--wc-border)" }}>
+          <div className="flex items-center gap-3 mb-3">
+            <div
+              className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0"
+              style={{
+                background: "linear-gradient(135deg, var(--wc-neon), var(--wc-green))",
+                color: "var(--wc-fg-inverse)",
+              }}
+            >
+              {initial}
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-bold truncate" style={{ color: "var(--wc-fg1)" }}>
+                {username} {streakBadge}
+              </p>
+              {streak !== 0 && (
+                <p className="text-xs" style={{ color: streak > 0 ? "var(--wc-fire)" : "var(--wc-fg3)" }}>
+                  {streak > 0 ? `+${streak} רצף 🔥` : `${streak} רצף`}
+                </p>
+              )}
+            </div>
+          </div>
           <button
             onClick={handleSignOut}
-            className="text-xs text-zinc-400 hover:text-red-500 transition-colors"
+            className="w-full text-xs py-2 rounded-lg font-medium transition-all"
+            style={{
+              background: "var(--wc-raised)",
+              color: "var(--wc-fg3)",
+              border: "1px solid var(--wc-border)",
+            }}
           >
             יציאה מהחשבון
           </button>
         </div>
       </aside>
 
-      {/* ══ Mobile Header ════════════════════════════════════════════════════ */}
-      <header className="md:hidden fixed top-0 inset-x-0 z-10 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 px-4 py-3 flex items-center justify-between">
+      {/* ══ Mobile Header ══════════════════════════════════════════════════════ */}
+      <header
+        className="md:hidden fixed top-0 inset-x-0 z-10 flex items-center justify-between px-4 h-14"
+        style={{
+          background: "var(--wc-overlay)",
+          backdropFilter: "blur(16px) saturate(180%)",
+          borderBottom: "1px solid var(--wc-border-glass)",
+        }}
+      >
+        <div
+          className="text-base font-black"
+          style={{ fontFamily: "var(--font-display)", color: "var(--wc-fg1)" }}
+        >
+          ⚽ מונדיאל 2026
+        </div>
         <div className="flex items-center gap-2">
-          <span className="text-xl">⚽</span>
-          <div>
-            <p className="text-[11px] text-zinc-500 leading-none">שלום,</p>
-            <p className="text-sm font-bold text-zinc-900 dark:text-zinc-50 leading-tight">
-              {username} {streakBadge}
-            </p>
+          {streak > 0 && (
+            <span
+              className="text-xs font-bold px-2.5 py-1 rounded-full"
+              style={{
+                background: "var(--wc-fire-bg)",
+                color: "var(--wc-fire)",
+                border: "1px solid rgba(255,77,28,0.25)",
+              }}
+            >
+              🔥 +{streak}
+            </span>
+          )}
+          <div
+            className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold"
+            style={{
+              background: "linear-gradient(135deg, var(--wc-neon), var(--wc-green))",
+              color: "var(--wc-fg-inverse)",
+            }}
+          >
+            {initial}
           </div>
         </div>
-        <button
-          onClick={handleSignOut}
-          className="text-xs text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
-        >
-          יציאה
-        </button>
       </header>
 
-      {/* ══ Main Content ═════════════════════════════════════════════════════ */}
-      <main className="flex-1 md:mr-56 lg:mr-64 pt-14 md:pt-0 pb-20 md:pb-0 overflow-y-auto min-h-screen">
+      {/* ══ Main Content ═══════════════════════════════════════════════════════ */}
+      <main className="flex-1 md:mr-56 lg:mr-64 pt-14 md:pt-0 pb-20 md:pb-0 min-h-screen">
         {children}
       </main>
 
-      {/* ══ Mobile Bottom Tab Bar ════════════════════════════════════════════ */}
-      <nav className="md:hidden fixed bottom-0 inset-x-0 bg-white dark:bg-zinc-900 border-t border-zinc-200 dark:border-zinc-800 flex z-10">
-        {NAV_ITEMS.map(({ href, icon, label }) => (
-          <Link
-            key={href}
-            href={href}
-            className={`flex-1 flex flex-col items-center gap-0.5 py-3 text-xs font-medium transition-colors ${
-              isActive(href)
-                ? "text-zinc-900 dark:text-zinc-50"
-                : "text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
-            }`}
-          >
-            <span className="text-lg leading-none">{icon}</span>
-            <span>{label}</span>
-            {isActive(href) && (
-              <span className="w-1 h-1 rounded-full bg-zinc-900 dark:bg-zinc-50 mt-0.5" />
-            )}
-          </Link>
-        ))}
+      {/* ══ Mobile Bottom Tab Bar ══════════════════════════════════════════════ */}
+      <nav
+        className="md:hidden fixed bottom-0 inset-x-0 flex z-10"
+        style={{
+          height: 64,
+          background: "var(--wc-overlay)",
+          backdropFilter: "blur(16px) saturate(180%)",
+          borderTop: "1px solid var(--wc-border-glass)",
+          paddingBottom: "env(safe-area-inset-bottom, 0px)",
+        }}
+      >
+        {NAV_ITEMS.map(({ href, icon, label }) => {
+          const active = isActive(href);
+          return (
+            <Link
+              key={href}
+              href={href}
+              className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2"
+            >
+              <span
+                className="text-xl leading-none transition-all duration-200"
+                style={{ filter: active ? "drop-shadow(0 0 5px rgba(0,230,90,0.7))" : "none" }}
+              >
+                {icon}
+              </span>
+              <span
+                className="text-[10px] font-bold transition-colors duration-150"
+                style={{ color: active ? "var(--wc-neon)" : "var(--wc-fg3)" }}
+              >
+                {label}
+              </span>
+              {active && (
+                <span
+                  className="w-1 h-1 rounded-full mt-0.5"
+                  style={{ background: "var(--wc-neon)", boxShadow: "0 0 6px var(--wc-neon)" }}
+                />
+              )}
+            </Link>
+          );
+        })}
       </nav>
     </div>
   );

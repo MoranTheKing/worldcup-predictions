@@ -5,27 +5,46 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+const S = {
+  input: {
+    fontFamily: "var(--wc-font-body)",
+    fontSize: 14,
+    background: "var(--wc-raised)",
+    border: "1.5px solid var(--wc-border)",
+    borderRadius: 12,
+    color: "var(--wc-fg1)",
+    padding: "12px 14px",
+    outline: "none",
+    width: "100%",
+    transition: "border-color 150ms, box-shadow 150ms",
+  } as React.CSSProperties,
+};
+
 export default function LoginPage() {
-  const router = useRouter();
+  const router   = useRouter();
   const supabase = createClient();
 
-  const [email, setEmail] = useState("");
+  const [email,    setEmail]    = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [error,    setError]    = useState<string | null>(null);
+  const [loading,  setLoading]  = useState(false);
+
+  function focusInput(e: React.FocusEvent<HTMLInputElement>) {
+    e.target.style.borderColor = "var(--wc-neon)";
+    e.target.style.boxShadow   = "0 0 0 3px var(--wc-neon-glow)";
+  }
+  function blurInput(e: React.FocusEvent<HTMLInputElement>) {
+    e.target.style.borderColor = "var(--wc-border)";
+    e.target.style.boxShadow   = "none";
+  }
 
   async function handleEmailLogin(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError(null);
-
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
-      setError("אימייל או סיסמה שגויים");
-    } else {
-      router.push("/dashboard");
-      router.refresh();
-    }
+    if (error) setError("אימייל או סיסמה שגויים");
+    else { router.push("/dashboard"); router.refresh(); }
     setLoading(false);
   }
 
@@ -34,39 +53,65 @@ export default function LoginPage() {
     setError(null);
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
     });
     if (error) setError("שגיאה בהתחברות עם Google");
     setLoading(false);
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 dark:bg-zinc-950 px-4">
+    <div
+      className="flex min-h-screen items-center justify-center px-4"
+      style={{ background: "var(--wc-bg)" }}
+    >
       <div className="w-full max-w-sm">
+
+        {/* Header */}
         <div className="text-center mb-8">
           <div className="text-5xl mb-3">⚽</div>
-          <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">התחברות</h1>
-          <p className="text-sm text-zinc-500 mt-1">מונדיאל 2026 — תחזיות</p>
+          <h1
+            className="text-3xl font-black"
+            style={{ fontFamily: "var(--font-display)", color: "var(--wc-fg1)" }}
+          >
+            מונדיאל 2026
+          </h1>
+          <p className="text-sm mt-1" style={{ color: "var(--wc-fg2)" }}>
+            משחק תחזיות — התחברות
+          </p>
         </div>
 
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-zinc-200 dark:border-zinc-800 p-6 flex flex-col gap-4">
+        {/* Card */}
+        <div
+          className="flex flex-col gap-4 p-6 rounded-2xl"
+          style={{
+            background: "var(--wc-surface)",
+            border: "1px solid var(--wc-border)",
+            boxShadow: "0 4px 24px rgba(0,0,0,0.4)",
+          }}
+        >
+          {/* Google */}
           <button
             onClick={handleGoogleLogin}
             disabled={loading}
-            className="flex items-center justify-center gap-3 w-full py-3 px-4 rounded-xl border border-zinc-300 dark:border-zinc-700 font-medium text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors disabled:opacity-50"
+            className="flex items-center justify-center gap-3 w-full py-3 px-4 rounded-xl text-sm font-semibold transition-all disabled:opacity-50"
+            style={{
+              background: "var(--wc-raised)",
+              border: "1px solid var(--wc-border)",
+              color: "var(--wc-fg1)",
+            }}
           >
             <GoogleIcon />
             המשך עם Google
           </button>
 
-          <div className="flex items-center gap-3 text-xs text-zinc-400">
-            <div className="flex-1 h-px bg-zinc-200 dark:bg-zinc-700" />
-            או
-            <div className="flex-1 h-px bg-zinc-200 dark:bg-zinc-700" />
+          {/* Divider */}
+          <div className="flex items-center gap-3">
+            <div className="flex-1 h-px" style={{ background: "var(--wc-border)" }} />
+            <span className="text-xs" style={{ color: "var(--wc-fg3)" }}>או</span>
+            <div className="flex-1 h-px" style={{ background: "var(--wc-border)" }} />
           </div>
 
+          {/* Email form */}
           <form onSubmit={handleEmailLogin} className="flex flex-col gap-3">
             <input
               type="email"
@@ -74,7 +119,9 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full px-4 py-3 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-transparent text-sm outline-none focus:ring-2 focus:ring-zinc-400 dark:focus:ring-zinc-500 placeholder:text-zinc-400"
+              style={S.input}
+              onFocus={focusInput}
+              onBlur={blurInput}
             />
             <input
               type="password"
@@ -82,22 +129,42 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="w-full px-4 py-3 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-transparent text-sm outline-none focus:ring-2 focus:ring-zinc-400 dark:focus:ring-zinc-500 placeholder:text-zinc-400"
+              style={S.input}
+              onFocus={focusInput}
+              onBlur={blurInput}
             />
-            {error && <p className="text-sm text-red-500 text-center">{error}</p>}
+
+            {error && (
+              <p
+                className="text-sm text-center py-2 px-3 rounded-lg"
+                style={{ background: "var(--wc-danger-bg)", color: "var(--wc-danger)" }}
+              >
+                {error}
+              </p>
+            )}
+
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 rounded-xl bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 font-medium text-sm hover:bg-zinc-700 dark:hover:bg-zinc-200 transition-colors disabled:opacity-50"
+              className="w-full py-3 rounded-xl text-sm font-bold transition-all disabled:opacity-50"
+              style={{
+                background: "var(--wc-neon)",
+                color: "var(--wc-fg-inverse)",
+                boxShadow: loading ? "none" : "0 0 16px var(--wc-neon-glow)",
+              }}
             >
               {loading ? "מתחבר..." : "התחברות"}
             </button>
           </form>
         </div>
 
-        <p className="text-center text-sm text-zinc-500 mt-4">
+        <p className="text-center text-sm mt-5" style={{ color: "var(--wc-fg3)" }}>
           אין לך חשבון?{" "}
-          <Link href="/signup" className="font-medium text-zinc-900 dark:text-zinc-50 underline underline-offset-2">
+          <Link
+            href="/signup"
+            className="font-semibold underline underline-offset-2"
+            style={{ color: "var(--wc-neon)" }}
+          >
             הרשמה
           </Link>
         </p>
@@ -108,7 +175,7 @@ export default function LoginPage() {
 
 function GoogleIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
       <path d="M17.64 9.205c0-.639-.057-1.252-.164-1.841H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615Z" fill="#4285F4"/>
       <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18Z" fill="#34A853"/>
       <path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332Z" fill="#FBBC05"/>
