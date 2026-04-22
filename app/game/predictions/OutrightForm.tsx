@@ -5,6 +5,7 @@ import {
   upsertTournamentPrediction,
   type PredictionActionState,
 } from "@/app/actions/predictions";
+import OutrightChoiceBadge from "@/components/game/OutrightChoiceBadge";
 import PlayerPicker from "@/components/pickers/PlayerPicker";
 import TeamPicker from "@/components/pickers/TeamPicker";
 
@@ -26,6 +27,7 @@ export default function OutrightForm({
   teams,
   players,
   existing,
+  isLocked = false,
 }: {
   teams: PickerTeam[];
   players: PickerPlayer[];
@@ -33,6 +35,7 @@ export default function OutrightForm({
     predicted_winner_team_id: string | null;
     predicted_top_scorer_name: string | null;
   } | null;
+  isLocked?: boolean;
 }) {
   const [state, formAction, isPending] = useActionState<PredictionActionState, FormData>(
     upsertTournamentPrediction,
@@ -43,6 +46,11 @@ export default function OutrightForm({
   const initialTopScorer = existing?.predicted_top_scorer_name ?? "";
   const [winnerId, setWinnerId] = useState(initialWinnerId);
   const [topScorerName, setTopScorerName] = useState(initialTopScorer);
+
+  const selectedTeam = useMemo(
+    () => teams.find((team) => team.id === winnerId) ?? null,
+    [teams, winnerId],
+  );
   const selectedPlayer = useMemo(
     () => players.find((player) => player.name === topScorerName) ?? null,
     [players, topScorerName],
@@ -69,6 +77,35 @@ export default function OutrightForm({
     [players, winnerId],
   );
 
+  if (isLocked) {
+    return (
+      <div className="rounded-2xl border border-white/8 bg-[rgba(6,13,26,0.3)] p-5">
+        <div className="mb-4">
+          <p className="text-sm font-bold text-wc-fg1">ניחושי הטורניר</p>
+          <p className="mt-1 text-xs text-wc-fg2">
+            הבחירות שלך ננעלו עם פתיחת הטורניר ואינן ניתנות לעריכה.
+          </p>
+        </div>
+
+        <div className="grid gap-4 lg:grid-cols-2">
+          <OutrightChoiceBadge
+            kind="winner"
+            label="זוכת הטורניר"
+            value={selectedTeam ? selectedTeam.name_he ?? selectedTeam.name : null}
+            logoUrl={selectedTeam?.logo_url ?? null}
+            locked
+          />
+          <OutrightChoiceBadge
+            kind="topScorer"
+            label="מלך השערים"
+            value={selectedPlayer?.name ?? (topScorerName || null)}
+            locked
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <form
       action={formAction}
@@ -77,7 +114,7 @@ export default function OutrightForm({
       <div className="mb-4">
         <p className="text-sm font-bold text-wc-fg1">ניחושי הטורניר</p>
         <p className="mt-1 text-xs text-wc-fg2">
-          הזוכה ומלך השערים נשמרים יחד, אבל כל שדה נשאר יציב מקומית גם כשמעדכנים את השדה השני.
+          זוכת הטורניר ומלך השערים נשמרים בנפרד, כך שכל בחירה מתעדכנת בלי למחוק את השנייה.
         </p>
       </div>
 

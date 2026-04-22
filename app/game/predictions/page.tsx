@@ -22,7 +22,7 @@ export default async function PredictionsPage() {
       isAuthenticated={Boolean(user)}
       groupJokerUsed={data.groupJokerUsed}
       knockoutJokerUsed={data.knockoutJokerUsed}
-      hiddenMatchCount={data.hiddenMatchCount}
+      tournamentStarted={data.tournamentStarted}
     />
   );
 }

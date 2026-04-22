@@ -40,7 +40,7 @@ export default function PredictionsClient({
   isAuthenticated,
   groupJokerUsed,
   knockoutJokerUsed,
-  hiddenMatchCount,
+  tournamentStarted,
 }: {
   matches: MatchWithTeams[];
   teams: PickerTeam[];
@@ -50,7 +50,7 @@ export default function PredictionsClient({
   isAuthenticated: boolean;
   groupJokerUsed: boolean;
   knockoutJokerUsed: boolean;
-  hiddenMatchCount: number;
+  tournamentStarted: boolean;
 }) {
   const predictionMap = useMemo(
     () => new Map(existingPredictions.map((prediction) => [prediction.match_id, prediction])),
@@ -120,33 +120,33 @@ export default function PredictionsClient({
         <div className="mb-4">
           <p className="text-xs font-bold uppercase tracking-[0.24em] text-wc-neon">הניחושים שלי</p>
           <p className="mt-2 text-sm text-wc-fg2">
-            כל משחק בטורניר מופיע כאן. משחקים שעדיין לא התחילו נשארים פתוחים לעריכה, ומשחקים חיים או גמורים נשמרים כתיעוד מלא עם ניקוד.
+            כל משחק בטורניר מופיע כאן. משחקים שעדיין לא התחילו נשארים פתוחים לעריכה, ומשחקים
+            חיים או גמורים נשמרים כתיעוד מלא עם ניקוד.
           </p>
         </div>
 
-        <OutrightForm teams={teams} players={players} existing={tournamentPrediction} />
+        <OutrightForm
+          teams={teams}
+          players={players}
+          existing={tournamentPrediction}
+          isLocked={tournamentStarted}
+        />
       </section>
 
       <section>
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.24em] text-wc-neon">
-              היסטוריית משחקים וניחושים
-            </p>
-            <p className="mt-1 text-xs text-wc-fg3">מסך אחד לכל הלו״ז: עבר, הווה ועתיד.</p>
-          </div>
-          <div className="text-end text-xs font-semibold text-wc-fg3">
-            <div>{matches.length} משחקים מוצגים</div>
-            {hiddenMatchCount > 0 ? (
-              <div className="mt-1">{hiddenMatchCount} משחקים עתידיים מוסתרים עד ששתי הנבחרות ייקבעו</div>
-            ) : null}
-          </div>
+        <div className="mb-3">
+          <p className="text-xs font-bold uppercase tracking-[0.24em] text-wc-neon">
+            היסטוריית משחקים וניחושים
+          </p>
+          <p className="mt-1 text-xs text-wc-fg3">מסך אחד לכל הלוז: עבר, הווה ועתיד.</p>
         </div>
 
         {matches.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-white/10 bg-[rgba(13,27,46,0.82)] p-10 text-center">
             <div className="text-5xl">📄</div>
-            <p className="mt-3 text-base font-semibold text-wc-fg2">אין כרגע משחקים זמינים למסך הניחושים.</p>
+            <p className="mt-3 text-base font-semibold text-wc-fg2">
+              אין כרגע משחקים זמינים למסך הניחושים.
+            </p>
             <p className="mt-2 text-sm text-wc-fg3">
               משחקים עתידיים עם placeholders יופיעו כאן אוטומטית ברגע ששתי הנבחרות יהיו ידועות.
             </p>

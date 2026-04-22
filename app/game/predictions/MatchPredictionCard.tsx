@@ -136,14 +136,7 @@ export default function MatchPredictionCard({
         >
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-[11px] font-semibold text-wc-fg3">{stageLabel}</span>
-            <span
-              className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${getStatusPillClass(
-                isFinished,
-                isLive,
-              )}`}
-            >
-              {isFinished ? "FT" : isLive ? "LIVE" : "UPCOMING"}
-            </span>
+            <StatusPill isFinished={isFinished} isLive={isLive} />
             {tone === "jackpot" ? (
               <span className="rounded-full bg-[rgba(64,224,255,0.16)] px-2 py-0.5 text-[10px] font-black text-[#8CF3FF] shadow-[0_0_18px_rgba(64,224,255,0.32)]">
                 👑 DIAMOND JOKER HIT
@@ -195,14 +188,16 @@ export default function MatchPredictionCard({
               </div>
 
               {hasPrediction && predictionScore ? (
-                <div className="rounded-[1rem] border border-white/10 bg-[rgba(255,255,255,0.05)] px-3 py-2.5 text-xs font-semibold text-wc-fg1 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
-                  <span className="rounded-full bg-[rgba(95,255,123,0.12)] px-2 py-0.5 text-[10px] font-bold text-wc-neon">
-                    {predictionOwnerLabel}
-                  </span>{" "}
-                  <span dir="ltr" className="inline-flex font-black tracking-[0.08em]">
-                    {predictionScore}
-                  </span>
-                  {optimisticIsJoker ? <span className="ms-2 text-wc-violet">🎏</span> : null}
+                <div className="rounded-[1rem] border border-white/10 bg-[rgba(255,255,255,0.05)] px-3 py-2.5 text-xs font-semibold text-wc-fg1 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="rounded-full bg-white/8 px-2 py-0.5 text-[10px] font-bold text-wc-fg2">
+                      {predictionOwnerLabel}
+                    </span>
+                    <span dir="ltr" className="inline-flex font-black tracking-[0.08em]">
+                      {predictionScore}
+                    </span>
+                    {optimisticIsJoker ? <span className="ms-auto text-wc-violet">🎏</span> : null}
+                  </div>
                 </div>
               ) : null}
 
@@ -341,9 +336,7 @@ function TeamSide({
   logoUrl: string | null;
 }) {
   return (
-    <div
-      className={`flex min-w-0 flex-1 items-center gap-2 ${align === "right" ? "justify-end" : ""}`}
-    >
+    <div className={`flex min-w-0 flex-1 items-center gap-2 ${align === "right" ? "justify-end" : ""}`}>
       {logoUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={logoUrl} alt="" className="h-7 w-7 flex-shrink-0 rounded-full object-cover" />
@@ -418,6 +411,29 @@ function ScoreInput({
   );
 }
 
+function StatusPill({
+  isFinished,
+  isLive,
+}: {
+  isFinished: boolean;
+  isLive: boolean;
+}) {
+  if (isLive) {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-[rgba(34,211,238,0.12)] px-2 py-0.5 text-[10px] font-bold text-cyan-300">
+        <span className="h-1.5 w-1.5 rounded-full bg-cyan-300 animate-pulse" />
+        LIVE
+      </span>
+    );
+  }
+
+  return (
+    <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${getStatusPillClass(isFinished)}`}>
+      {isFinished ? "FT" : "UPCOMING"}
+    </span>
+  );
+}
+
 function compareOutcome(
   actualHome: number | null,
   actualAway: number | null,
@@ -442,13 +458,9 @@ function parseDraftValue(value: string) {
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
 }
 
-function getStatusPillClass(isFinished: boolean, isLive: boolean) {
+function getStatusPillClass(isFinished: boolean) {
   if (isFinished) {
     return "bg-white/8 text-wc-fg2";
-  }
-
-  if (isLive) {
-    return "bg-[rgba(255,92,130,0.12)] text-wc-danger";
   }
 
   return "bg-white/6 text-wc-fg3";
@@ -494,9 +506,9 @@ function getCardChrome(
 
   if (tone === "live") {
     return {
-      borderColor: "rgba(255,92,130,0.5)",
-      background: "var(--wc-surface)",
-      boxShadow: "0 0 18px rgba(255,92,130,0.1)",
+      borderColor: "rgba(34,211,238,0.5)",
+      background: "linear-gradient(135deg, rgba(7,22,32,0.96), rgba(6,18,29,0.94))",
+      boxShadow: "0 0 18px rgba(34,211,238,0.14)",
     };
   }
 
@@ -537,7 +549,7 @@ function getResultPanelClass(tone: PredictionTone) {
   }
 
   if (tone === "live") {
-    return "border-[rgba(255,92,130,0.24)] bg-[rgba(255,92,130,0.08)] text-wc-danger";
+    return "border-[rgba(34,211,238,0.28)] bg-[rgba(34,211,238,0.08)] text-cyan-300";
   }
 
   if (tone === "saved") {

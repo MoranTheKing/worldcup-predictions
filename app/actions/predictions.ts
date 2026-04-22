@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getJokerBucket, getUserJokerUsage } from "@/lib/game/boosters";
+import { hasTournamentStarted } from "@/lib/game/tournament-start";
 
 export type PredictionActionState = {
   error?: string;
@@ -172,6 +173,25 @@ export async function upsertTournamentPrediction(
 
   if (!user) {
     return { error: "צריך להתחבר כדי לשמור ניחושי טורניר." };
+  }
+
+  const { data: kickoffMatch, error: kickoffError } = await admin
+    .from("matches")
+    .select("status, date_time")
+    .order("match_number", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (kickoffError) {
+    console.error(
+      "[upsertTournamentPrediction] kickoff lookup error:",
+      formatSupabaseError(kickoffError),
+    );
+    return { error: "לא הצלחנו לאמת אם ניחושי הטורניר כבר ננעלו." };
+  }
+
+  if (hasTournamentStarted(kickoffMatch)) {
+    return { error: "ניחושי הטורניר ננעלו עם פתיחת הטורניר." };
   }
 
   const winnerTeamId = parseUuidField(formData.get("winner_team_id"));

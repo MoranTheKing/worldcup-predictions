@@ -218,6 +218,34 @@ Supabase schema work:
 Still intentionally out of scope for this phase:
 
 - match scoring logic for prediction points
+
+## Phase 2.5 UI / Outrights Polish
+
+As of April 22, 2026, the Predictions Hub received another polish pass focused on match-card clarity and outright locking.
+
+What changed:
+
+- the match-count helper text on `/game/predictions` was removed so the feed reads more cleanly
+- `LIVE` now uses a cyan broadcast-style treatment instead of red, so it no longer looks like a failed prediction state
+- outright picks now lock when the tournament officially starts:
+  the first match is no longer `scheduled` or its kickoff time has passed
+- once locked, `/game/predictions` shows premium static badges instead of disabled inputs
+- league leaderboards now reveal outright picks for:
+  everyone after kickoff
+  the authenticated user immediately, even before kickoff
+- visible leaderboard outright picks now include:
+  team flag image + winner name
+  player avatar icon + top scorer name
+
+Design semantics now used in the prediction feed:
+
+- scheduled unsaved: neutral
+- scheduled saved: neutral-active dark card
+- live: cyan
+- finished miss / no prediction: red
+- finished direction hit: soft yellow
+- finished exact hit: strong green
+- finished exact hit with joker: diamond cyan-violet premium glow
 - prediction entry UI on match cards
 - league leaderboards powered by the new prediction tables
 - social invite/join UX beyond the schema, auth, and protection groundwork

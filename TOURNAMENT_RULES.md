@@ -258,6 +258,41 @@ Current UI behavior:
 
 - the table itself is live and reactive:
   it always extracts the team currently sitting 3rd in each group table and re-sorts the 12 rows immediately from live scores
+
+## Predictions UI And Outrights Lock
+
+The `/game/predictions` experience now uses the following presentation rules:
+
+- the previous helper copy showing `X matches shown / Y hidden` was removed
+- `LIVE` is rendered in cyan, not red, to separate active broadcast state from failed prediction state
+- a scheduled match with a saved prediction stays visually neutral; it must not look like a hit
+- finished match colors are:
+  red for total miss or no prediction
+  soft yellow for direction hit
+  strong green for exact hit
+  diamond cyan-violet glow for exact hit with joker
+
+Outright picks now lock at tournament start.
+
+Lock condition:
+
+- the first tournament match is no longer `scheduled`
+  or
+- the first tournament match kickoff time has already passed
+
+Locked rendering:
+
+- the app no longer shows disabled winner/top-scorer inputs after lock
+- instead it renders premium static badges with:
+  winner flag image + team name
+  player avatar icon + top scorer name
+  a lock indicator
+
+League leaderboard visibility rule:
+
+- outright picks are visible for all league members once the tournament has started
+- before kickoff, the authenticated user can still see their own outright picks in the league leaderboard
+- other members remain hidden until kickoff
 - live ordering uses the global tiebreak stack for this table:
   points -> goal difference -> goals scored -> fair play -> FIFA ranking
 - `׳”׳¢׳₪׳׳”` and `׳”׳“׳—׳”` badges only render when `entry.isLocked === true`

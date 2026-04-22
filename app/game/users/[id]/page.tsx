@@ -3,7 +3,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import MatchPredictionCard from "@/app/game/predictions/MatchPredictionCard";
 import PredictionsClient from "@/app/game/predictions/PredictionsClient";
+import OutrightChoiceBadge from "@/components/game/OutrightChoiceBadge";
 import { loadPredictionsHubData } from "@/lib/game/predictions-hub";
+import { hasTournamentStarted } from "@/lib/game/tournament-start";
 import { attachTeamsToMatches } from "@/lib/tournament/matches";
 import type { MatchWithTeams } from "@/lib/tournament/matches";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -81,7 +83,7 @@ export default async function OpponentPredictionsPage({
           isAuthenticated
           groupJokerUsed={selfData.groupJokerUsed}
           knockoutJokerUsed={selfData.knockoutJokerUsed}
-          hiddenMatchCount={selfData.hiddenMatchCount}
+          tournamentStarted={selfData.tournamentStarted}
         />
       </div>
     );
@@ -93,7 +95,7 @@ export default async function OpponentPredictionsPage({
     predictionsResult,
     tournamentResult,
     { data: leagueRows },
-    startedResult,
+    kickoffResult,
   ] = await Promise.all([
     admin
       .from("matches")
@@ -117,7 +119,12 @@ export default async function OpponentPredictionsPage({
     sharedLeagueIds.length > 0
       ? admin.from("leagues").select("id, name").in("id", sharedLeagueIds)
       : Promise.resolve({ data: [], error: null }),
-    admin.from("matches").select("match_number", { head: true, count: "exact" }).neq("status", "scheduled"),
+    admin
+      .from("matches")
+      .select("status, date_time")
+      .order("match_number", { ascending: true })
+      .limit(1)
+      .maybeSingle(),
   ]);
 
   const allMatches = attachTeamsToMatches(
@@ -143,17 +150,26 @@ export default async function OpponentPredictionsPage({
       league.name ?? "League",
     ]),
   );
+  const tournamentStarted = hasTournamentStarted(kickoffResult.data);
+
   const teamsById = new Map(
-    ((teamsData ?? []) as Array<{ id: string; name: string; name_he?: string | null }>).map((team) => [
+    (
+      (teamsData ?? []) as Array<{
+        id: string;
+        name: string;
+        name_he?: string | null;
+        logo_url?: string | null;
+      }>
+    ).map((team) => [
       team.id,
-      team.name_he ?? team.name,
+      { name: team.name_he ?? team.name, logoUrl: team.logo_url ?? null },
     ]),
   );
-  const winnerTeamLabel =
+
+  const winnerTeam =
     typeof tournamentResult.data?.predicted_winner_team_id === "string"
       ? teamsById.get(tournamentResult.data.predicted_winner_team_id) ?? null
       : null;
-  const tournamentStarted = (startedResult.count ?? 0) > 0;
 
   return (
     <div className="flex flex-col gap-6">
@@ -165,9 +181,7 @@ export default async function OpponentPredictionsPage({
           ← חזרה לליגה
         </Link>
         {backLeagueId ? (
-          <span className="text-xs text-wc-fg3">
-            שיתוף ליגה: {sharedLeagueNames.get(backLeagueId) ?? "League"}
-          </span>
+          <span className="text-xs text-wc-fg3">שיתוף ליגה: {sharedLeagueNames.get(backLeagueId) ?? "League"}</span>
         ) : null}
       </div>
 
@@ -190,9 +204,7 @@ export default async function OpponentPredictionsPage({
             )}
 
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.24em] text-wc-neon">
-                Opponent View
-              </p>
+              <p className="text-xs font-bold uppercase tracking-[0.24em] text-wc-neon">Opponent View</p>
               <h1 className="mt-2 text-3xl font-black text-wc-fg1">{displayName}</h1>
               <p className="mt-1 text-sm text-wc-fg2">
                 משחקים עתידיים נשארים נעולים. רק משחקים חיים או גמורים חושפים את הניחוש בפועל.
@@ -201,11 +213,20 @@ export default async function OpponentPredictionsPage({
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
-            <ReadOnlyStat label="זוכה הטורניר" value={winnerTeamLabel} hidden={!tournamentStarted} />
-            <ReadOnlyStat
+            <OutrightChoiceBadge
+              kind="winner"
+              label="זוכת הטורניר"
+              value={winnerTeam?.name ?? null}
+              logoUrl={winnerTeam?.logoUrl ?? null}
+              hidden={!tournamentStarted}
+              locked
+            />
+            <OutrightChoiceBadge
+              kind="topScorer"
               label="מלך השערים"
               value={tournamentResult.data?.predicted_top_scorer_name ?? null}
               hidden={!tournamentStarted}
+              locked
             />
           </div>
         </div>
@@ -237,23 +258,6 @@ export default async function OpponentPredictionsPage({
           </div>
         )}
       </section>
-    </div>
-  );
-}
-
-function ReadOnlyStat({
-  label,
-  value,
-  hidden,
-}: {
-  label: string;
-  value: string | null;
-  hidden: boolean;
-}) {
-  return (
-    <div className="rounded-[1.4rem] border border-white/10 bg-white/5 px-4 py-3 text-start">
-      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-wc-fg3">{label}</p>
-      <p className="mt-2 text-sm font-bold text-wc-fg1">{hidden ? "🔒 Hidden" : value ?? "—"}</p>
     </div>
   );
 }

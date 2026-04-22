@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useActionState, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import OutrightChoiceBadge from "@/components/game/OutrightChoiceBadge";
 import {
   deleteLeague,
   leaveLeague,
@@ -18,6 +19,7 @@ export type LeagueMemberRow = {
   total_score: number;
   avatar_url: string | null;
   winner_prediction: string | null;
+  winner_logo_url: string | null;
   top_scorer_prediction: string | null;
   outrights_visible: boolean;
 };
@@ -54,9 +56,7 @@ export default function LeagueViewClient({
       <section className="rounded-[1.75rem] border border-white/10 bg-[rgba(13,27,46,0.82)] p-5">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.24em] text-wc-neon">
-              League Lobby
-            </p>
+            <p className="text-xs font-bold uppercase tracking-[0.24em] text-wc-neon">League Lobby</p>
             <h2 className="mt-2 text-3xl font-black text-wc-fg1">{league.name}</h2>
             <div className="mt-3 flex flex-wrap gap-2">
               {isOwner ? (
@@ -90,21 +90,21 @@ export default function LeagueViewClient({
           <div>
             <p className="text-sm font-bold text-wc-fg1">טבלת המובילים</p>
             <p className="mt-1 text-xs text-wc-fg3">
-              מדורג לפי total score מהגבוה לנמוך. לחיצה על שורה תפתח תצוגת ניחושים
-              לקריאה בלבד.
+              מדורג לפי total score מהגבוה לנמוך. לחיצה על שורה תפתח את תצוגת הניחושים לקריאה בלבד,
+              או עריכה מלאה אם זו השורה שלך.
             </p>
           </div>
         </div>
 
         {members.length > 0 ? (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[920px]">
+            <table className="w-full min-w-[980px]">
               <thead>
                 <tr className="border-b border-white/10 text-right">
                   <th className="px-5 py-3 text-[11px] font-semibold text-wc-fg3">#</th>
                   <th className="px-4 py-3 text-[11px] font-semibold text-wc-fg3">שחקן</th>
                   <th className="px-4 py-3 text-[11px] font-semibold text-wc-fg3">נקודות</th>
-                  <th className="px-4 py-3 text-[11px] font-semibold text-wc-fg3">זוכה טורניר</th>
+                  <th className="px-4 py-3 text-[11px] font-semibold text-wc-fg3">זוכת טורניר</th>
                   <th className="px-4 py-3 text-[11px] font-semibold text-wc-fg3">מלך השערים</th>
                   <th className="px-5 py-3 text-[11px] font-semibold text-wc-fg3">פעולות</th>
                 </tr>
@@ -163,15 +163,11 @@ function InviteCard({ inviteCode }: { inviteCode: string | null }) {
 
   return (
     <div className="rounded-[1.4rem] border border-white/10 bg-white/5 p-4">
-      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-wc-fg3">
-        Invite Link
-      </p>
+      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-wc-fg3">Invite Link</p>
       <p className="mt-3 font-mono text-3xl font-black tracking-[0.3em] text-wc-neon">
         {inviteCode ?? "----"}
       </p>
-      <p className="mt-2 text-xs text-wc-fg3">
-        שתף לינק שמכיל את הקוד או בקש מחבר להקליד אותו ידנית.
-      </p>
+      <p className="mt-2 text-xs text-wc-fg3">שתף לינק שמכיל את הקוד או בקש מחבר להקליד אותו ידנית.</p>
       <button
         type="button"
         onClick={handleShare}
@@ -191,19 +187,14 @@ function LeaveLeagueCard({
   leagueId: string;
   currentUserId: string;
 }) {
-  const [state, action, isPending] = useActionState<LeagueActionState, FormData>(
-    leaveLeague,
-    null,
-  );
+  const [state, action, isPending] = useActionState<LeagueActionState, FormData>(leaveLeague, null);
 
   return (
     <form action={action} className="rounded-[1.4rem] border border-white/10 bg-white/5 p-4">
       <input type="hidden" name="league_id" value={leagueId} />
       <input type="hidden" name="target_user_id" value={currentUserId} />
       <p className="text-sm font-bold text-wc-fg1">עזיבת ליגה</p>
-      <p className="mt-2 text-xs text-wc-fg3">
-        הפעולה תסיר אותך מהליגה ותחזיר אותך למסך הליגות.
-      </p>
+      <p className="mt-2 text-xs text-wc-fg3">הפעולה תסיר אותך מהליגה ותחזיר אותך למסך הליגות.</p>
       {state?.error ? <InlineError message={state.error} /> : null}
       <button
         type="submit"
@@ -222,10 +213,7 @@ function LeaveLeagueCard({
 }
 
 function DeleteLeagueCard({ leagueId }: { leagueId: string }) {
-  const [state, action, isPending] = useActionState<LeagueActionState, FormData>(
-    deleteLeague,
-    null,
-  );
+  const [state, action, isPending] = useActionState<LeagueActionState, FormData>(deleteLeague, null);
 
   return (
     <form
@@ -234,9 +222,7 @@ function DeleteLeagueCard({ leagueId }: { leagueId: string }) {
     >
       <input type="hidden" name="league_id" value={leagueId} />
       <p className="text-sm font-bold text-wc-fg1">מחיקת ליגה</p>
-      <p className="mt-2 text-xs text-wc-fg3">
-        מחיקה תמחק גם את כל החברים מתוך הליגה. הפעולה בלתי הפיכה.
-      </p>
+      <p className="mt-2 text-xs text-wc-fg3">מחיקה תמחק גם את כל החברים מתוך הליגה. הפעולה בלתי הפיכה.</p>
       {state?.error ? <InlineError message={state.error} /> : null}
       <button
         type="submit"
@@ -315,10 +301,23 @@ function LeagueMemberRowView({
       </td>
       <td className="px-4 py-3 text-sm font-black text-wc-neon">{member.total_score}</td>
       <td className="px-4 py-3 text-sm text-wc-fg2">
-        <OutrightCell visible={member.outrights_visible} value={member.winner_prediction} />
+        <OutrightChoiceBadge
+          kind="winner"
+          value={member.winner_prediction}
+          logoUrl={member.winner_logo_url}
+          hidden={!member.outrights_visible}
+          compact
+          locked
+        />
       </td>
       <td className="px-4 py-3 text-sm text-wc-fg2">
-        <OutrightCell visible={member.outrights_visible} value={member.top_scorer_prediction} />
+        <OutrightChoiceBadge
+          kind="topScorer"
+          value={member.top_scorer_prediction}
+          hidden={!member.outrights_visible}
+          compact
+          locked
+        />
       </td>
       <td
         className="px-5 py-3"
@@ -333,24 +332,6 @@ function LeagueMemberRowView({
       </td>
     </tr>
   );
-}
-
-function OutrightCell({
-  visible,
-  value,
-}: {
-  visible: boolean;
-  value: string | null;
-}) {
-  if (!visible) {
-    return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-white/6 px-2.5 py-1 text-xs font-semibold text-wc-fg3">
-        🔒 Hidden
-      </span>
-    );
-  }
-
-  return <span className="block truncate">{value ?? "—"}</span>;
 }
 
 function RemoveMemberButton({

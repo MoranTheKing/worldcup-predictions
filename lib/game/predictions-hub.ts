@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getUserJokerUsage } from "@/lib/game/boosters";
+import { hasTournamentStarted } from "@/lib/game/tournament-start";
 import { attachTeamsToMatches } from "@/lib/tournament/matches";
 import type { MatchWithTeams } from "@/lib/tournament/matches";
 import type { MatchPredictionRow, TournamentPredRow } from "@/app/game/predictions/PredictionsClient";
@@ -13,7 +14,7 @@ export type PredictionsHubData = {
   tournamentPrediction: TournamentPredRow | null;
   groupJokerUsed: boolean;
   knockoutJokerUsed: boolean;
-  hiddenMatchCount: number;
+  tournamentStarted: boolean;
 };
 
 export async function loadPredictionsHubData(userId: string | null): Promise<PredictionsHubData> {
@@ -44,7 +45,7 @@ export async function loadPredictionsHubData(userId: string | null): Promise<Pre
   const visibleMatches = allMatches.filter(
     (match) => match.status !== "scheduled" || Boolean(match.homeTeam && match.awayTeam),
   );
-  const hiddenMatchCount = allMatches.length - visibleMatches.length;
+  const tournamentStarted = hasTournamentStarted(allMatches[0] ?? null);
 
   const teams: PickerTeam[] = (teamsData ?? []).map((team) => ({
     id: String((team as { id: string }).id),
@@ -121,6 +122,6 @@ export async function loadPredictionsHubData(userId: string | null): Promise<Pre
     tournamentPrediction,
     groupJokerUsed,
     knockoutJokerUsed,
-    hiddenMatchCount,
+    tournamentStarted,
   };
 }
