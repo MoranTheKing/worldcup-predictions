@@ -12,9 +12,13 @@ import type { TeamStanding, TournamentMatch, TournamentTeam } from "@/lib/utils/
 
 type KnockoutRound = Exclude<MatchStageKind, "group" | "unknown">;
 
+export type PlaceholderPart =
+  | { kind: "team"; team: TournamentTeam }
+  | { kind: "seed"; labelHe: string };
+
 export type ResolvedSeed =
   | { kind: "team"; team: TournamentTeam }
-  | { kind: "placeholder"; labelHe: string };
+  | { kind: "placeholder"; labelHe: string; parts?: PlaceholderPart[] };
 
 export type ResolvedBracketMatch = {
   matchNumber: number;
@@ -30,30 +34,43 @@ type KnockoutResolverInput = {
   matches: TournamentMatch[];
 };
 
-function placeholderLabelHe(
+function buildPlaceholderSeed(
   placeholder: string,
   groupStandings: Record<string, TeamStanding[]>,
-) {
+): Extract<ResolvedSeed, { kind: "placeholder" }> {
   const trimmed = placeholder.trim();
   const reference = parseReferencePlaceholder(trimmed);
 
-  if (reference?.kind === "winner") return `מנצחת משחק ${reference.matchNumber}`;
-  if (reference?.kind === "loser") return `מפסידת משחק ${reference.matchNumber}`;
+  if (reference?.kind === "winner") {
+    return { kind: "placeholder", labelHe: `מנצחת משחק ${reference.matchNumber}` };
+  }
+
+  if (reference?.kind === "loser") {
+    return { kind: "placeholder", labelHe: `מפסידת משחק ${reference.matchNumber}` };
+  }
 
   const seedOptions = parseSeedPlaceholder(trimmed);
   if (seedOptions?.every((seed) => seed.rank === 3)) {
-    return seedOptions
-      .map((seed) => {
-        const lockedThird = groupStandings[seed.groupLetter]?.find(
-          (entry) => entry.lockedRank === 3,
-        );
+    const parts: PlaceholderPart[] = seedOptions.map((seed) => {
+      const lockedThird = groupStandings[seed.groupLetter]?.find((entry) => entry.lockedRank === 3);
 
-        return lockedThird?.team.name_he ?? lockedThird?.team.name ?? `3${seed.groupLetter}`;
-      })
-      .join("/");
+      if (lockedThird) {
+        return { kind: "team", team: lockedThird.team };
+      }
+
+      return { kind: "seed", labelHe: `3${seed.groupLetter}` };
+    });
+
+    return {
+      kind: "placeholder",
+      labelHe: parts
+        .map((part) => (part.kind === "team" ? part.team.name_he ?? part.team.name : part.labelHe))
+        .join("/"),
+      parts,
+    };
   }
 
-  return trimmed;
+  return { kind: "placeholder", labelHe: trimmed };
 }
 
 export function resolveKnockoutBracket({
@@ -106,10 +123,7 @@ export function resolveKnockoutBracket({
 
     const placeholder = side === "home" ? match.home_placeholder : match.away_placeholder;
     if (placeholder) {
-      return {
-        kind: "placeholder",
-        labelHe: placeholderLabelHe(placeholder, groupStandings),
-      };
+      return buildPlaceholderSeed(placeholder, groupStandings);
     }
 
     return { kind: "placeholder", labelHe: "ייקבע בהמשך" };

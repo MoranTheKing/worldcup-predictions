@@ -411,7 +411,7 @@ Prediction feed polish:
 Tiered hit visuals:
 
 - `0` points / miss remains neutral gray
-- correct direction with wrong exact score now receives a distinct blue accent instead of blending into neutral cards
+- correct direction with wrong exact score now receives a distinct light-green accent instead of blending into neutral cards
 - exact score hits are now clearly green
 - exact score + joker hits now use a much stronger diamond-style cyan / violet treatment instead of the older amber look
 
@@ -430,3 +430,116 @@ RLS note:
 
 - this pass did not add any new user-scoped DB mutations
 - prediction reads and writes still run through the previously-hardened auth + admin-client flow, so broken legacy RLS policies should not block the polished prediction UI while the DB migration is still pending
+
+
+## Phase 2.2 Social Viewing And Refined Prediction States
+
+As of April 22, 2026, the game hub now includes a first secure opponent-view layer and a tighter prediction-state design.
+
+Prediction card rules:
+
+- scheduled cards with no saved bet stay neutral
+- scheduled cards with a saved bet stay neutral-active and explicitly show `הניחוש שלך: X - Y`
+- finished matches with no prediction are treated exactly like a total miss
+- finished miss / `0` points:
+  red accent
+- finished direction hit:
+  light green accent
+- finished exact hit:
+  strong green accent
+- finished exact hit with joker:
+  diamond cyan-violet accent
+
+Joker UX:
+
+- once a stage joker is already allocated, other matches in that same stage no longer show disabled joker controls
+- the toggle remains mounted only on the active joker match (or on all matches while the stage joker is still unused)
+
+Top-scorer picker:
+
+- the top-scorer control now uses a clean native `select`
+- this removes the hanging custom search/autocomplete state after selection
+
+Gamer Card metrics:
+
+- the `/game` header now shows both:
+  `Total Score`
+  `Total Hits`
+- `Total Hits` counts finished predictions where the exact score was hit perfectly
+
+Social viewing:
+
+- league leaderboard rows now open `/game/users/[id]`
+- access is still restricted server-side:
+  self-view is allowed
+  viewing another user requires sharing at least one league
+- opponent pages only show `live` and `finished` matches
+- scheduled matches stay hidden entirely
+- leaderboard outright picks (winner / top scorer) stay locked until the tournament has officially started
+
+Knockout placeholder overflow fix:
+
+- progressive third-place labels now prefer flag emojis derived from the team flag URL
+- example:
+  `🇨🇿/🇧🇦/3C/3D/3F`
+- this keeps mixed placeholder strings short enough for the bracket cards
+
+RLS / DB note:
+
+- new migration:
+  `supabase/migrations/20260422000016_enable_social_prediction_selects.sql`
+- it aligns `profiles`, `predictions`, and `tournament_predictions` with:
+  authenticated `SELECT ... USING (true)`
+  self-only `INSERT / UPDATE / DELETE`
+
+
+## Phase 2.3 QA Fixes: Read-Only Opponent View, Yellow Direction Hits, League Stats
+
+As of April 22, 2026, the social prediction layer received another QA-driven correction pass.
+
+Prediction-card rules now in force:
+
+- scheduled unsaved:
+  neutral
+- scheduled saved:
+  neutral-active dark blue / slate treatment
+- finished miss or finished without a prediction:
+  red
+- finished direction hit:
+  soft yellow
+- finished exact hit:
+  strong green
+- finished exact hit with joker:
+  extreme diamond / crown treatment with heavier glow
+
+Save-flow fix:
+
+- scheduled match cards now keep their score inputs inside the actual prediction form
+- the local draft score is preserved through save, so a typed result like `4 - 1` no longer snaps back to `0 - 0`
+- successful saves still trigger a refresh, but the optimistic card state now reflects the typed values correctly before the round-trip completes
+
+Opponent-view privacy rules:
+
+- `/game/users/[id]` is now strictly read-only and no longer passes interactive props into client cards
+- scheduled matches are no longer omitted from the opponent page
+- instead, scheduled matches render with a lock state:
+  prediction panel shows `🔒 ? - ?`
+  points stay hidden
+- only `live` and `finished` matches reveal the opponent's real prediction
+- outright picks on both the league leaderboard and the opponent page remain hidden until the tournament has officially started
+
+League overview cards:
+
+- `/game/leagues` now shows:
+  total member count per league
+  the current user's rank inside that league
+
+Knockout placeholder rendering:
+
+- mixed Annex C third-place placeholders no longer use emoji flags
+- when a qualifying third-place team is already known, the bracket now renders the real flag image from that team's standard `logo_url`
+- unresolved groups still stay in seed form such as `3C`
+
+UI consistency:
+
+- the winner and top-scorer outright fields now use the same dark native `select` treatment

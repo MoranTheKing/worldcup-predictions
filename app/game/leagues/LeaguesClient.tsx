@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useActionState, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -11,6 +12,8 @@ export type LeagueRow = {
   invite_code: string | null;
   owner_id: string | null;
   created_at: string | null;
+  member_count: number;
+  current_rank: number | null;
 };
 
 type ActionMode = "create" | "join" | null;
@@ -29,14 +32,10 @@ export default function LeaguesClient({
 
   return (
     <div className="flex flex-col gap-6">
-      <section
-        className="rounded-[1.75rem] border border-white/10 bg-[rgba(13,27,46,0.82)] p-5"
-      >
+      <section className="rounded-[1.75rem] border border-white/10 bg-[rgba(13,27,46,0.82)] p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.24em] text-wc-neon">
-              הליגות שלי
-            </p>
+            <p className="text-xs font-bold uppercase tracking-[0.24em] text-wc-neon">הליגות שלי</p>
             <h2 className="mt-2 text-2xl font-black text-wc-fg1">מרכז הליגות החברתיות</h2>
             <p className="mt-2 max-w-2xl text-sm text-wc-fg2">
               יוצרים ליגה פרטית, מצטרפים עם קוד בן 4 תווים, ומשתווים מול חברים על אותו טורניר.
@@ -63,9 +62,7 @@ export default function LeaguesClient({
 
         {!isAuthenticated ? (
           <div className="mt-5 rounded-2xl border border-dashed border-white/10 bg-white/5 p-5 text-center">
-            <p className="text-sm font-semibold text-wc-fg2">
-              צריך להתחבר כדי ליצור ליגה או להצטרף אליה.
-            </p>
+            <p className="text-sm font-semibold text-wc-fg2">צריך להתחבר כדי ליצור ליגה או להצטרף אליה.</p>
           </div>
         ) : openPanel === "create" ? (
           <div className="mt-5">
@@ -73,10 +70,7 @@ export default function LeaguesClient({
           </div>
         ) : openPanel === "join" ? (
           <div className="mt-5">
-            <JoinLeaguePanel
-              initialCode={joinDraft}
-              onCodeChange={setJoinDraft}
-            />
+            <JoinLeaguePanel initialCode={joinDraft} onCodeChange={setJoinDraft} />
           </div>
         ) : null}
       </section>
@@ -88,7 +82,7 @@ export default function LeaguesClient({
               הליגות הפעילות ({leagues.length})
             </p>
             <p className="text-xs font-semibold text-wc-fg3">
-              אפשר לפתוח כל ליגה כדי לראות טבלת מובילים וניהול חברים
+              אפשר לפתוח כל ליגה כדי לראות טבלת מובילים, ניחושי חברים וניהול הזמנות.
             </p>
           </div>
 
@@ -112,12 +106,18 @@ export default function LeaguesClient({
                       {league.invite_code ?? "----"}
                     </span>
                   </p>
+                  <div className="mt-2 flex flex-wrap gap-2 text-[11px] font-semibold text-wc-fg3">
+                    <span className="rounded-full bg-white/6 px-2.5 py-1">
+                      {league.member_count} חברים
+                    </span>
+                    <span className="rounded-full bg-white/6 px-2.5 py-1">
+                      {league.current_rank ? `מקום ${league.current_rank}` : "מיקום בהמתנה"}
+                    </span>
+                  </div>
                 </div>
               </div>
 
-              <span className="flex-shrink-0 text-xs font-semibold text-wc-fg3">
-                פתח ליגה ←
-              </span>
+              <span className="flex-shrink-0 text-xs font-semibold text-wc-fg3">פתח ליגה ←</span>
             </Link>
           ))}
         </section>
@@ -126,7 +126,7 @@ export default function LeaguesClient({
           <div className="text-5xl">🏟️</div>
           <p className="mt-3 text-base font-semibold text-wc-fg2">עוד לא הצטרפת לאף ליגה</p>
           <p className="mt-2 text-sm text-wc-fg3">
-            בחר למעלה אם ליצור ליגה חדשה או להצטרף עם קוד הזמנה שקיבלת.
+            בחר למעלה אם ליצור ליגה חדשה או להצטרף עם קוד ההזמנה שקיבלת.
           </p>
         </section>
       ) : null}
@@ -147,9 +147,7 @@ function CreateLeaguePanel() {
     >
       <div className="mb-4">
         <p className="text-sm font-bold text-wc-fg1">צור ליגה חדשה</p>
-        <p className="mt-1 text-xs text-wc-fg3">
-          שם אחד, קוד אחד, וטבלת דירוג אחת משותפת לכל החברים.
-        </p>
+        <p className="mt-1 text-xs text-wc-fg3">שם אחד, קוד אחד, וטבלת דירוג אחת משותפת לכל החברים.</p>
       </div>
 
       <label className="block text-xs font-semibold text-wc-fg3">
@@ -244,7 +242,7 @@ function ActionToggle({
 }: {
   active: boolean;
   onClick: () => void;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <button

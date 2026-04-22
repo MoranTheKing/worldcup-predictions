@@ -181,11 +181,11 @@ export default function PredictionsClient({
                   ? jokerSelectionOverride[bucket] ?? null
                   : initialJokerSelection[bucket];
               const isSelected = selectedMatchId === match.match_number;
-              const canUseJoker = isSelected || (!savedStageUsed && selectedMatchId === null);
+              const showJokerToggle = isSelected || (!savedStageUsed && selectedMatchId === null);
 
               return (
                 <div
-                  key={match.match_number}
+                  key={`${match.match_number}-${existing?.home_score_guess ?? "x"}-${existing?.away_score_guess ?? "x"}-${existing?.is_joker_applied ? "joker" : "plain"}-${match.status}`}
                   ref={(element) => {
                     matchRefs.current[match.match_number] = element;
                   }}
@@ -197,7 +197,7 @@ export default function PredictionsClient({
                     existingIsJoker={existing?.is_joker_applied ?? false}
                     pointsEarned={existing?.points_earned ?? null}
                     isJokerSelected={isSelected}
-                    canUseJoker={canUseJoker}
+                    showJokerToggle={showJokerToggle}
                     onToggleJoker={() =>
                       setJokerSelectionOverride((current) => ({
                         ...current,

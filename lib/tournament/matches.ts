@@ -152,6 +152,19 @@ export function formatMatchTimeLabel(iso: string, timeZone = "Asia/Jerusalem") {
   }
 }
 
+export function getFlagEmojiFromLogoUrl(logoUrl: string | null) {
+  if (!logoUrl) return null;
+
+  const match = logoUrl.match(/\/([a-z]{2})\.(?:png|svg|webp|jpg|jpeg)(?:\?.*)?$/i);
+  const countryCode = match?.[1]?.toUpperCase();
+  if (!countryCode || countryCode.length !== 2) return null;
+
+  return countryCode
+    .split("")
+    .map((char) => String.fromCodePoint(127397 + char.charCodeAt(0)))
+    .join("");
+}
+
 export function attachTeamsToMatches(
   matches: TournamentMatchRecord[],
   teams: TournamentTeamRecord[],

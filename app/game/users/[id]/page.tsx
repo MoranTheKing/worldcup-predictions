@@ -1,0 +1,227 @@
+import Image from "next/image";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import MatchPredictionCard from "@/app/game/predictions/MatchPredictionCard";
+import { attachTeamsToMatches } from "@/lib/tournament/matches";
+import type { MatchWithTeams } from "@/lib/tournament/matches";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { fetchAuthProfile, resolveDisplayName } from "@/lib/supabase/auth-profile";
+import { createClient } from "@/lib/supabase/server";
+
+export const dynamic = "force-dynamic";
+
+export default async function OpponentPredictionsPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ league?: string }>;
+}) {
+  const { id: targetUserId } = await params;
+  const { league: requestedLeagueId } = await searchParams;
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect(`/login?next=/game/users/${targetUserId}`);
+  }
+
+  const admin = createAdminClient();
+
+  const [{ data: currentMemberships }, { data: targetMemberships }, profile] = await Promise.all([
+    admin.from("league_members").select("league_id").eq("user_id", user.id),
+    admin.from("league_members").select("league_id").eq("user_id", targetUserId),
+    fetchAuthProfile(admin, targetUserId),
+  ]);
+
+  const currentLeagueIds = new Set(
+    ((currentMemberships ?? []) as Array<{ league_id?: string | null }>)
+      .map((row) => row.league_id)
+      .filter((value): value is string => typeof value === "string" && value.length > 0),
+  );
+  const sharedLeagueIds = ((targetMemberships ?? []) as Array<{ league_id?: string | null }>)
+    .map((row) => row.league_id)
+    .filter((value): value is string => typeof value === "string" && currentLeagueIds.has(value));
+
+  if (user.id !== targetUserId && sharedLeagueIds.length === 0) {
+    redirect("/game/leagues");
+  }
+
+  const backLeagueId =
+    requestedLeagueId && sharedLeagueIds.includes(requestedLeagueId)
+      ? requestedLeagueId
+      : sharedLeagueIds[0] ?? null;
+  const backHref = backLeagueId ? `/game/leagues/${backLeagueId}` : "/game/leagues";
+
+  const [
+    { data: matchesData },
+    { data: teamsData },
+    predictionsResult,
+    tournamentResult,
+    { data: leagueRows },
+    startedResult,
+  ] = await Promise.all([
+    admin
+      .from("matches")
+      .select(
+        "match_number, stage, status, date_time, minute, home_team_id, away_team_id, home_placeholder, away_placeholder, home_score, away_score, is_extra_time, home_penalty_score, away_penalty_score",
+      )
+      .order("date_time", { ascending: true }),
+    admin
+      .from("teams")
+      .select("id, name, name_he, logo_url, group_letter")
+      .order("name_he", { ascending: true }),
+    admin
+      .from("predictions")
+      .select("match_id, home_score_guess, away_score_guess, is_joker_applied, points_earned")
+      .eq("user_id", targetUserId),
+    admin
+      .from("tournament_predictions")
+      .select("predicted_winner_team_id, predicted_top_scorer_name")
+      .eq("user_id", targetUserId)
+      .maybeSingle(),
+    sharedLeagueIds.length > 0
+      ? admin.from("leagues").select("id, name").in("id", sharedLeagueIds)
+      : Promise.resolve({ data: [], error: null }),
+    admin.from("matches").select("match_number", { head: true, count: "exact" }).neq("status", "scheduled"),
+  ]);
+
+  const allMatches = attachTeamsToMatches(
+    (matchesData ?? []) as Parameters<typeof attachTeamsToMatches>[0],
+    (teamsData ?? []) as Parameters<typeof attachTeamsToMatches>[1],
+  ) as MatchWithTeams[];
+
+  const predictionMap = new Map(
+    ((predictionsResult.data ?? []) as Array<{
+      match_id: number;
+      home_score_guess: number | null;
+      away_score_guess: number | null;
+      is_joker_applied?: boolean | null;
+      points_earned?: number | null;
+    }>).map((prediction) => [prediction.match_id, prediction]),
+  );
+
+  const displayName = resolveDisplayName(profile, null);
+  const avatarUrl = profile?.avatarUrl ?? null;
+  const sharedLeagueNames = new Map(
+    ((leagueRows ?? []) as Array<{ id: string; name?: string | null }>).map((league) => [
+      league.id,
+      league.name ?? "League",
+    ]),
+  );
+  const teamsById = new Map(
+    ((teamsData ?? []) as Array<{ id: string; name: string; name_he?: string | null }>).map((team) => [
+      team.id,
+      team.name_he ?? team.name,
+    ]),
+  );
+  const winnerTeamLabel =
+    typeof tournamentResult.data?.predicted_winner_team_id === "string"
+      ? teamsById.get(tournamentResult.data.predicted_winner_team_id) ?? null
+      : null;
+  const tournamentStarted = (startedResult.count ?? 0) > 0;
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex items-center justify-between gap-3">
+        <Link
+          href={backHref}
+          className="text-xs font-semibold text-wc-fg3 transition-colors hover:text-wc-neon"
+        >
+          ← חזרה לליגה
+        </Link>
+        {backLeagueId ? (
+          <span className="text-xs text-wc-fg3">
+            שיתוף ליגה: {sharedLeagueNames.get(backLeagueId) ?? "League"}
+          </span>
+        ) : null}
+      </div>
+
+      <section className="rounded-[1.75rem] border border-white/10 bg-[rgba(13,27,46,0.82)] p-5">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-center gap-4">
+            {avatarUrl ? (
+              <Image
+                src={avatarUrl}
+                alt={displayName}
+                width={68}
+                height={68}
+                unoptimized
+                className="aspect-square h-[68px] w-[68px] rounded-full object-cover"
+              />
+            ) : (
+              <div className="flex aspect-square h-[68px] w-[68px] items-center justify-center rounded-full bg-[linear-gradient(135deg,var(--wc-violet),var(--wc-magenta))] text-2xl font-black text-white">
+                {displayName.charAt(0).toUpperCase()}
+              </div>
+            )}
+
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.24em] text-wc-neon">
+                Opponent View
+              </p>
+              <h1 className="mt-2 text-3xl font-black text-wc-fg1">{displayName}</h1>
+              <p className="mt-1 text-sm text-wc-fg2">
+                משחקים עתידיים נשארים נעולים. רק משחקים חיים או גמורים חושפים את הניחוש בפועל.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <ReadOnlyStat label="זוכה הטורניר" value={winnerTeamLabel} hidden={!tournamentStarted} />
+            <ReadOnlyStat
+              label="מלך השערים"
+              value={tournamentResult.data?.predicted_top_scorer_name ?? null}
+              hidden={!tournamentStarted}
+            />
+          </div>
+        </div>
+      </section>
+
+      <section className="flex flex-col gap-4">
+        {allMatches.length > 0 ? (
+          allMatches.map((match) => {
+            const prediction = predictionMap.get(match.match_number);
+            return (
+              <MatchPredictionCard
+                key={`${match.match_number}-${prediction?.home_score_guess ?? "x"}-${prediction?.away_score_guess ?? "x"}-${prediction?.is_joker_applied ? "joker" : "plain"}-${match.status}`}
+                match={match}
+                existingHome={prediction?.home_score_guess ?? null}
+                existingAway={prediction?.away_score_guess ?? null}
+                existingIsJoker={prediction?.is_joker_applied ?? false}
+                pointsEarned={prediction?.points_earned ?? null}
+                isJokerSelected={Boolean(prediction?.is_joker_applied)}
+                showJokerToggle={false}
+                predictionOwnerLabel="הניחוש שלו/ה"
+                isReadOnly
+                hideScheduledPrediction
+              />
+            );
+          })
+        ) : (
+          <div className="rounded-2xl border border-dashed border-white/10 bg-[rgba(13,27,46,0.82)] p-10 text-center text-sm text-wc-fg3">
+            עדיין אין משחקים זמינים להצגה.
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
+
+function ReadOnlyStat({
+  label,
+  value,
+  hidden,
+}: {
+  label: string;
+  value: string | null;
+  hidden: boolean;
+}) {
+  return (
+    <div className="rounded-[1.4rem] border border-white/10 bg-white/5 px-4 py-3 text-start">
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-wc-fg3">{label}</p>
+      <p className="mt-2 text-sm font-bold text-wc-fg1">{hidden ? "🔒 Hidden" : value ?? "—"}</p>
+    </div>
+  );
+}

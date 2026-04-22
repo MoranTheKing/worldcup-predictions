@@ -404,7 +404,7 @@ As of April 22, 2026, finished prediction cards follow a stricter visual scoring
 - miss / `0` points:
   neutral gray treatment
 - correct direction, wrong exact score:
-  blue-accent treatment
+  light-green treatment
 - exact score hit:
   green-accent treatment
 - exact score hit with joker:
@@ -437,3 +437,110 @@ Example:
 Display rule:
 
 - these mixed labels use tighter truncation / font sizing inside knockout cards so they do not expand the bracket width unexpectedly
+
+
+## Phase 2.2 - Refined Prediction Card States
+
+Finished prediction cards now follow this stricter result ladder:
+
+- scheduled, unsaved:
+  neutral
+- scheduled, already saved:
+  neutral-active with a visible saved prediction summary
+- finished, no prediction:
+  treat as miss
+- finished miss / `0` points:
+  red
+- finished direction hit:
+  light green
+- finished exact hit:
+  strong green
+- finished exact hit with joker:
+  diamond cyan-violet
+
+Additional UI rule:
+
+- if a stage joker is already used, other matches in that stage no longer render disabled joker buttons
+- the toggle is hidden instead of shown as unavailable
+
+
+## Social Viewing Privacy Rules
+
+The social prediction layer now follows these display constraints:
+
+- leaderboard rows in `/game/leagues/[id]` open a read-only user page at `/game/users/[id]`
+- server-side access is allowed only when:
+  the viewer is the same user
+  or both users share at least one league
+- opponent pages show only matches with status:
+  `live`
+  `finished`
+- scheduled matches are fully hidden
+- league leaderboard outright picks remain hidden until the tournament has officially started
+
+
+## Total Hits Metric
+
+The gamer-card header on `/game` now includes `Total Hits` (`סה"כ בולים`).
+
+Definition:
+
+- count all finished match predictions where:
+  `home_score_guess === home_score`
+  and
+  `away_score_guess === away_score`
+
+
+## Flag-Based Knockout Placeholder Compaction
+
+To stop mixed Annex C placeholder labels from overflowing bracket cards:
+
+- when a third-place team is already known, the bracket now prefers that team's real flag image from `team.logo_url`
+- unresolved group fragments remain in seed notation such as `3C`
+
+Example:
+
+- `3A/B/C/D/F`
+  can become a compact inline sequence of:
+  `flag(A) / flag(B) / 3C / 3D / 3F`
+
+
+## Phase 2.3 - Prediction UX And Anti-Cheat Corrections
+
+As of April 22, 2026, the prediction layer follows these additional QA corrections.
+
+### Match Card Result Ladder
+
+- scheduled unsaved:
+  neutral
+- scheduled saved:
+  neutral-active, dark blue / slate tone
+- finished miss or finished without prediction:
+  red
+- finished direction hit:
+  soft yellow
+- finished exact hit:
+  strong green
+- finished exact hit with joker:
+  extreme diamond / crown treatment
+
+Direction-hit rule:
+
+- compare only the outcome sign
+- a draw prediction such as `0 - 0` against a real draw such as `1 - 1` counts as a direction hit
+- implementation rule:
+  `Math.sign(actual_home - actual_away) === Math.sign(predicted_home - predicted_away)`
+
+### Opponent Privacy Rules
+
+- `/game/users/[id]` is read-only and does not pass interactive handlers into prediction cards
+- scheduled matches are visible for context, but their prediction is locked:
+  `🔒 ? - ?`
+- only `live` and `finished` matches may reveal the opponent's saved pick
+- outright picks remain locked until the tournament has officially started
+
+### League Overview Stats
+
+- `/game/leagues` now shows:
+  total members in each league
+  the authenticated user's current rank in that league

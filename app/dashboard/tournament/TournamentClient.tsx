@@ -1,6 +1,10 @@
 "use client";
 
-import type { ResolvedBracketMatch, ResolvedSeed } from "@/lib/bracket/knockout";
+import type {
+  PlaceholderPart,
+  ResolvedBracketMatch,
+  ResolvedSeed,
+} from "@/lib/bracket/knockout";
 import type { StandingStatus, TeamStanding } from "@/lib/utils/standings";
 import Image from "next/image";
 import { useMemo, useState } from "react";
@@ -902,7 +906,7 @@ function SeedRow({
           {seed.kind === "team" ? (
             seed.team.name_he ?? seed.team.name
           ) : (
-            <span className="text-wc-fg3">{seed.labelHe}</span>
+            <PlaceholderSeedLabel seed={seed} />
           )}
         </span>
       </div>
@@ -916,6 +920,54 @@ function SeedRow({
         </div>
       )}
     </div>
+  );
+}
+
+function PlaceholderSeedLabel({
+  seed,
+}: {
+  seed: Extract<ResolvedSeed, { kind: "placeholder" }>;
+}) {
+  if (!seed.parts?.length) {
+    return <span className="text-wc-fg3">{seed.labelHe}</span>;
+  }
+
+  return (
+    <span className="inline-flex max-w-full items-center gap-0.5 overflow-hidden whitespace-nowrap text-wc-fg3">
+      {seed.parts.map((part, index) => (
+        <PlaceholderSeedPart key={`${part.kind}-${index}`} part={part} showDivider={index > 0} />
+      ))}
+    </span>
+  );
+}
+
+function PlaceholderSeedPart({
+  part,
+  showDivider,
+}: {
+  part: PlaceholderPart;
+  showDivider: boolean;
+}) {
+  return (
+    <>
+      {showDivider ? <span className="opacity-60">/</span> : null}
+      {part.kind === "team" ? (
+        part.team.logo_url ? (
+          <Image
+            src={part.team.logo_url}
+            alt={part.team.name}
+            width={12}
+            height={9}
+            className="h-[9px] w-3 rounded-[2px] object-cover"
+            unoptimized
+          />
+        ) : (
+          <span className="text-[9px]">{part.team.name_he ?? part.team.name}</span>
+        )
+      ) : (
+        <span className="text-[9px]">{part.labelHe}</span>
+      )}
+    </>
   );
 }
 

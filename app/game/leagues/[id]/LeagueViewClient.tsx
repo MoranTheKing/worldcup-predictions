@@ -17,6 +17,9 @@ export type LeagueMemberRow = {
   display_name: string;
   total_score: number;
   avatar_url: string | null;
+  winner_prediction: string | null;
+  top_scorer_prediction: string | null;
+  outrights_visible: boolean;
 };
 
 type LeagueViewProps = {
@@ -72,10 +75,7 @@ export default function LeagueViewClient({
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
-            <InviteCard
-              leagueId={league.id}
-              inviteCode={league.invite_code}
-            />
+            <InviteCard inviteCode={league.invite_code} />
             {isOwner ? (
               <DeleteLeagueCard leagueId={league.id} />
             ) : (
@@ -90,22 +90,23 @@ export default function LeagueViewClient({
           <div>
             <p className="text-sm font-bold text-wc-fg1">טבלת המובילים</p>
             <p className="mt-1 text-xs text-wc-fg3">
-              מדורג לפי total score מהגבוה לנמוך
+              מדורג לפי total score מהגבוה לנמוך. לחיצה על שורה תפתח תצוגת ניחושים
+              לקריאה בלבד.
             </p>
           </div>
         </div>
 
         {members.length > 0 ? (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[560px]">
+            <table className="w-full min-w-[920px]">
               <thead>
                 <tr className="border-b border-white/10 text-right">
                   <th className="px-5 py-3 text-[11px] font-semibold text-wc-fg3">#</th>
                   <th className="px-4 py-3 text-[11px] font-semibold text-wc-fg3">שחקן</th>
                   <th className="px-4 py-3 text-[11px] font-semibold text-wc-fg3">נקודות</th>
-                  <th className="px-5 py-3 text-[11px] font-semibold text-wc-fg3">
-                    פעולות
-                  </th>
+                  <th className="px-4 py-3 text-[11px] font-semibold text-wc-fg3">זוכה טורניר</th>
+                  <th className="px-4 py-3 text-[11px] font-semibold text-wc-fg3">מלך השערים</th>
+                  <th className="px-5 py-3 text-[11px] font-semibold text-wc-fg3">פעולות</th>
                 </tr>
               </thead>
               <tbody>
@@ -130,13 +131,7 @@ export default function LeagueViewClient({
   );
 }
 
-function InviteCard({
-  leagueId,
-  inviteCode,
-}: {
-  leagueId: string;
-  inviteCode: string | null;
-}) {
+function InviteCard({ inviteCode }: { inviteCode: string | null }) {
   const [copied, setCopied] = useState(false);
   const inviteUrl = useMemo(() => {
     if (typeof window === "undefined" || !inviteCode) {
@@ -147,9 +142,7 @@ function InviteCard({
   }, [inviteCode]);
 
   async function handleShare() {
-    if (!inviteCode || !inviteUrl) {
-      return;
-    }
+    if (!inviteCode || !inviteUrl) return;
 
     try {
       if (navigator.share) {
@@ -187,7 +180,6 @@ function InviteCard({
       >
         {copied ? "הלינק הועתק" : "שתף / העתק לינק"}
       </button>
-      <input type="hidden" value={leagueId} />
     </div>
   );
 }
@@ -205,10 +197,7 @@ function LeaveLeagueCard({
   );
 
   return (
-    <form
-      action={action}
-      className="rounded-[1.4rem] border border-white/10 bg-white/5 p-4"
-    >
+    <form action={action} className="rounded-[1.4rem] border border-white/10 bg-white/5 p-4">
       <input type="hidden" name="league_id" value={leagueId} />
       <input type="hidden" name="target_user_id" value={currentUserId} />
       <p className="text-sm font-bold text-wc-fg1">עזיבת ליגה</p>
@@ -278,8 +267,24 @@ function LeagueMemberRowView({
   isSelf: boolean;
   leagueId: string;
 }) {
+  const router = useRouter();
+  const href = `/game/users/${member.user_id}?league=${leagueId}`;
+
   return (
-    <tr className={`border-b border-white/10 ${isSelf ? "bg-[rgba(95,255,123,0.05)]" : ""}`}>
+    <tr
+      role="link"
+      tabIndex={0}
+      className={`cursor-pointer border-b border-white/10 transition hover:bg-white/5 ${
+        isSelf ? "bg-[rgba(95,255,123,0.05)]" : ""
+      }`}
+      onClick={() => router.push(href)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          router.push(href);
+        }
+      }}
+    >
       <td className="px-5 py-3 text-sm font-bold text-wc-fg3">{getRankLabel(rank)}</td>
       <td className="px-4 py-3">
         <div className="flex items-center gap-3">
@@ -303,15 +308,23 @@ function LeagueMemberRowView({
               {isSelf ? <span className="ms-1 text-[10px] text-wc-fg3">(אני)</span> : null}
             </p>
             <p className="text-xs text-wc-fg3">
-              {member.joined_at
-                ? new Date(member.joined_at).toLocaleDateString("he-IL")
-                : "חבר ליגה"}
+              {member.joined_at ? new Date(member.joined_at).toLocaleDateString("he-IL") : "חבר ליגה"}
             </p>
           </div>
         </div>
       </td>
       <td className="px-4 py-3 text-sm font-black text-wc-neon">{member.total_score}</td>
-      <td className="px-5 py-3">
+      <td className="px-4 py-3 text-sm text-wc-fg2">
+        <OutrightCell visible={member.outrights_visible} value={member.winner_prediction} />
+      </td>
+      <td className="px-4 py-3 text-sm text-wc-fg2">
+        <OutrightCell visible={member.outrights_visible} value={member.top_scorer_prediction} />
+      </td>
+      <td
+        className="px-5 py-3"
+        onClick={(event) => event.stopPropagation()}
+        onKeyDown={(event) => event.stopPropagation()}
+      >
         {isOwner && !isSelf ? (
           <RemoveMemberButton leagueId={leagueId} targetUserId={member.user_id} />
         ) : (
@@ -320,6 +333,24 @@ function LeagueMemberRowView({
       </td>
     </tr>
   );
+}
+
+function OutrightCell({
+  visible,
+  value,
+}: {
+  visible: boolean;
+  value: string | null;
+}) {
+  if (!visible) {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-white/6 px-2.5 py-1 text-xs font-semibold text-wc-fg3">
+        🔒 Hidden
+      </span>
+    );
+  }
+
+  return <span className="block truncate">{value ?? "—"}</span>;
 }
 
 function RemoveMemberButton({
@@ -348,6 +379,7 @@ function RemoveMemberButton({
       <button
         type="submit"
         onClick={(event) => {
+          event.stopPropagation();
           if (!window.confirm("להסיר את החבר הזה מהליגה?")) {
             event.preventDefault();
           }
@@ -364,11 +396,7 @@ function RemoveMemberButton({
 }
 
 function InlineError({ message }: { message: string }) {
-  return (
-    <p className="mt-3 text-xs font-semibold text-wc-danger">
-      {message}
-    </p>
-  );
+  return <p className="mt-3 text-xs font-semibold text-wc-danger">{message}</p>;
 }
 
 function getRankLabel(rank: number) {

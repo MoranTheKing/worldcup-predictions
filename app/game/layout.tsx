@@ -1,12 +1,13 @@
 import Image from "next/image";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
 import DashboardShell from "@/components/DashboardShell";
 import DevToolsFloatingButton from "@/components/DevToolsFloatingButton";
 import GameSubNav from "@/components/game/GameSubNav";
-import { fetchAuthProfile, resolveDisplayName } from "@/lib/supabase/auth-profile";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { getUserJokerUsage } from "@/lib/game/boosters";
+import { getUserGameStats } from "@/lib/game/stats";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { fetchAuthProfile, resolveDisplayName } from "@/lib/supabase/auth-profile";
+import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +27,7 @@ export default async function GameLayout({
 
   const admin = createAdminClient();
 
-  const [profile, jokerUsage] = await Promise.all([
+  const [profile, jokerUsage, gameStats] = await Promise.all([
     fetchAuthProfile(admin, user.id).catch((error) => {
       console.error("[GameLayout] profile fetch failed:", error);
       return null;
@@ -35,11 +36,16 @@ export default async function GameLayout({
       console.error("[GameLayout] joker usage failed:", error);
       return { groupUsed: false, knockoutUsed: false };
     }),
+    getUserGameStats(admin, user.id).catch((error) => {
+      console.error("[GameLayout] game stats failed:", error);
+      return { totalHits: 0 };
+    }),
   ]);
 
   const displayName = resolveDisplayName(profile, user);
   const avatarUrl = profile?.avatarUrl ?? null;
   const totalScore = profile?.totalScore ?? 0;
+  const totalHits = gameStats.totalHits;
   const initial = displayName.charAt(0).toUpperCase();
 
   return (
@@ -73,21 +79,28 @@ export default async function GameLayout({
                 <p className="text-xs font-bold uppercase tracking-[0.28em] text-wc-neon">
                   משחק הניחושים
                 </p>
-                <h1 className="wc-display mt-2 truncate text-4xl text-wc-fg1">
-                  {displayName}
-                </h1>
+                <h1 className="wc-display mt-2 truncate text-4xl text-wc-fg1">{displayName}</h1>
                 <p className="mt-2 text-sm text-wc-fg2">
                   כל הניחושים, הליגות והבוסטרים שלך מרוכזים עכשיו במקום אחד.
                 </p>
               </div>
             </div>
 
-            <div className="rounded-[1.4rem] border border-wc-neon/20 bg-[rgba(6,13,26,0.42)] px-5 py-4 text-start shadow-[0_0_20px_rgba(95,255,123,0.08)]">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-wc-fg3">
-                Total Score
-              </p>
-              <p className="wc-display mt-2 text-5xl text-wc-neon">{totalScore}</p>
-              <p className="mt-1 text-xs font-semibold text-wc-fg3">נקודות מצטברות</p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <MetricCard
+                title="Total Score"
+                value={String(totalScore)}
+                subtitle={'סה"כ נקודות'}
+                accentClassName="text-wc-neon"
+                borderClassName="border-wc-neon/20"
+              />
+              <MetricCard
+                title="Total Hits"
+                value={String(totalHits)}
+                subtitle={'סה"כ בולים'}
+                accentClassName="text-[#8BFFB7]"
+                borderClassName="border-[rgba(34,197,94,0.22)]"
+              />
             </div>
           </div>
 
@@ -110,6 +123,30 @@ export default async function GameLayout({
       </div>
       <DevToolsFloatingButton />
     </DashboardShell>
+  );
+}
+
+function MetricCard({
+  title,
+  value,
+  subtitle,
+  accentClassName,
+  borderClassName,
+}: {
+  title: string;
+  value: string;
+  subtitle: string;
+  accentClassName: string;
+  borderClassName: string;
+}) {
+  return (
+    <div
+      className={`rounded-[1.4rem] border bg-[rgba(6,13,26,0.42)] px-5 py-4 text-start shadow-[0_0_20px_rgba(95,255,123,0.08)] ${borderClassName}`}
+    >
+      <p className="text-xs font-semibold uppercase tracking-[0.24em] text-wc-fg3">{title}</p>
+      <p className={`wc-display mt-2 text-5xl ${accentClassName}`}>{value}</p>
+      <p className="mt-1 text-xs font-semibold text-wc-fg3">{subtitle}</p>
+    </div>
   );
 }
 
@@ -139,7 +176,7 @@ function BoosterCard({
           <p className="text-sm font-bold text-wc-fg1">{title}</p>
           <p className="mt-1 text-xs text-wc-fg3">{subtitle}</p>
         </div>
-        <span className={`text-3xl ${isUsed ? "grayscale" : ""}`}>🃏</span>
+        <span className={`text-3xl ${isUsed ? "grayscale" : ""}`}>🎏</span>
       </div>
 
       <div
