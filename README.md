@@ -543,3 +543,40 @@ Knockout placeholder rendering:
 UI consistency:
 
 - the winner and top-scorer outright fields now use the same dark native `select` treatment
+
+
+## Phase 2.4 UX Cleanup: Custom Outrights Dropdowns, Self-View Bypass, Dev Reset
+
+As of April 22, 2026, the prediction UX received another polish pass focused on visual consistency and anti-cheat edge cases.
+
+Outrights UI:
+
+- the plain native `select` controls were replaced again with polished custom dark dropdowns
+- winner picker now renders the team flag image next to each team name
+- top-scorer picker now renders a generic player avatar icon next to each player
+- the helper sentence about winner-team players appearing first was removed from the UI
+- winner-team sorting still remains active behind the scenes
+
+Prediction card cleanup:
+
+- the duplicate small gray `הניחוש שלך` line was removed from scheduled saved cards
+- the remaining saved-prediction summary now appears as a premium glass-style bet slip badge
+- the raw joker-availability text line was removed from the prediction list surface
+- booster inventory is now communicated only through the Gamer Card header
+
+Self-view privilege:
+
+- if a user opens `/game/users/[id]` with their own user id, the page no longer behaves like an opponent page
+- instead, it mounts the full editable `My Predictions` experience directly inside that route
+- this preserves league-navigation context while bypassing anti-cheat locks for the owner of the predictions
+
+Dev Tools:
+
+- new dangerous action:
+  `איפוס כל הניחושים והג׳וקרים`
+- this resets:
+  `predictions`
+  `tournament_predictions`
+- route:
+  `/api/dev/predictions/reset`
+- the route is still blocked in production by the existing dev-only guard

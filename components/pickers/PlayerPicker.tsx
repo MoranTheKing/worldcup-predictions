@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 export type PickerPlayer = {
   id: number;
@@ -9,19 +9,11 @@ export type PickerPlayer = {
   position: string | null;
 };
 
-function translatePosition(position: string | null): string {
-  if (!position) return "";
-  if (position.includes("Attacker")) return "חלוץ";
-  if (position.includes("Midfielder")) return "קשר";
-  if (position.includes("Defender")) return "בלם";
-  if (position.includes("Goalkeeper")) return "שוער";
-  return position;
-}
-
 interface Props {
   players: PickerPlayer[];
   winnerId: string;
   value: PickerPlayer | null;
+  fallbackLabel?: string;
   onChange: (player: PickerPlayer | null) => void;
 }
 
@@ -29,98 +21,77 @@ export default function PlayerPicker({
   players,
   winnerId,
   value,
+  fallbackLabel,
   onChange,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
-  const [showAll, setShowAll] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
-  const winnerPlayers = players.filter((player) => String(player.team_id) === winnerId);
-  const pool = showAll || winnerPlayers.length === 0 ? players : winnerPlayers;
-  const filtered = search.trim()
-    ? pool.filter((player) => player.name.toLowerCase().includes(search.toLowerCase()))
-    : pool;
+  const sortedPlayers = useMemo(() => {
+    return [...players].sort((left, right) => {
+      const leftWinner = left.team_id === winnerId;
+      const rightWinner = right.team_id === winnerId;
+
+      if (leftWinner && !rightWinner) return -1;
+      if (!leftWinner && rightWinner) return 1;
+      return left.name.localeCompare(right.name);
+    });
+  }, [players, winnerId]);
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return sortedPlayers;
+    return sortedPlayers.filter((player) =>
+      player.name.toLowerCase().includes(search.toLowerCase()),
+    );
+  }, [search, sortedPlayers]);
 
   useEffect(() => {
-    function handler(event: MouseEvent) {
+    function handleMouseDown(event: MouseEvent) {
       if (ref.current && !ref.current.contains(event.target as Node)) {
         setOpen(false);
+        setSearch("");
       }
     }
 
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    document.addEventListener("mousedown", handleMouseDown);
+    return () => document.removeEventListener("mousedown", handleMouseDown);
   }, []);
 
   return (
-    <div ref={ref} className="relative flex flex-col gap-1.5">
+    <div ref={ref} className="relative">
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}
-        className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-sm outline-none"
-        style={{
-          background: "var(--wc-raised)",
-          border: "1.5px solid var(--wc-border)",
-          borderRadius: 12,
-          color: "var(--wc-fg1)",
-        }}
+        className="flex w-full items-center justify-between rounded-xl border border-white/10 bg-[rgba(8,16,28,0.92)] px-3 py-2.5 text-sm text-wc-fg1 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition hover:border-wc-neon/30"
       >
-        <span style={{ color: value ? "var(--wc-fg1)" : "var(--wc-fg3)" }}>
-          {value ? value.name : "-- בחר שחקן --"}
+        <span className="flex min-w-0 items-center gap-2">
+          <PlayerAvatarIcon />
+          <span className={`truncate ${value || fallbackLabel ? "text-wc-fg1" : "text-wc-fg3"}`}>
+            {value ? value.name : fallbackLabel || "-- בחר שחקן --"}
+          </span>
         </span>
-        <span className="text-xs" style={{ color: "var(--wc-fg3)" }}>
-          {open ? "▴" : "▾"}
-        </span>
+        <span className="text-xs text-wc-fg3">{open ? "▴" : "▾"}</span>
       </button>
 
-      {winnerPlayers.length > 0 ? (
-        <button
-          type="button"
-          onClick={() => {
-            setShowAll((current) => !current);
-            setSearch("");
-          }}
-          className="text-center text-xs underline"
-          style={{ color: "var(--wc-fg3)" }}
-        >
-          {showAll
-            ? `שחקני הנבחרת הזוכה (${winnerPlayers.length})`
-            : `כל השחקנים (${players.length})`}
-        </button>
-      ) : null}
-
       {open ? (
-        <div
-          className="absolute top-11 z-50 w-full overflow-hidden"
-          style={{
-            background: "var(--wc-surface)",
-            border: "1px solid var(--wc-border)",
-            boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
-            borderRadius: 12,
-          }}
-        >
-          <div className="p-2" style={{ borderBottom: "1px solid var(--wc-border)" }}>
+        <div className="absolute z-50 mt-2 w-full overflow-hidden rounded-[1rem] border border-white/10 bg-[rgba(7,13,24,0.98)] shadow-[0_18px_48px_rgba(0,0,0,0.45)]">
+          <div className="border-b border-white/8 p-2">
             <input
               autoFocus
               type="text"
-              placeholder="חיפוש שחקן..."
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              className="w-full rounded-lg px-3 py-2 text-sm outline-none"
-              style={{
-                background: "var(--wc-raised)",
-                border: "1px solid var(--wc-border)",
-                color: "var(--wc-fg1)",
-              }}
+              placeholder="חיפוש שחקן..."
+              className="w-full rounded-lg border border-white/8 bg-[rgba(255,255,255,0.04)] px-3 py-2 text-sm text-wc-fg1 outline-none placeholder:text-wc-fg3 focus:border-wc-neon/30"
             />
           </div>
-          <ul className="max-h-48 overflow-y-auto">
+
+          <ul className="max-h-64 overflow-y-auto py-1">
             {filtered.length === 0 ? (
-              <li className="px-4 py-3 text-center text-sm" style={{ color: "var(--wc-fg3)" }}>
-                לא נמצא שחקן
-              </li>
+              <li className="px-4 py-3 text-center text-sm text-wc-fg3">לא נמצא שחקן</li>
             ) : null}
+
             {filtered.map((player) => {
               const isSelected = value?.id === player.id;
 
@@ -133,33 +104,14 @@ export default function PlayerPicker({
                       setOpen(false);
                       setSearch("");
                     }}
-                    className="flex w-full items-center justify-between px-4 py-2 text-right text-sm transition-colors"
-                    style={
+                    className={`flex w-full items-center gap-3 px-4 py-2.5 text-right text-sm transition ${
                       isSelected
-                        ? {
-                            background: "var(--wc-neon-bg)",
-                            color: "var(--wc-neon)",
-                            fontWeight: 500,
-                          }
-                        : { color: "var(--wc-fg1)" }
-                    }
-                    onMouseEnter={(event) => {
-                      if (!isSelected) {
-                        event.currentTarget.style.background = "var(--wc-raised)";
-                      }
-                    }}
-                    onMouseLeave={(event) => {
-                      if (!isSelected) {
-                        event.currentTarget.style.background = "transparent";
-                      }
-                    }}
+                        ? "bg-[rgba(95,255,123,0.12)] text-wc-neon"
+                        : "text-wc-fg1 hover:bg-white/6"
+                    }`}
                   >
-                    <span>{player.name}</span>
-                    {player.position ? (
-                      <span className="text-xs" style={{ color: "var(--wc-fg3)" }}>
-                        {translatePosition(player.position)}
-                      </span>
-                    ) : null}
+                    <PlayerAvatarIcon />
+                    <span className="truncate">{player.name}</span>
                   </button>
                 </li>
               );
@@ -168,5 +120,15 @@ export default function PlayerPicker({
         </div>
       ) : null}
     </div>
+  );
+}
+
+function PlayerAvatarIcon() {
+  return (
+    <span className="inline-flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-white/8 text-wc-fg2">
+      <svg viewBox="0 0 20 20" className="h-3.5 w-3.5 fill-current" aria-hidden="true">
+        <path d="M10 10a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm0 1.5c-3.05 0-5.75 1.54-6.77 3.86-.19.44.13.94.61.94h12.32c.48 0 .8-.5.61-.94C15.75 13.04 13.05 11.5 10 11.5Z" />
+      </svg>
+    </span>
   );
 }

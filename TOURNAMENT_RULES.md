@@ -544,3 +544,49 @@ Direction-hit rule:
 - `/game/leagues` now shows:
   total members in each league
   the authenticated user's current rank in that league
+
+
+## Phase 2.4 - Custom Outrights Pickers And Self-View Override
+
+As of April 22, 2026, the social game layer follows these additional UI and privilege rules.
+
+### Outrights Pickers
+
+- winner and top-scorer inputs no longer use plain native selects
+- winner picker:
+  custom dark dropdown
+  renders the real team flag image next to the team name
+- top-scorer picker:
+  custom dark dropdown
+  renders a generic player avatar icon next to each player
+- winner-team players still sort to the top, but the explanatory helper text is no longer shown
+
+### Scheduled Saved Card Cleanup
+
+- scheduled saved cards must show the saved prediction only once
+- the saved summary appears as a styled bet-slip style badge
+- no duplicate gray helper line should remain under the form buttons
+
+### Booster Status Visibility
+
+- the prediction list itself must not render raw text such as:
+  `ג׳וקר בתים: נוצל`
+  or
+  `ג׳וקר נוקאאוט: זמין`
+- booster state belongs only in the Gamer Card header
+
+### Self-View Privilege Override
+
+- `/game/users/[id]` applies anti-cheat locking only when the viewer is looking at another user
+- if `viewerId === targetId`, the page bypasses privacy locks completely
+- current implementation:
+  mount the full editable `My Predictions` surface inside that route
+
+### Dev Tools Prediction Reset
+
+- new dev-only dangerous action:
+  `איפוס כל הניחושים והג׳וקרים`
+- current reset target tables:
+  `predictions`
+  `tournament_predictions`
+- production remains protected through the existing `devOnly()` guard in `app/api/dev/_guard.ts`

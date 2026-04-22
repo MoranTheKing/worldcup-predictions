@@ -5,6 +5,8 @@ import {
   upsertTournamentPrediction,
   type PredictionActionState,
 } from "@/app/actions/predictions";
+import PlayerPicker from "@/components/pickers/PlayerPicker";
+import TeamPicker from "@/components/pickers/TeamPicker";
 
 export type PickerTeam = {
   id: string;
@@ -41,7 +43,10 @@ export default function OutrightForm({
   const initialTopScorer = existing?.predicted_top_scorer_name ?? "";
   const [winnerId, setWinnerId] = useState(initialWinnerId);
   const [topScorerName, setTopScorerName] = useState(initialTopScorer);
-  const pickerResetKey = state?.success ? state.savedAt ?? "saved" : "stable";
+  const selectedPlayer = useMemo(
+    () => players.find((player) => player.name === topScorerName) ?? null,
+    [players, topScorerName],
+  );
 
   const sortedTeams = useMemo(
     () =>
@@ -51,18 +56,18 @@ export default function OutrightForm({
     [teams],
   );
 
-  const sortedPlayers = useMemo(() => {
-    return [...players].sort((left, right) => {
-      const leftWinner = left.team_id === winnerId;
-      const rightWinner = right.team_id === winnerId;
+  const sortedPlayers = useMemo(
+    () =>
+      [...players].sort((left, right) => {
+        const leftWinner = left.team_id === winnerId;
+        const rightWinner = right.team_id === winnerId;
 
-      if (leftWinner && !rightWinner) return -1;
-      if (!leftWinner && rightWinner) return 1;
-      return left.name.localeCompare(right.name);
-    });
-  }, [players, winnerId]);
-
-  const hasExistingTopScorerOption = sortedPlayers.some((player) => player.name === topScorerName);
+        if (leftWinner && !rightWinner) return -1;
+        if (!leftWinner && rightWinner) return 1;
+        return left.name.localeCompare(right.name);
+      }),
+    [players, winnerId],
+  );
 
   return (
     <form
@@ -81,50 +86,19 @@ export default function OutrightForm({
 
       <div className="grid gap-4 lg:grid-cols-[1fr_1fr_auto] lg:items-end">
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="winner-select" className="text-xs font-semibold text-wc-fg2">
-            זוכת הטורניר
-          </label>
-          <select
-            key={`winner-${pickerResetKey}`}
-            id="winner-select"
-            value={winnerId}
-            onChange={(event) => setWinnerId(event.target.value)}
-            className="wc-input text-sm"
-          >
-            <option value="">-- בחר נבחרת --</option>
-            {sortedTeams.map((team) => (
-              <option key={team.id} value={team.id}>
-                {team.name_he ?? team.name}
-              </option>
-            ))}
-          </select>
+          <label className="text-xs font-semibold text-wc-fg2">זוכת הטורניר</label>
+          <TeamPicker teams={sortedTeams} value={winnerId} onChange={setWinnerId} />
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="top-scorer-select" className="text-xs font-semibold text-wc-fg2">
-            מלך השערים
-          </label>
-          <select
-            key={`scorer-${pickerResetKey}-${winnerId || "none"}`}
-            id="top-scorer-select"
-            value={hasExistingTopScorerOption ? topScorerName : ""}
-            onChange={(event) => setTopScorerName(event.target.value)}
-            className="wc-input text-sm"
-          >
-            <option value="">-- בחר שחקן --</option>
-            {!hasExistingTopScorerOption && topScorerName ? (
-              <option value={topScorerName}>{`שמור: ${topScorerName}`}</option>
-            ) : null}
-            {sortedPlayers.map((player) => {
-              const prefix = player.team_id === winnerId && winnerId ? "★ " : "";
-              return (
-                <option key={player.id} value={player.name}>
-                  {`${prefix}${player.name}`}
-                </option>
-              );
-            })}
-          </select>
-          <p className="text-[11px] text-wc-fg3">שחקני הנבחרת שבחרת לזכייה מופיעים בראש הרשימה.</p>
+          <label className="text-xs font-semibold text-wc-fg2">מלך השערים</label>
+          <PlayerPicker
+            players={sortedPlayers}
+            winnerId={winnerId}
+            value={selectedPlayer}
+            fallbackLabel={selectedPlayer ? undefined : topScorerName || undefined}
+            onChange={(player) => setTopScorerName(player?.name ?? "")}
+          />
         </div>
 
         <button

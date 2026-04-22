@@ -2,6 +2,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import MatchPredictionCard from "@/app/game/predictions/MatchPredictionCard";
+import PredictionsClient from "@/app/game/predictions/PredictionsClient";
+import { loadPredictionsHubData } from "@/lib/game/predictions-hub";
 import { attachTeamsToMatches } from "@/lib/tournament/matches";
 import type { MatchWithTeams } from "@/lib/tournament/matches";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -54,6 +56,36 @@ export default async function OpponentPredictionsPage({
       ? requestedLeagueId
       : sharedLeagueIds[0] ?? null;
   const backHref = backLeagueId ? `/game/leagues/${backLeagueId}` : "/game/leagues";
+
+  if (user.id === targetUserId) {
+    const selfData = await loadPredictionsHubData(user.id);
+
+    return (
+      <div className="flex flex-col gap-6">
+        <div className="flex items-center justify-between gap-3">
+          <Link
+            href={backHref}
+            className="text-xs font-semibold text-wc-fg3 transition-colors hover:text-wc-neon"
+          >
+            ← חזרה לליגה
+          </Link>
+          <span className="text-xs text-wc-fg3">תצוגת עריכה מלאה של הניחושים שלך</span>
+        </div>
+
+        <PredictionsClient
+          matches={selfData.matches}
+          teams={selfData.teams}
+          players={selfData.players}
+          existingPredictions={selfData.existingPredictions}
+          tournamentPrediction={selfData.tournamentPrediction}
+          isAuthenticated
+          groupJokerUsed={selfData.groupJokerUsed}
+          knockoutJokerUsed={selfData.knockoutJokerUsed}
+          hiddenMatchCount={selfData.hiddenMatchCount}
+        />
+      </div>
+    );
+  }
 
   const [
     { data: matchesData },

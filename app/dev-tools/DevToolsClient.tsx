@@ -248,6 +248,33 @@ function DevToolsClientInner({ matches, error }: Props) {
     }
   }
 
+  async function resetAllPredictions() {
+    if (
+      !confirm("לאפס את כל הניחושים, הג'וקרים וניחושי הטורניר? הפעולה מוחקת את כל טבלאות החיזוי ואינה הפיכה.")
+    ) {
+      return;
+    }
+
+    setBulkSaving(true);
+    setMessage(null);
+
+    try {
+      const res = await fetch("/api/dev/predictions/reset", { method: "POST" });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setMessage(`Error: ${body.error ?? res.statusText}`);
+        return;
+      }
+
+      const body = await res.json().catch(() => ({}));
+      refreshWithMessage(
+        `אופסו ${body.predictionsReset ?? 0} ניחושי משחק ו-${body.outrightsReset ?? 0} ניחושי טורניר. כל הג'וקרים שוחררו.`,
+      );
+    } finally {
+      setBulkSaving(false);
+    }
+  }
+
   async function randomizeAll() {
     if (!confirm("למלא את כל המשחקים בתוצאות אקראיות ולסנכרן מיד את כל הטורניר?")) return;
 
@@ -379,6 +406,13 @@ function DevToolsClientInner({ matches, error }: Props) {
               className="rounded-2xl border border-[rgba(255,92,130,0.6)] bg-[rgba(255,92,130,0.12)] px-4 py-3 text-sm font-bold text-wc-danger transition hover:bg-[rgba(255,92,130,0.25)] disabled:opacity-50"
             >
               Clear All Match Data
+            </button>
+            <button
+              onClick={resetAllPredictions}
+              disabled={pending}
+              className="rounded-2xl border border-[rgba(255,145,64,0.65)] bg-[rgba(255,145,64,0.14)] px-4 py-3 text-sm font-bold text-[#FFB36B] transition hover:bg-[rgba(255,145,64,0.24)] disabled:opacity-50"
+            >
+              איפוס כל הניחושים והג׳וקרים
             </button>
           </div>
         </header>

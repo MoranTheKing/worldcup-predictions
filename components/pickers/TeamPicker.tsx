@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 export type PickerTeam = {
   id: string;
@@ -13,109 +13,93 @@ export type PickerTeam = {
 interface Props {
   teams: PickerTeam[];
   value: string;
-  label: string;
-  onChange: (id: string, label: string) => void;
+  onChange: (id: string) => void;
   placeholder?: string;
 }
 
 export default function TeamPicker({
   teams,
   value,
-  label,
   onChange,
-  placeholder = "-- בחר קבוצה --",
+  placeholder = "-- בחר נבחרת --",
 }: Props) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const ref = useRef<HTMLDivElement>(null);
 
-  const filtered = search.trim()
-    ? teams.filter(
-        (team) =>
-          (team.name_he ?? team.name).includes(search) ||
-          team.name.toLowerCase().includes(search.toLowerCase()),
-      )
-    : teams;
+  const selectedTeam = useMemo(
+    () => teams.find((team) => String(team.id) === value) ?? null,
+    [teams, value],
+  );
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return teams;
+
+    return teams.filter((team) => {
+      const display = team.name_he ?? team.name;
+      return display.toLowerCase().includes(search.toLowerCase()) || team.name.toLowerCase().includes(search.toLowerCase());
+    });
+  }, [search, teams]);
 
   useEffect(() => {
-    function handler(event: MouseEvent) {
+    function handleMouseDown(event: MouseEvent) {
       if (ref.current && !ref.current.contains(event.target as Node)) {
         setOpen(false);
+        setSearch("");
       }
     }
 
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    document.addEventListener("mousedown", handleMouseDown);
+    return () => document.removeEventListener("mousedown", handleMouseDown);
   }, []);
-
-  const selectedTeam = teams.find((team) => String(team.id) === value);
 
   return (
     <div ref={ref} className="relative">
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}
-        className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-sm outline-none"
-        style={{
-          background: "var(--wc-raised)",
-          border: "1.5px solid var(--wc-border)",
-          borderRadius: 12,
-          color: "var(--wc-fg1)",
-        }}
+        className="flex w-full items-center justify-between rounded-xl border border-white/10 bg-[rgba(8,16,28,0.92)] px-3 py-2.5 text-sm text-wc-fg1 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition hover:border-wc-neon/30"
       >
-        <span className="flex items-center gap-2">
+        <span className="flex min-w-0 items-center gap-2">
           {selectedTeam?.logo_url ? (
             <Image
               src={selectedTeam.logo_url}
               alt=""
               width={20}
-              height={13}
-              className="flex-shrink-0 rounded-sm object-cover"
+              height={14}
+              className="h-[14px] w-5 flex-shrink-0 rounded-[3px] object-cover"
               unoptimized
             />
-          ) : null}
-          <span style={{ color: value ? "var(--wc-fg1)" : "var(--wc-fg3)" }}>
-            {value ? label : placeholder}
+          ) : (
+            <span className="h-[14px] w-5 rounded-[3px] bg-white/8" />
+          )}
+          <span className={`truncate ${selectedTeam ? "text-wc-fg1" : "text-wc-fg3"}`}>
+            {selectedTeam ? selectedTeam.name_he ?? selectedTeam.name : placeholder}
           </span>
         </span>
-        <span className="text-xs" style={{ color: "var(--wc-fg3)" }}>
-          {open ? "▴" : "▾"}
-        </span>
+        <span className="text-xs text-wc-fg3">{open ? "▴" : "▾"}</span>
       </button>
 
       {open ? (
-        <div
-          className="absolute z-50 mt-1 w-full overflow-hidden"
-          style={{
-            background: "var(--wc-surface)",
-            border: "1px solid var(--wc-border)",
-            boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
-            borderRadius: 12,
-          }}
-        >
-          <div className="p-2" style={{ borderBottom: "1px solid var(--wc-border)" }}>
+        <div className="absolute z-50 mt-2 w-full overflow-hidden rounded-[1rem] border border-white/10 bg-[rgba(7,13,24,0.98)] shadow-[0_18px_48px_rgba(0,0,0,0.45)]">
+          <div className="border-b border-white/8 p-2">
             <input
               autoFocus
               type="text"
-              placeholder="חיפוש..."
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              className="w-full rounded-lg px-3 py-2 text-sm outline-none"
-              style={{
-                background: "var(--wc-raised)",
-                border: "1px solid var(--wc-border)",
-                color: "var(--wc-fg1)",
-              }}
+              placeholder="חיפוש נבחרת..."
+              className="w-full rounded-lg border border-white/8 bg-[rgba(255,255,255,0.04)] px-3 py-2 text-sm text-wc-fg1 outline-none placeholder:text-wc-fg3 focus:border-wc-neon/30"
             />
           </div>
-          <ul className="max-h-48 overflow-y-auto">
+
+          <ul className="max-h-64 overflow-y-auto py-1">
             {filtered.length === 0 ? (
-              <li className="px-4 py-3 text-center text-sm" style={{ color: "var(--wc-fg3)" }}>
-                לא נמצאה קבוצה
-              </li>
+              <li className="px-4 py-3 text-center text-sm text-wc-fg3">לא נמצאה נבחרת</li>
             ) : null}
+
             {filtered.map((team) => {
-              const displayLabel = team.name_he ?? team.name;
+              const displayName = team.name_he ?? team.name;
               const isSelected = String(team.id) === value;
 
               return (
@@ -123,42 +107,29 @@ export default function TeamPicker({
                   <button
                     type="button"
                     onClick={() => {
-                      onChange(String(team.id), displayLabel);
+                      onChange(String(team.id));
                       setOpen(false);
                       setSearch("");
                     }}
-                    className="flex w-full items-center gap-2 px-4 py-2 text-right text-sm transition-colors"
-                    style={
+                    className={`flex w-full items-center gap-3 px-4 py-2.5 text-right text-sm transition ${
                       isSelected
-                        ? {
-                            background: "var(--wc-neon-bg)",
-                            color: "var(--wc-neon)",
-                            fontWeight: 500,
-                          }
-                        : { color: "var(--wc-fg1)" }
-                    }
-                    onMouseEnter={(event) => {
-                      if (!isSelected) {
-                        event.currentTarget.style.background = "var(--wc-raised)";
-                      }
-                    }}
-                    onMouseLeave={(event) => {
-                      if (!isSelected) {
-                        event.currentTarget.style.background = "transparent";
-                      }
-                    }}
+                        ? "bg-[rgba(95,255,123,0.12)] text-wc-neon"
+                        : "text-wc-fg1 hover:bg-white/6"
+                    }`}
                   >
                     {team.logo_url ? (
                       <Image
                         src={team.logo_url}
                         alt=""
-                        width={18}
-                        height={12}
-                        className="flex-shrink-0 rounded-sm object-cover"
+                        width={22}
+                        height={15}
+                        className="h-[15px] w-[22px] flex-shrink-0 rounded-[3px] object-cover"
                         unoptimized
                       />
-                    ) : null}
-                    <span>{displayLabel}</span>
+                    ) : (
+                      <span className="h-[15px] w-[22px] rounded-[3px] bg-white/8" />
+                    )}
+                    <span className="truncate">{displayName}</span>
                   </button>
                 </li>
               );

@@ -195,8 +195,10 @@ export default function MatchPredictionCard({
               </div>
 
               {hasPrediction && predictionScore ? (
-                <div className="rounded-xl border border-white/12 bg-white/5 px-3 py-2 text-xs font-semibold text-wc-fg1">
-                  <span className="text-wc-neon">{predictionOwnerLabel}:</span>{" "}
+                <div className="rounded-[1rem] border border-white/10 bg-[rgba(255,255,255,0.05)] px-3 py-2.5 text-xs font-semibold text-wc-fg1 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+                  <span className="rounded-full bg-[rgba(95,255,123,0.12)] px-2 py-0.5 text-[10px] font-bold text-wc-neon">
+                    {predictionOwnerLabel}
+                  </span>{" "}
                   <span dir="ltr" className="inline-flex font-black tracking-[0.08em]">
                     {predictionScore}
                   </span>
@@ -238,13 +240,6 @@ export default function MatchPredictionCard({
                   ) : state?.success ? (
                     <p className="text-xs font-semibold text-wc-neon">
                       הניחוש נשמר{isJokerSelected ? " עם ג'וקר" : ""}.
-                    </p>
-                  ) : hasPrediction && predictionScore ? (
-                    <p className="text-xs text-wc-fg3">
-                      {predictionOwnerLabel}:{" "}
-                      <span dir="ltr" className="font-bold">
-                        {predictionScore}
-                      </span>
                     </p>
                   ) : null}
                 </div>
