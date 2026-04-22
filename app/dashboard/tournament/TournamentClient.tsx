@@ -895,8 +895,15 @@ function SeedRow({
         ) : (
           <div className="h-[9px] w-3 shrink-0 rounded-sm bg-white/10" />
         )}
-        <span className="truncate text-[10px]">
-          {seed.kind === "team" ? seed.team.name_he ?? seed.team.name : <span className="text-wc-fg3">{seed.labelHe}</span>}
+        <span
+          className={`truncate whitespace-nowrap ${seed.kind === "team" ? "text-[10px]" : "text-[9px]"}`}
+          title={seed.kind === "team" ? seed.team.name_he ?? seed.team.name : seed.labelHe}
+        >
+          {seed.kind === "team" ? (
+            seed.team.name_he ?? seed.team.name
+          ) : (
+            <span className="text-wc-fg3">{seed.labelHe}</span>
+          )}
         </span>
       </div>
 

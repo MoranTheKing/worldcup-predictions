@@ -395,3 +395,45 @@ As of April 22, 2026, the social game layer also follows these stability rules:
 - existing prediction lookups must support a legacy fallback if `predictions.is_joker_applied` is not queryable yet
 - invite links now support a direct `/game/join/[code]` flow instead of only pre-filling a join input
 - tournament outright fields must preserve local UI state independently, so changing the winner cannot clear the top-scorer value
+
+
+## Phase 2.1 - Prediction Card Visual Rules
+
+As of April 22, 2026, finished prediction cards follow a stricter visual scoring ladder:
+
+- miss / `0` points:
+  neutral gray treatment
+- correct direction, wrong exact score:
+  blue-accent treatment
+- exact score hit:
+  green-accent treatment
+- exact score hit with joker:
+  diamond / prismatic cyan-violet treatment
+
+Formatting rules:
+
+- score strings are rendered consistently as `home - away`
+- score readouts are forced into an LTR context inside the RTL UI so the home score no longer appears visually swapped with the away score
+- editable cards with an existing prediction must surface it explicitly as `הניחוש שלך: X - Y`
+
+
+## Progressive Third-Place Placeholder Rules
+
+The knockout bracket no longer waits for all best-third-place groups to lock before improving the label text on ambiguous seeds.
+
+Rules:
+
+- true team injection into the Round of 32 still depends on the deterministic Annex C assignment and qualified-third-place resolution
+- however, the bracket label for an ambiguous placeholder such as `3A/B/C/D/F` now upgrades progressively
+- for each group whose third-place finisher is already locked:
+  replace `3X` with that real team name
+- keep unresolved segments as placeholders
+
+Example:
+
+- if group `A` and `B` have locked third-place teams but `C/D/F` have not, the UI may show:
+  `Team A / Team B / 3C / 3D / 3F`
+
+Display rule:
+
+- these mixed labels use tighter truncation / font sizing inside knockout cards so they do not expand the bracket width unexpectedly

@@ -9,38 +9,46 @@ export type PickerPlayer = {
   position: string | null;
 };
 
-function translatePosition(pos: string | null): string {
-  if (!pos) return "";
-  if (pos.includes("Attacker")) return "חלוץ";
-  if (pos.includes("Midfielder")) return "קשר";
-  if (pos.includes("Defender")) return "בלם";
-  if (pos.includes("Goalkeeper")) return "שוער";
-  return pos;
+function translatePosition(position: string | null): string {
+  if (!position) return "";
+  if (position.includes("Attacker")) return "חלוץ";
+  if (position.includes("Midfielder")) return "קשר";
+  if (position.includes("Defender")) return "בלם";
+  if (position.includes("Goalkeeper")) return "שוער";
+  return position;
 }
 
 interface Props {
   players: PickerPlayer[];
   winnerId: string;
   value: PickerPlayer | null;
-  onChange: (p: PickerPlayer | null) => void;
+  onChange: (player: PickerPlayer | null) => void;
 }
 
-export default function PlayerPicker({ players, winnerId, value, onChange }: Props) {
+export default function PlayerPicker({
+  players,
+  winnerId,
+  value,
+  onChange,
+}: Props) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [showAll, setShowAll] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
-  const winnerPlayers = players.filter((p) => String(p.team_id) === winnerId);
+  const winnerPlayers = players.filter((player) => String(player.team_id) === winnerId);
   const pool = showAll || winnerPlayers.length === 0 ? players : winnerPlayers;
   const filtered = search.trim()
-    ? pool.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()))
+    ? pool.filter((player) => player.name.toLowerCase().includes(search.toLowerCase()))
     : pool;
 
   useEffect(() => {
-    function handler(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    function handler(event: MouseEvent) {
+      if (ref.current && !ref.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
     }
+
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
@@ -49,8 +57,8 @@ export default function PlayerPicker({ players, winnerId, value, onChange }: Pro
     <div ref={ref} className="relative flex flex-col gap-1.5">
       <button
         type="button"
-        onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm outline-none"
+        onClick={() => setOpen((current) => !current)}
+        className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-sm outline-none"
         style={{
           background: "var(--wc-raised)",
           border: "1.5px solid var(--wc-border)",
@@ -62,29 +70,29 @@ export default function PlayerPicker({ players, winnerId, value, onChange }: Pro
           {value ? value.name : "-- בחר שחקן --"}
         </span>
         <span className="text-xs" style={{ color: "var(--wc-fg3)" }}>
-          {open ? "▲" : "▼"}
+          {open ? "▴" : "▾"}
         </span>
       </button>
 
-      {winnerPlayers.length > 0 && (
+      {winnerPlayers.length > 0 ? (
         <button
           type="button"
           onClick={() => {
-            setShowAll((s) => !s);
+            setShowAll((current) => !current);
             setSearch("");
           }}
-          className="text-xs underline text-center"
+          className="text-center text-xs underline"
           style={{ color: "var(--wc-fg3)" }}
         >
           {showAll
             ? `שחקני הנבחרת הזוכה (${winnerPlayers.length})`
             : `כל השחקנים (${players.length})`}
         </button>
-      )}
+      ) : null}
 
-      {open && (
+      {open ? (
         <div
-          className="absolute z-50 top-11 w-full overflow-hidden"
+          className="absolute top-11 z-50 w-full overflow-hidden"
           style={{
             background: "var(--wc-surface)",
             border: "1px solid var(--wc-border)",
@@ -98,8 +106,8 @@ export default function PlayerPicker({ players, winnerId, value, onChange }: Pro
               type="text"
               placeholder="חיפוש שחקן..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+              onChange={(event) => setSearch(event.target.value)}
+              className="w-full rounded-lg px-3 py-2 text-sm outline-none"
               style={{
                 background: "var(--wc-raised)",
                 border: "1px solid var(--wc-border)",
@@ -108,26 +116,24 @@ export default function PlayerPicker({ players, winnerId, value, onChange }: Pro
             />
           </div>
           <ul className="max-h-48 overflow-y-auto">
-            {filtered.length === 0 && (
-              <li
-                className="px-4 py-3 text-sm text-center"
-                style={{ color: "var(--wc-fg3)" }}
-              >
+            {filtered.length === 0 ? (
+              <li className="px-4 py-3 text-center text-sm" style={{ color: "var(--wc-fg3)" }}>
                 לא נמצא שחקן
               </li>
-            )}
-            {filtered.map((p) => {
-              const isSelected = value?.id === p.id;
+            ) : null}
+            {filtered.map((player) => {
+              const isSelected = value?.id === player.id;
+
               return (
-                <li key={p.id}>
+                <li key={player.id}>
                   <button
                     type="button"
                     onClick={() => {
-                      onChange(p);
+                      onChange(player);
                       setOpen(false);
                       setSearch("");
                     }}
-                    className="w-full text-right px-4 py-2 text-sm flex items-center justify-between transition-colors"
+                    className="flex w-full items-center justify-between px-4 py-2 text-right text-sm transition-colors"
                     style={
                       isSelected
                         ? {
@@ -137,30 +143,30 @@ export default function PlayerPicker({ players, winnerId, value, onChange }: Pro
                           }
                         : { color: "var(--wc-fg1)" }
                     }
-                    onMouseEnter={(e) => {
-                      if (!isSelected)
-                        (e.currentTarget as HTMLButtonElement).style.background =
-                          "var(--wc-raised)";
+                    onMouseEnter={(event) => {
+                      if (!isSelected) {
+                        event.currentTarget.style.background = "var(--wc-raised)";
+                      }
                     }}
-                    onMouseLeave={(e) => {
-                      if (!isSelected)
-                        (e.currentTarget as HTMLButtonElement).style.background =
-                          "transparent";
+                    onMouseLeave={(event) => {
+                      if (!isSelected) {
+                        event.currentTarget.style.background = "transparent";
+                      }
                     }}
                   >
-                    <span>{p.name}</span>
-                    {p.position && (
+                    <span>{player.name}</span>
+                    {player.position ? (
                       <span className="text-xs" style={{ color: "var(--wc-fg3)" }}>
-                        {translatePosition(p.position)}
+                        {translatePosition(player.position)}
                       </span>
-                    )}
+                    ) : null}
                   </button>
                 </li>
               );
             })}
           </ul>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

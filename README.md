@@ -395,3 +395,38 @@ What changed:
 Important follow-up:
 
 - the code now has a server-side fallback, but the new migration should still be run in Supabase SQL Editor so the database itself is fully repaired
+
+
+## Phase 2.1 UI Polish: Predictions, Leaderboards, And Progressive Knockout Labels
+
+As of April 22, 2026, the game surface received a focused visual polish pass driven by user testing.
+
+Prediction feed polish:
+
+- score formatting is now standardized as `Home - Away`
+- score displays on prediction cards are forced into a left-to-right rendering context so RTL layout no longer visually flips finished results
+- saved editable predictions now render a clear `הניחוש שלך: X - Y` state instead of a vague generic note
+- tournament outright search dropdowns now fully close and clear after a successful save by remounting the pickers with a fresh success key
+
+Tiered hit visuals:
+
+- `0` points / miss remains neutral gray
+- correct direction with wrong exact score now receives a distinct blue accent instead of blending into neutral cards
+- exact score hits are now clearly green
+- exact score + joker hits now use a much stronger diamond-style cyan / violet treatment instead of the older amber look
+
+Leaderboard polish:
+
+- league leaderboard avatars now use square, object-cover, fully circular rendering so portrait photos are no longer squished
+
+Knockout bracket polish:
+
+- ambiguous round-of-32 third-place placeholders now resolve progressively per locked group
+- example:
+  if `3A` and `3B` are already locked but the rest are not, a slot like `3A/B/C/D/F` can now render as `TeamA/TeamB/3C/3D/3F`
+- bracket seed labels now use tighter truncation rules so these mixed real-team / unresolved placeholder strings do not blow up card width
+
+RLS note:
+
+- this pass did not add any new user-scoped DB mutations
+- prediction reads and writes still run through the previously-hardened auth + admin-client flow, so broken legacy RLS policies should not block the polished prediction UI while the DB migration is still pending

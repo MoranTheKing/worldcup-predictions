@@ -290,10 +290,10 @@ function LeagueMemberRowView({
               width={36}
               height={36}
               unoptimized
-              className="h-9 w-9 rounded-xl object-cover"
+              className="aspect-square h-9 w-9 rounded-full object-cover"
             />
           ) : (
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[linear-gradient(135deg,var(--wc-violet),var(--wc-magenta))] text-xs font-black text-white">
+            <div className="flex aspect-square h-9 w-9 items-center justify-center rounded-full bg-[linear-gradient(135deg,var(--wc-violet),var(--wc-magenta))] text-xs font-black text-white">
               {member.display_name.charAt(0).toUpperCase()}
             </div>
           )}

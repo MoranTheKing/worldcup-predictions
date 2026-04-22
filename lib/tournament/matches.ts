@@ -54,6 +54,10 @@ export type MatchScoreSummary = {
   isExtraTime: boolean;
 };
 
+export function formatScorePair(homeScore: number, awayScore: number) {
+  return `${homeScore} - ${awayScore}`;
+}
+
 const STAGE_LABELS_HE: Record<MatchStageKind, string> = {
   group: "שלב בתים",
   round_of_32: "32 האחרונות",
@@ -183,7 +187,7 @@ export function getMatchScoreSummary(match: {
 }): MatchScoreSummary | null {
   if (match.home_score === null || match.away_score === null) return null;
 
-  const regularScore = `${match.home_score} - ${match.away_score}`;
+  const regularScore = formatScorePair(match.home_score, match.away_score);
   const hasPenalties =
     match.home_score === match.away_score &&
     match.home_penalty_score !== null &&
@@ -192,9 +196,12 @@ export function getMatchScoreSummary(match: {
     match.away_penalty_score !== undefined;
 
   if (hasPenalties) {
+    const homePenaltyScore = match.home_penalty_score as number;
+    const awayPenaltyScore = match.away_penalty_score as number;
+
     return {
       regularScore,
-      displayScore: `${regularScore} (${match.home_penalty_score} - ${match.away_penalty_score})`,
+      displayScore: `${regularScore} (${formatScorePair(homePenaltyScore, awayPenaltyScore)} PEN)`,
       hasPenalties: true,
       isExtraTime: Boolean(match.is_extra_time),
     };

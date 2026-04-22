@@ -31,28 +31,31 @@ export default function TeamPicker({
 
   const filtered = search.trim()
     ? teams.filter(
-        (t) =>
-          (t.name_he ?? t.name).includes(search) ||
-          t.name.toLowerCase().includes(search.toLowerCase())
+        (team) =>
+          (team.name_he ?? team.name).includes(search) ||
+          team.name.toLowerCase().includes(search.toLowerCase()),
       )
     : teams;
 
   useEffect(() => {
-    function handler(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    function handler(event: MouseEvent) {
+      if (ref.current && !ref.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
     }
+
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const selectedTeam = teams.find((t) => String(t.id) === value);
+  const selectedTeam = teams.find((team) => String(team.id) === value);
 
   return (
     <div ref={ref} className="relative">
       <button
         type="button"
-        onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm outline-none"
+        onClick={() => setOpen((current) => !current)}
+        className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-sm outline-none"
         style={{
           background: "var(--wc-raised)",
           border: "1.5px solid var(--wc-border)",
@@ -61,26 +64,26 @@ export default function TeamPicker({
         }}
       >
         <span className="flex items-center gap-2">
-          {selectedTeam?.logo_url && (
+          {selectedTeam?.logo_url ? (
             <Image
               src={selectedTeam.logo_url}
               alt=""
               width={20}
               height={13}
-              className="rounded-sm flex-shrink-0"
+              className="flex-shrink-0 rounded-sm object-cover"
               unoptimized
             />
-          )}
+          ) : null}
           <span style={{ color: value ? "var(--wc-fg1)" : "var(--wc-fg3)" }}>
             {value ? label : placeholder}
           </span>
         </span>
         <span className="text-xs" style={{ color: "var(--wc-fg3)" }}>
-          {open ? "▲" : "▼"}
+          {open ? "▴" : "▾"}
         </span>
       </button>
 
-      {open && (
+      {open ? (
         <div
           className="absolute z-50 mt-1 w-full overflow-hidden"
           style={{
@@ -96,8 +99,8 @@ export default function TeamPicker({
               type="text"
               placeholder="חיפוש..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+              onChange={(event) => setSearch(event.target.value)}
+              className="w-full rounded-lg px-3 py-2 text-sm outline-none"
               style={{
                 background: "var(--wc-raised)",
                 border: "1px solid var(--wc-border)",
@@ -106,27 +109,25 @@ export default function TeamPicker({
             />
           </div>
           <ul className="max-h-48 overflow-y-auto">
-            {filtered.length === 0 && (
-              <li
-                className="px-4 py-3 text-sm text-center"
-                style={{ color: "var(--wc-fg3)" }}
-              >
+            {filtered.length === 0 ? (
+              <li className="px-4 py-3 text-center text-sm" style={{ color: "var(--wc-fg3)" }}>
                 לא נמצאה קבוצה
               </li>
-            )}
-            {filtered.map((t) => {
-              const dl = t.name_he ?? t.name;
-              const isSelected = String(t.id) === value;
+            ) : null}
+            {filtered.map((team) => {
+              const displayLabel = team.name_he ?? team.name;
+              const isSelected = String(team.id) === value;
+
               return (
-                <li key={t.id}>
+                <li key={team.id}>
                   <button
                     type="button"
                     onClick={() => {
-                      onChange(String(t.id), dl);
+                      onChange(String(team.id), displayLabel);
                       setOpen(false);
                       setSearch("");
                     }}
-                    className="w-full text-right px-4 py-2 text-sm flex items-center gap-2 transition-colors"
+                    className="flex w-full items-center gap-2 px-4 py-2 text-right text-sm transition-colors"
                     style={
                       isSelected
                         ? {
@@ -136,35 +137,35 @@ export default function TeamPicker({
                           }
                         : { color: "var(--wc-fg1)" }
                     }
-                    onMouseEnter={(e) => {
-                      if (!isSelected)
-                        (e.currentTarget as HTMLButtonElement).style.background =
-                          "var(--wc-raised)";
+                    onMouseEnter={(event) => {
+                      if (!isSelected) {
+                        event.currentTarget.style.background = "var(--wc-raised)";
+                      }
                     }}
-                    onMouseLeave={(e) => {
-                      if (!isSelected)
-                        (e.currentTarget as HTMLButtonElement).style.background =
-                          "transparent";
+                    onMouseLeave={(event) => {
+                      if (!isSelected) {
+                        event.currentTarget.style.background = "transparent";
+                      }
                     }}
                   >
-                    {t.logo_url && (
+                    {team.logo_url ? (
                       <Image
-                        src={t.logo_url}
+                        src={team.logo_url}
                         alt=""
                         width={18}
                         height={12}
-                        className="rounded-sm flex-shrink-0"
+                        className="flex-shrink-0 rounded-sm object-cover"
                         unoptimized
                       />
-                    )}
-                    <span>{dl}</span>
+                    ) : null}
+                    <span>{displayLabel}</span>
                   </button>
                 </li>
               );
             })}
           </ul>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

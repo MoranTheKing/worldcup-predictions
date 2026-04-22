@@ -6,6 +6,7 @@ import {
   determineKnockoutWinnerId,
   getRoundOf32AssignedTeamId,
   parseReferencePlaceholder,
+  parseSeedPlaceholder,
 } from "@/lib/tournament/knockout-utils";
 import type { TeamStanding, TournamentMatch, TournamentTeam } from "@/lib/utils/standings";
 
@@ -29,12 +30,28 @@ type KnockoutResolverInput = {
   matches: TournamentMatch[];
 };
 
-function placeholderLabelHe(placeholder: string) {
+function placeholderLabelHe(
+  placeholder: string,
+  groupStandings: Record<string, TeamStanding[]>,
+) {
   const trimmed = placeholder.trim();
   const reference = parseReferencePlaceholder(trimmed);
 
   if (reference?.kind === "winner") return `מנצחת משחק ${reference.matchNumber}`;
   if (reference?.kind === "loser") return `מפסידת משחק ${reference.matchNumber}`;
+
+  const seedOptions = parseSeedPlaceholder(trimmed);
+  if (seedOptions?.every((seed) => seed.rank === 3)) {
+    return seedOptions
+      .map((seed) => {
+        const lockedThird = groupStandings[seed.groupLetter]?.find(
+          (entry) => entry.lockedRank === 3,
+        );
+
+        return lockedThird?.team.name_he ?? lockedThird?.team.name ?? `3${seed.groupLetter}`;
+      })
+      .join("/");
+  }
 
   return trimmed;
 }
@@ -55,13 +72,16 @@ export function resolveKnockoutBracket({
   function resolveTeamId(match: TournamentMatch, side: "home" | "away"): string | null {
     const placeholder = side === "home" ? match.home_placeholder : match.away_placeholder;
 
-    const seededAssignment = getRoundOf32AssignedTeamId(roundOf32Assignments, match.match_number, side);
+    const seededAssignment = getRoundOf32AssignedTeamId(
+      roundOf32Assignments,
+      match.match_number,
+      side,
+    );
     if (seededAssignment) return seededAssignment;
 
     const reference = parseReferencePlaceholder(placeholder);
     if (!reference) {
-      const explicitTeamId = side === "home" ? match.home_team_id : match.away_team_id;
-      return explicitTeamId;
+      return side === "home" ? match.home_team_id : match.away_team_id;
     }
 
     const upstream = matchesByNumber.get(reference.matchNumber);
@@ -79,12 +99,17 @@ export function resolveKnockoutBracket({
     const resolvedTeamId = resolveTeamId(match, side);
     if (resolvedTeamId) {
       const team = teamsById.get(resolvedTeamId);
-      if (team) return { kind: "team", team };
+      if (team) {
+        return { kind: "team", team };
+      }
     }
 
     const placeholder = side === "home" ? match.home_placeholder : match.away_placeholder;
     if (placeholder) {
-      return { kind: "placeholder", labelHe: placeholderLabelHe(placeholder) };
+      return {
+        kind: "placeholder",
+        labelHe: placeholderLabelHe(placeholder, groupStandings),
+      };
     }
 
     return { kind: "placeholder", labelHe: "ייקבע בהמשך" };

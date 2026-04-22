@@ -42,8 +42,7 @@ export default function OutrightForm({
   const initialWinnerId = existing?.predicted_winner_team_id ?? "";
   const initialWinner = teams.find((team) => team.id === initialWinnerId) ?? null;
   const initialTopScorer = existing?.predicted_top_scorer_name ?? "";
-  const initialPlayer =
-    players.find((player) => player.name === initialTopScorer) ?? null;
+  const initialPlayer = players.find((player) => player.name === initialTopScorer) ?? null;
 
   const [winnerId, setWinnerId] = useState(initialWinnerId);
   const [winnerLabel, setWinnerLabel] = useState(
@@ -54,24 +53,25 @@ export default function OutrightForm({
 
   const sortedTeams = useMemo(
     () =>
-      [...teams].sort((a, b) =>
-        (a.name_he ?? a.name).localeCompare(b.name_he ?? b.name, "he"),
+      [...teams].sort((left, right) =>
+        (left.name_he ?? left.name).localeCompare(right.name_he ?? right.name, "he"),
       ),
     [teams],
   );
 
   const sortedPlayers = useMemo(() => {
-    return [...players].sort((a, b) => {
-      const aWinner = a.team_id === winnerId;
-      const bWinner = b.team_id === winnerId;
+    return [...players].sort((left, right) => {
+      const leftWinner = left.team_id === winnerId;
+      const rightWinner = right.team_id === winnerId;
 
-      if (aWinner && !bWinner) return -1;
-      if (!aWinner && bWinner) return 1;
-      return a.name.localeCompare(b.name);
+      if (leftWinner && !rightWinner) return -1;
+      if (!leftWinner && rightWinner) return 1;
+      return left.name.localeCompare(right.name);
     });
   }, [players, winnerId]);
 
   const topScorerValue = selectedPlayer?.name ?? topScorerText;
+  const pickerResetKey = state?.success ? state.savedAt ?? "saved" : null;
 
   return (
     <form
@@ -81,7 +81,8 @@ export default function OutrightForm({
       <div className="mb-4">
         <p className="text-sm font-bold text-wc-fg1">ניחושי הטורניר</p>
         <p className="mt-1 text-xs text-wc-fg2">
-          הזוכה ומלך השערים נשמרים יחד, אבל כל שדה נשאר יציב מקומית גם כשאתה משנה את השני.
+          הזוכה ומלך השערים נשמרים יחד, אבל כל שדה נשאר יציב מקומית גם כשמעדכנים את
+          השדה השני.
         </p>
       </div>
 
@@ -92,13 +93,14 @@ export default function OutrightForm({
         <div className="flex flex-col gap-1.5">
           <label className="text-xs font-semibold text-wc-fg2">זוכת הטורניר</label>
           <TeamPicker
+            key={`winner-${pickerResetKey ?? "stable"}`}
             teams={sortedTeams}
             value={winnerId}
             label={winnerLabel}
             placeholder="-- בחר נבחרת --"
-            onChange={(id, label) => {
+            onChange={(id, labelValue) => {
               setWinnerId(id);
-              setWinnerLabel(label);
+              setWinnerLabel(labelValue);
             }}
           />
         </div>
@@ -107,6 +109,7 @@ export default function OutrightForm({
           <label className="text-xs font-semibold text-wc-fg2">מלך השערים</label>
           {sortedPlayers.length > 0 ? (
             <PlayerPicker
+              key={`scorer-${pickerResetKey ?? "stable"}-${winnerId || "none"}`}
               players={sortedPlayers}
               winnerId={winnerId}
               value={selectedPlayer}
