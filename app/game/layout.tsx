@@ -5,6 +5,7 @@ import DashboardShell from "@/components/DashboardShell";
 import DevToolsFloatingButton from "@/components/DevToolsFloatingButton";
 import GameSubNav from "@/components/game/GameSubNav";
 import { fetchAuthProfile, resolveDisplayName } from "@/lib/supabase/auth-profile";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getUserJokerUsage } from "@/lib/game/boosters";
 
 export const dynamic = "force-dynamic";
@@ -23,12 +24,14 @@ export default async function GameLayout({
     redirect("/login?next=/game");
   }
 
+  const admin = createAdminClient();
+
   const [profile, jokerUsage] = await Promise.all([
-    fetchAuthProfile(supabase, user.id).catch((error) => {
+    fetchAuthProfile(admin, user.id).catch((error) => {
       console.error("[GameLayout] profile fetch failed:", error);
       return null;
     }),
-    getUserJokerUsage(supabase, user.id).catch((error) => {
+    getUserJokerUsage(admin, user.id).catch((error) => {
       console.error("[GameLayout] joker usage failed:", error);
       return { groupUsed: false, knockoutUsed: false };
     }),

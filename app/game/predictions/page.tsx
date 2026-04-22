@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { attachTeamsToMatches } from "@/lib/tournament/matches";
 import type { MatchWithTeams } from "@/lib/tournament/matches";
 import PredictionsClient, {
@@ -15,6 +16,7 @@ export default async function PredictionsPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  const admin = createAdminClient();
 
   const [{ data: matchesData }, { data: teamsData }, { data: playersData }] =
     await Promise.all([
@@ -69,20 +71,20 @@ export default async function PredictionsPage() {
 
   if (user) {
     const [predictionsResult, tournamentResult, jokerUsage] = await Promise.all([
-      supabase
+      admin
         .from("predictions")
         .select("match_id, home_score_guess, away_score_guess, is_joker_applied, points_earned")
         .eq("user_id", user.id),
-      supabase
+      admin
         .from("tournament_predictions")
         .select("predicted_winner_team_id, predicted_top_scorer_name")
         .eq("user_id", user.id)
         .maybeSingle(),
-      getUserJokerUsage(supabase, user.id),
+      getUserJokerUsage(admin, user.id),
     ]);
 
     if (predictionsResult.error) {
-      const fallbackPredictions = await supabase
+      const fallbackPredictions = await admin
         .from("predictions")
         .select("match_id, home_score_guess, away_score_guess, points_earned")
         .eq("user_id", user.id);
@@ -97,7 +99,7 @@ export default async function PredictionsPage() {
     }
 
     if (tournamentResult.error) {
-      const fallbackTournament = await supabase
+      const fallbackTournament = await admin
         .from("outright_bets")
         .select("predicted_winner_team_id, predicted_top_scorer_name")
         .eq("user_id", user.id)

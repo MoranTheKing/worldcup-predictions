@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getJokerBucket, getUserJokerUsage } from "@/lib/game/boosters";
 
 export type PredictionActionState = {
@@ -28,6 +29,7 @@ export async function upsertMatchPrediction(
   formData: FormData,
 ): Promise<PredictionActionState> {
   const supabase = await createClient();
+  const admin = createAdminClient();
   const {
     data: { user },
     error: authError,
@@ -42,7 +44,7 @@ export async function upsertMatchPrediction(
     return { error: "צריך להתחבר כדי לשמור ניחוש." };
   }
 
-  const { data: matchRow, error: matchError } = await supabase
+  const { data: matchRow, error: matchError } = await admin
     .from("matches")
     .select("status, home_team_id, away_team_id")
     .eq("match_number", matchId)
@@ -73,7 +75,7 @@ export async function upsertMatchPrediction(
   }
 
   const wantsJoker = parseBooleanField(formData.get("is_joker_applied"));
-  const existingPrediction = await getExistingPrediction(supabase, user.id, matchId);
+  const existingPrediction = await getExistingPrediction(admin, user.id, matchId);
 
   if (existingPrediction.error) {
     console.error(
@@ -86,7 +88,7 @@ export async function upsertMatchPrediction(
   const existingIsJoker = existingPrediction.data?.is_joker_applied ?? false;
 
   if (wantsJoker && !existingIsJoker) {
-    const usage = await getUserJokerUsage(supabase, user.id);
+    const usage = await getUserJokerUsage(admin, user.id);
     const bucket = getJokerBucket(stage, matchId);
     const isAlreadyUsed = bucket === "group" ? usage.groupUsed : usage.knockoutUsed;
 
@@ -108,13 +110,13 @@ export async function upsertMatchPrediction(
     is_joker_applied: wantsJoker,
   };
 
-  const { error: upsertError } = await supabase
+  const { error: upsertError } = await admin
     .from("predictions")
     .upsert(payload, { onConflict: "user_id,match_id" });
 
   if (upsertError) {
     if (!wantsJoker && upsertError.code === "42703") {
-      const { error: fallbackError } = await supabase
+      const { error: fallbackError } = await admin
         .from("predictions")
         .upsert(
           {
@@ -157,6 +159,7 @@ export async function upsertTournamentPrediction(
   formData: FormData,
 ): Promise<PredictionActionState> {
   const supabase = await createClient();
+  const admin = createAdminClient();
   const {
     data: { user },
     error: authError,
@@ -184,11 +187,11 @@ export async function upsertTournamentPrediction(
     predicted_top_scorer_name: topScorerName,
   };
 
-  const { error: tournamentError } = await supabase
+  const { error: tournamentError } = await admin
     .from("tournament_predictions")
     .upsert(payload, { onConflict: "user_id" });
 
-  const { error: outrightMirrorError } = await supabase
+  const { error: outrightMirrorError } = await admin
     .from("outright_bets")
     .upsert(payload, { onConflict: "user_id" });
 
@@ -225,7 +228,7 @@ export async function upsertTournamentPrediction(
 }
 
 async function getExistingPrediction(
-  supabase: Awaited<ReturnType<typeof createClient>>,
+  supabase: ReturnType<typeof createAdminClient>,
   userId: string,
   matchId: number,
 ): Promise<ExistingPredictionLookup> {

@@ -374,3 +374,24 @@ What changed:
 - league invite links now target the direct-join route instead of only pre-filling the join input
 - `OutrightForm` now keeps winner and top-scorer state independent, so changing the predicted winner no longer wipes the saved/typed top-scorer value
 - `app/game/loading.tsx` now provides a stable loading shell while switching between `/game` tabs
+
+
+## Emergency RLS Recovery For Prediction Saves
+
+As of April 22, 2026, another production issue was traced back to legacy recursive RLS policies that still existed in some Supabase environments.
+
+What changed:
+
+- `GameLayout` now reads the gamer card profile and joker inventory through the admin client after authenticating the user, so the `/game` shell no longer crashes if user-scoped RLS is temporarily broken
+- `/game/predictions` now reads the user prediction history, tournament outrights, and joker usage through the admin client after auth verification
+- prediction save actions now authenticate with the normal session client, then perform the actual DB lookup/upsert through the admin client to avoid recursive-policy failures during save
+- new migration: `supabase/migrations/20260422000015_force_flat_prediction_rls.sql`
+- that migration aggressively drops every existing policy on:
+  `league_members`
+  `predictions`
+  `tournament_predictions`
+  and recreates the flat authenticated rules from scratch
+
+Important follow-up:
+
+- the code now has a server-side fallback, but the new migration should still be run in Supabase SQL Editor so the database itself is fully repaired
