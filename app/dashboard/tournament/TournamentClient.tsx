@@ -1,13 +1,9 @@
 "use client";
 
 import type { ResolvedBracketMatch, ResolvedSeed } from "@/lib/bracket/knockout";
-import {
-  type KnockoutTreeNode,
-  type WinnerTreeRound,
-} from "@/lib/tournament/knockout-tree";
 import type { StandingStatus, TeamStanding } from "@/lib/utils/standings";
 import Image from "next/image";
-import { useMemo, useState } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 
 type Props = {
   groupStandings: Record<string, TeamStanding[]>;
@@ -15,8 +11,9 @@ type Props = {
   teamsRemaining: number;
   bracket: ResolvedBracketMatch[];
   knockoutTree: {
-    rounds: Record<WinnerTreeRound, KnockoutTreeNode[]>;
+    rounds: Record<string, unknown[]>;
     leafCount: number;
+    finalMatchNumber?: number | null;
     thirdPlaceMatchNumber: number | null;
   };
   hasLive: boolean;
@@ -28,14 +25,6 @@ type Tab = "groups" | "third" | "knockout";
 type StatusDisplay = {
   label: string;
   pillClassName: string;
-};
-
-type VerticalRound = Exclude<WinnerTreeRound, "final">;
-
-type VerticalRoundGroup = {
-  id: string;
-  parentMatchNumber: number | null;
-  nodes: KnockoutTreeNode[];
 };
 
 const TEXT = {
@@ -73,7 +62,7 @@ const TEXT = {
   final: "הגמר",
   teams32: "32 נבחרות",
   rounds5: "5 סיבובי הכרעה",
-  verticalBracket: "עץ נוקאאוט אנכי",
+  verticalBracket: "בראקט אנכי מפוצל",
   matchLabel: "משחק",
   liveBannerTitle: "טבלה בזמן אמת",
   liveBannerNote: "הניקוד מתעדכן בזמן אמת, ו-LIVE מופיע ליד הנבחרות שמשחקות עכשיו.",
@@ -85,31 +74,18 @@ const TEXT = {
     "הטבלה הגלובלית מדרגת את כל 12 הקבוצות מהמקום השלישי לפי כללי פיפ\"א, והקו מסמן את הגבול בין 8 העולות ל-4 המודחות.",
   cutoffNote: "מקום 8 מסמן את קו העלייה. מקום 9 ומטה נשארים מחוץ ל-32 האחרונות.",
   bracketNote:
-    "הנוקאאוט נשאר במסלול אנכי מלמעלה למטה, אבל כעת עם חיבורים ויזואליים אמיתיים בין זוג משחקים לבין השלב הבא, בלי טקסט עזר מיותר.",
+    "הנוקאאוט מוצג כעת כבראקט מפוצל שנפגש במרכז: המסלול העליון זורם למטה אל חצי הגמר הראשון, המסלול התחתון זורם למעלה אל חצי הגמר השני, ושניהם נפגשים בגמר שבמרכז.",
   emptyBracket: "ברגע שיוזנו משחקי הנוקאאוט, העץ המלא יוצג כאן.",
-  finalHint: "הקרב על הגביע",
-  thirdHint: "הקרב על מדליית הארד",
+  topPath: "המסלול העליון",
+  bottomPath: "המסלול התחתון",
+  thirdPlaceShort: "מקום 3",
+  thirdPlaceLong: "משחק על המקום השלישי",
 };
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "groups", label: TEXT.tabs.groups },
   { id: "third", label: TEXT.tabs.third },
   { id: "knockout", label: TEXT.tabs.knockout },
-];
-
-const ROUND_LABELS: Record<WinnerTreeRound, string> = {
-  round_of_32: TEXT.round32,
-  round_of_16: TEXT.round16,
-  quarter_final: TEXT.quarterFinal,
-  semi_final: TEXT.semiFinal,
-  final: TEXT.final,
-};
-
-const VERTICAL_ROUND_FLOW: VerticalRound[] = [
-  "round_of_32",
-  "round_of_16",
-  "quarter_final",
-  "semi_final",
 ];
 
 const STATUS_META: Record<StandingStatus, { rowClassName: string }> = {
@@ -128,6 +104,25 @@ const QUALIFIED_PILL_CLASS = "bg-[rgba(95,255,123,0.14)] text-wc-neon";
 const ELIMINATED_PILL_CLASS = "bg-[rgba(255,92,130,0.14)] text-wc-danger";
 const LOCKED_POSITION_PILL_CLASS = "bg-white/8 text-wc-fg2";
 const CONNECTOR_CLASS = "bg-[rgba(255,255,255,0.18)]";
+const CARD_WIDTH_CLASS = "mx-auto w-full max-w-[220px]";
+const TOP_ROUND_OF_32_PAIRS = [
+  [73, 74],
+  [75, 76],
+  [77, 78],
+  [79, 80],
+] as const;
+const BOTTOM_ROUND_OF_32_PAIRS = [
+  [81, 82],
+  [83, 84],
+  [85, 86],
+  [87, 88],
+] as const;
+const TOP_ROUND_OF_16 = [89, 90, 91, 92] as const;
+const BOTTOM_ROUND_OF_16 = [93, 94, 95, 96] as const;
+const TOP_QUARTERS = [97, 98] as const;
+const BOTTOM_QUARTERS = [99, 100] as const;
+const TOP_SEMI = 101;
+const BOTTOM_SEMI = 102;
 
 function getLockedPositionLabel(rank: number) {
   return `${TEXT.lockedPosition} ${rank}`;
@@ -402,31 +397,17 @@ function KnockoutBracket({
     () => new Map(bracket.map((match) => [match.matchNumber, match])),
     [bracket],
   );
-
-  const roundGroups = useMemo(
-    () =>
-      Object.fromEntries(
-        VERTICAL_ROUND_FLOW.map((round) => [
-          round,
-          buildVerticalRoundGroups(knockoutTree.rounds[round] ?? []),
-        ]),
-      ) as Record<VerticalRound, VerticalRoundGroup[]>,
-    [knockoutTree],
-  );
-
-  const finalNode = knockoutTree.rounds.final[0] ?? null;
   const finalMatch =
-    (finalNode ? matchesByNumber.get(finalNode.matchNumber) : null) ??
-    bracket.find((match) => match.round === "final") ??
-    null;
+    (knockoutTree.finalMatchNumber
+      ? matchesByNumber.get(knockoutTree.finalMatchNumber)
+      : null) ?? bracket.find((match) => match.round === "final") ?? null;
   const thirdPlaceMatch =
     (knockoutTree.thirdPlaceMatchNumber
       ? matchesByNumber.get(knockoutTree.thirdPlaceMatchNumber)
       : null) ?? bracket.find((match) => match.round === "third_place") ?? null;
-
-  const hasWinnerTree = VERTICAL_ROUND_FLOW.some(
-    (round) => (knockoutTree.rounds[round] ?? []).length > 0,
-  );
+  const hasWinnerTree =
+    TOP_ROUND_OF_32_PAIRS.flat().some((matchNumber) => matchesByNumber.has(matchNumber)) ||
+    BOTTOM_ROUND_OF_32_PAIRS.flat().some((matchNumber) => matchesByNumber.has(matchNumber));
 
   if (!hasWinnerTree) {
     return (
@@ -437,174 +418,338 @@ function KnockoutBracket({
   }
 
   return (
-    <div className="mt-6 space-y-8 pb-6">
-      {VERTICAL_ROUND_FLOW.map((round) => (
-        <RoundStageSection
-          key={round}
-          label={ROUND_LABELS[round]}
-          groups={roundGroups[round]}
-          matchesByNumber={matchesByNumber}
-        />
-      ))}
+    <div className="mt-6 space-y-6 pb-6">
+      <SplitBracketSection
+        title={TEXT.topPath}
+        direction="down"
+        matchesByNumber={matchesByNumber}
+        roundOf32Pairs={TOP_ROUND_OF_32_PAIRS}
+        roundOf16={TOP_ROUND_OF_16}
+        quarterFinals={TOP_QUARTERS}
+        semiFinal={TOP_SEMI}
+      />
 
-      <section className="relative rounded-[1.75rem] border border-[rgba(255,182,73,0.18)] bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,182,73,0.05))] p-4 pt-10 sm:p-5 sm:pt-12">
-        <div className="absolute -top-3 left-1/2 h-12 w-px -translate-x-1/2 bg-[linear-gradient(180deg,rgba(255,255,255,0),rgba(255,255,255,0.22),rgba(255,182,73,0.35))]" />
+      <CenterClimaxBlock finalMatch={finalMatch} thirdPlaceMatch={thirdPlaceMatch} />
 
-        <div className="sticky top-4 z-10 mb-5 flex justify-center">
-          <div className="rounded-full border border-[rgba(255,182,73,0.22)] bg-[rgba(7,11,18,0.88)] px-4 py-2 shadow-[0_12px_32px_rgba(0,0,0,0.26)] backdrop-blur">
-            <p className="wc-display text-xl text-wc-fg1">יום ההכרעה</p>
-          </div>
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-2">
-          {finalMatch && (
-            <FeaturedMatchCard
-              label={TEXT.final}
-              hint={TEXT.finalHint}
-              variant="final"
-              match={finalMatch}
-            />
-          )}
-          {thirdPlaceMatch && (
-            <FeaturedMatchCard
-              label={TEXT.thirdPlace}
-              hint={TEXT.thirdHint}
-              variant="third"
-              match={thirdPlaceMatch}
-            />
-          )}
-        </div>
-      </section>
+      <SplitBracketSection
+        title={TEXT.bottomPath}
+        direction="up"
+        matchesByNumber={matchesByNumber}
+        roundOf32Pairs={BOTTOM_ROUND_OF_32_PAIRS}
+        roundOf16={BOTTOM_ROUND_OF_16}
+        quarterFinals={BOTTOM_QUARTERS}
+        semiFinal={BOTTOM_SEMI}
+      />
     </div>
   );
 }
 
-function buildVerticalRoundGroups(nodes: KnockoutTreeNode[]): VerticalRoundGroup[] {
-  const orderedNodes = [...nodes].sort((left, right) => left.center - right.center);
-  const groups = new Map<number, VerticalRoundGroup>();
-
-  for (const node of orderedNodes) {
-    const parentMatchNumber = node.parentMatchNumber ?? -(node.matchNumber + 1);
-    const existing = groups.get(parentMatchNumber);
-
-    if (existing) {
-      existing.nodes.push(node);
-      continue;
-    }
-
-    groups.set(parentMatchNumber, {
-      id: `${node.round}-${parentMatchNumber}`,
-      parentMatchNumber: node.parentMatchNumber,
-      nodes: [node],
-    });
-  }
-
-  return Array.from(groups.values()).sort(
-    (left, right) => left.nodes[0].center - right.nodes[0].center,
-  );
-}
-
-function RoundStageSection({
-  label,
-  groups,
+function SplitBracketSection({
+  title,
+  direction,
   matchesByNumber,
+  roundOf32Pairs,
+  roundOf16,
+  quarterFinals,
+  semiFinal,
 }: {
-  label: string;
-  groups: VerticalRoundGroup[];
+  title: string;
+  direction: "down" | "up";
   matchesByNumber: Map<number, ResolvedBracketMatch>;
+  roundOf32Pairs: readonly (readonly [number, number])[];
+  roundOf16: readonly number[];
+  quarterFinals: readonly number[];
+  semiFinal: number;
 }) {
+  const pairMatches = roundOf32Pairs
+    .map(([left, right]) => {
+      const leftMatch = matchesByNumber.get(left);
+      const rightMatch = matchesByNumber.get(right);
+      if (!leftMatch || !rightMatch) return null;
+      return [leftMatch, rightMatch] as const;
+    })
+    .filter((pair): pair is readonly [ResolvedBracketMatch, ResolvedBracketMatch] => Boolean(pair));
+
+  const roundOf16Matches = roundOf16
+    .map((matchNumber) => matchesByNumber.get(matchNumber))
+    .filter((match): match is ResolvedBracketMatch => Boolean(match));
+  const quarterFinalMatches = quarterFinals
+    .map((matchNumber) => matchesByNumber.get(matchNumber))
+    .filter((match): match is ResolvedBracketMatch => Boolean(match));
+  const semiFinalMatch = matchesByNumber.get(semiFinal) ?? null;
+
+  const orderedRows =
+    direction === "down"
+      ? [
+          <StageRow key="round32" label={TEXT.round32}>
+            <PairMatchesGrid pairs={pairMatches} direction="down" />
+          </StageRow>,
+          <ParallelConnectorBand key="parallel" count={pairMatches.length} direction="down" />,
+          <StageRow key="round16" label={TEXT.round16}>
+            <CompactMatchGrid matches={roundOf16Matches} columnsClassName="grid-cols-1 sm:grid-cols-2 xl:grid-cols-4" />
+          </StageRow>,
+          <MergeConnectorBand key="merge-quarters" count={quarterFinalMatches.length} direction="down" />,
+          <StageRow key="quarters" label={TEXT.quarterFinal}>
+            <CompactMatchGrid matches={quarterFinalMatches} columnsClassName="grid-cols-1 sm:grid-cols-2" />
+          </StageRow>,
+          <MergeConnectorBand key="merge-semi" count={1} direction="down" />,
+          <StageRow key="semi" label={TEXT.semiFinal}>
+            <SingleMatchSlot match={semiFinalMatch} />
+          </StageRow>,
+        ]
+      : [
+          <StageRow key="semi" label={TEXT.semiFinal}>
+            <SingleMatchSlot match={semiFinalMatch} />
+          </StageRow>,
+          <MergeConnectorBand key="merge-semi" count={1} direction="up" />,
+          <StageRow key="quarters" label={TEXT.quarterFinal}>
+            <CompactMatchGrid matches={quarterFinalMatches} columnsClassName="grid-cols-1 sm:grid-cols-2" />
+          </StageRow>,
+          <MergeConnectorBand key="merge-round16" count={quarterFinalMatches.length} direction="up" />,
+          <StageRow key="round16" label={TEXT.round16}>
+            <CompactMatchGrid matches={roundOf16Matches} columnsClassName="grid-cols-1 sm:grid-cols-2 xl:grid-cols-4" />
+          </StageRow>,
+          <ParallelConnectorBand key="parallel" count={pairMatches.length} direction="up" />,
+          <StageRow key="round32" label={TEXT.round32}>
+            <PairMatchesGrid pairs={pairMatches} direction="up" />
+          </StageRow>,
+        ];
+
   return (
-    <section className="relative rounded-[1.75rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.015))] p-4 sm:p-5">
-      <div className="sticky top-4 z-10 mb-6 flex justify-center">
+    <section className="rounded-[1.75rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.015))] p-4 sm:p-5">
+      <div className="mb-6 flex justify-center">
         <div className="rounded-full border border-white/10 bg-[rgba(7,11,18,0.9)] px-4 py-2 shadow-[0_12px_32px_rgba(0,0,0,0.26)] backdrop-blur">
-          <p className="wc-display text-xl text-wc-fg1">{label}</p>
+          <p className="wc-display text-lg text-wc-fg1 sm:text-xl">{title}</p>
         </div>
       </div>
 
-      <div className="space-y-8">
-        {groups.map((group) => (
-          <RoundFlowGroup
-            key={group.id}
-            group={group}
-            matchesByNumber={matchesByNumber}
+      <div className="space-y-4">{orderedRows}</div>
+    </section>
+  );
+}
+
+function StageRow({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="space-y-3">
+      <div className="flex justify-center">
+        <div className="rounded-full border border-white/10 bg-white/6 px-3 py-1 text-[11px] font-semibold tracking-[0.18em] text-wc-fg2">
+          {label}
+        </div>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function PairMatchesGrid({
+  pairs,
+  direction,
+}: {
+  pairs: ReadonlyArray<readonly [ResolvedBracketMatch, ResolvedBracketMatch]>;
+  direction: "down" | "up";
+}) {
+  if (pairs.length === 0) return null;
+
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {pairs.map(([leftMatch, rightMatch]) => (
+        <PairMatchCell
+          key={`${leftMatch.matchNumber}-${rightMatch.matchNumber}`}
+          matches={[leftMatch, rightMatch]}
+          direction={direction}
+        />
+      ))}
+    </div>
+  );
+}
+
+function PairMatchCell({
+  matches,
+  direction,
+}: {
+  matches: readonly [ResolvedBracketMatch, ResolvedBracketMatch];
+  direction: "down" | "up";
+}) {
+  const cards = (
+    <div className="grid grid-cols-2 gap-2">
+      {matches.map((match) => (
+        <KnockoutMatchCard key={match.matchNumber} match={match} variant="default" compact />
+      ))}
+    </div>
+  );
+
+  return (
+    <div className="flex flex-col items-center gap-2">
+      {direction === "up" && <PairConnector direction="up" />}
+      <div className="w-full max-w-[460px]">{cards}</div>
+      {direction === "down" && <PairConnector direction="down" />}
+    </div>
+  );
+}
+
+function PairConnector({ direction }: { direction: "down" | "up" }) {
+  return (
+    <svg
+      className="h-10 w-full max-w-[220px]"
+      viewBox="0 0 220 40"
+      fill="none"
+      aria-hidden="true"
+    >
+      {direction === "down" ? (
+        <>
+          <path d="M55 0 V14 H110 V40" stroke="rgba(255,255,255,0.18)" strokeWidth="1.5" />
+          <path d="M165 0 V14 H110" stroke="rgba(255,255,255,0.18)" strokeWidth="1.5" />
+        </>
+      ) : (
+        <>
+          <path d="M55 40 V26 H110 V0" stroke="rgba(255,255,255,0.18)" strokeWidth="1.5" />
+          <path d="M165 40 V26 H110" stroke="rgba(255,255,255,0.18)" strokeWidth="1.5" />
+        </>
+      )}
+    </svg>
+  );
+}
+
+function CompactMatchGrid({
+  matches,
+  columnsClassName,
+}: {
+  matches: ReadonlyArray<ResolvedBracketMatch>;
+  columnsClassName: string;
+}) {
+  if (matches.length === 0) return null;
+
+  return (
+    <div className={`grid gap-4 ${columnsClassName}`}>
+      {matches.map((match) => (
+        <SingleMatchSlot key={match.matchNumber} match={match} />
+      ))}
+    </div>
+  );
+}
+
+function SingleMatchSlot({ match }: { match: ResolvedBracketMatch | null }) {
+  if (!match) return null;
+
+  return <KnockoutMatchCard match={match} variant="default" compact />;
+}
+
+function ParallelConnectorBand({
+  count,
+  direction,
+}: {
+  count: number;
+  direction: "down" | "up";
+}) {
+  if (count <= 0) return null;
+
+  return (
+    <div className={`grid gap-4 ${count === 4 ? "sm:grid-cols-2 xl:grid-cols-4" : count === 2 ? "sm:grid-cols-2" : ""}`}>
+      {Array.from({ length: count }).map((_, index) => (
+        <div key={`${direction}-${count}-${index}`} className="flex justify-center">
+          <div className={`h-8 w-px ${CONNECTOR_CLASS}`} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function MergeConnectorBand({
+  count,
+  direction,
+}: {
+  count: number;
+  direction: "down" | "up";
+}) {
+  return (
+    <div className={`grid gap-4 ${count === 2 ? "sm:grid-cols-2" : ""}`}>
+      {Array.from({ length: count }).map((_, index) => (
+        <div key={`${direction}-merge-${count}-${index}`} className="flex justify-center">
+          <svg
+            className="h-10 w-full max-w-[220px]"
+            viewBox="0 0 220 40"
+            fill="none"
+            aria-hidden="true"
+          >
+            {direction === "down" ? (
+              <>
+                <path d="M55 0 V12 H110 V40" stroke="rgba(255,255,255,0.18)" strokeWidth="1.5" />
+                <path d="M165 0 V12 H110" stroke="rgba(255,255,255,0.18)" strokeWidth="1.5" />
+              </>
+            ) : (
+              <>
+                <path d="M55 40 V28 H110 V0" stroke="rgba(255,255,255,0.18)" strokeWidth="1.5" />
+                <path d="M165 40 V28 H110" stroke="rgba(255,255,255,0.18)" strokeWidth="1.5" />
+              </>
+            )}
+          </svg>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function CenterClimaxBlock({
+  finalMatch,
+  thirdPlaceMatch,
+}: {
+  finalMatch: ResolvedBracketMatch | null;
+  thirdPlaceMatch: ResolvedBracketMatch | null;
+}) {
+  return (
+    <section className="rounded-[1.75rem] border border-[rgba(255,182,73,0.2)] bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,182,73,0.05))] p-4 sm:p-5">
+      <div className="mb-5 flex justify-center">
+        <div className="rounded-full border border-[rgba(255,182,73,0.22)] bg-[rgba(7,11,18,0.9)] px-4 py-2 shadow-[0_12px_32px_rgba(0,0,0,0.26)] backdrop-blur">
+          <p className="wc-display text-xl text-wc-fg1">מרכז ההכרעה</p>
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        {finalMatch ? (
+          <FeaturedMatchCard
+            label={TEXT.final}
+            sublabel={TEXT.final}
+            variant="final"
+            match={finalMatch}
           />
-        ))}
+        ) : null}
+        {thirdPlaceMatch ? (
+          <FeaturedMatchCard
+            label={TEXT.thirdPlaceShort}
+            sublabel={TEXT.thirdPlaceLong}
+            variant="third"
+            match={thirdPlaceMatch}
+          />
+        ) : null}
       </div>
     </section>
   );
 }
 
-function RoundFlowGroup({
-  group,
-  matchesByNumber,
-}: {
-  group: VerticalRoundGroup;
-  matchesByNumber: Map<number, ResolvedBracketMatch>;
-}) {
-  const matches = group.nodes
-    .map((node) => matchesByNumber.get(node.matchNumber))
-    .filter((match): match is ResolvedBracketMatch => Boolean(match));
-
-  if (matches.length === 0) return null;
-
-  return (
-    <div className="space-y-3">
-      <div className={`grid gap-3 ${matches.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}>
-        {matches.map((match) => (
-          <KnockoutMatchCard
-            key={match.matchNumber}
-            match={match}
-            variant="default"
-          />
-        ))}
-      </div>
-
-      <ConvergenceConnector childCount={matches.length} />
-    </div>
-  );
-}
-
-function ConvergenceConnector({ childCount }: { childCount: number }) {
-  if (childCount <= 1) {
-    return (
-      <div className="flex flex-col items-center">
-        <div className={`h-10 w-px ${CONNECTOR_CLASS}`} />
-        <div className={`h-2 w-2 rotate-45 border-b border-r border-[rgba(255,255,255,0.22)]`} />
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex flex-col items-center">
-      <div className="relative h-12 w-full max-w-[18rem]">
-        <div className={`absolute left-1/4 top-0 h-4 w-px -translate-x-1/2 ${CONNECTOR_CLASS}`} />
-        <div className={`absolute left-3/4 top-0 h-4 w-px -translate-x-1/2 ${CONNECTOR_CLASS}`} />
-        <div className={`absolute left-1/4 right-1/4 top-4 border-t border-[rgba(255,255,255,0.18)]`} />
-        <div className={`absolute left-1/2 top-4 h-8 w-px -translate-x-1/2 ${CONNECTOR_CLASS}`} />
-      </div>
-      <div className="h-2 w-2 rotate-45 border-b border-r border-[rgba(255,255,255,0.22)]" />
-    </div>
-  );
-}
-
 function FeaturedMatchCard({
   label,
-  hint,
+  sublabel,
   variant,
   match,
 }: {
   label: string;
-  hint: string;
+  sublabel: string;
   variant: "final" | "third";
   match: ResolvedBracketMatch;
 }) {
   return (
-    <div className="space-y-2 rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-3">
-      <div>
+    <div className="space-y-3 rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-4">
+      <div className="text-center">
         <p className={`wc-display text-2xl ${variant === "final" ? "text-wc-amber" : "text-[#CD7F32]"}`}>
           {label}
         </p>
-        <p className="mt-1 text-xs text-wc-fg2">{hint}</p>
+        <p className="mt-1 text-xs text-wc-fg2">{sublabel}</p>
       </div>
       <KnockoutMatchCard match={match} variant={variant} />
     </div>
@@ -614,9 +759,11 @@ function FeaturedMatchCard({
 function KnockoutMatchCard({
   match,
   variant,
+  compact = false,
 }: {
   match: ResolvedBracketMatch;
   variant: "default" | "final" | "third";
+  compact?: boolean;
 }) {
   const isLive = match.liveMatch?.status === "live";
   const liveMatch = match.liveMatch;
@@ -649,10 +796,10 @@ function KnockoutMatchCard({
           : thirdVariant
             ? "border-[rgba(205,127,50,0.82)] shadow-[0_0_0_1px_rgba(205,127,50,0.28)]"
             : ""
-      }`}
+      } ${compact ? CARD_WIDTH_CLASS : "w-full"}`}
     >
       <div
-        className={`flex items-center justify-between gap-2 px-3 py-2 text-[10px] font-semibold ${
+        className={`flex items-center justify-between gap-2 px-2.5 py-2 text-[10px] font-semibold ${
           finalVariant
             ? "bg-[linear-gradient(90deg,var(--wc-amber),#ffd580)] text-[color:var(--wc-text-inverse)]"
             : thirdVariant
@@ -729,20 +876,20 @@ function SeedRow({
 
   return (
     <div className={`flex items-center justify-between gap-2 px-3 py-2 ${borderClass} ${bgClass}`}>
-      <div className={`flex min-w-0 items-center gap-2 ${textClass}`}>
+      <div className={`flex min-w-0 items-center gap-1.5 ${textClass}`}>
         {seed.kind === "team" && seed.team.logo_url ? (
           <Image
             src={seed.team.logo_url}
             alt={seed.team.name}
-            width={16}
-            height={11}
+            width={14}
+            height={10}
             className="rounded-sm object-cover"
             unoptimized
           />
         ) : (
-          <div className="h-[11px] w-4 shrink-0 rounded-sm bg-white/10" />
+          <div className="h-[10px] w-3.5 shrink-0 rounded-sm bg-white/10" />
         )}
-        <span className="truncate">
+        <span className="truncate text-[10.5px] sm:text-[11px]">
           {seed.kind === "team" ? seed.team.name_he ?? seed.team.name : <span className="text-wc-fg3">{seed.labelHe}</span>}
         </span>
       </div>

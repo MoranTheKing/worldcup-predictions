@@ -199,9 +199,10 @@ As of April 21, 2026, the live tournament implementation also includes:
 - Deterministic group-position locking and a terminal Best 3rd Place lock in `lib/utils/standings.ts`
 - Official FIFA 2026 Annex C best-3rd-place injection into Round of 32 slots through `syncTournamentState()`
 - A placeholder-driven knockout tree in `lib/tournament/knockout-tree.ts`, used by the Tournament page and the Matches board
-- A vertical, mobile-first bracket layout that keeps knockout cards readable by stacking the rounds top-to-bottom instead of shrinking a horizontal tree
-- Downward visual connectors between paired matches and their next-round card, so progression is readable without helper text
-- A bottom finals block that highlights `הגמר` in gold and `משחק על המקום השלישי` in bronze
+- A split vertical bracket layout that keeps knockout cards readable on mobile by letting the top half flow down, the bottom half flow up, and both meet at a centered finals block
+- Visual connector branches between paired matches and their next-round card, so progression is readable without helper text
+- Compact knockout cards (`max-w-[220px]`) and centered grids for the early rounds
+- A center finals block that highlights `הגמר` in gold and `מקום 3` in bronze
 - Global elimination persistence in `teams.is_eliminated`, covering eliminated 4th-place teams, locked bottom-4 third-place teams, and knockout losers with the semi-final / 3rd-place exception
 - Dev Tools flows where `Finish All Matches` and per-match `RESET` save immediately and trigger tournament sync without needing an extra manual save step
 

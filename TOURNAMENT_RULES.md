@@ -138,16 +138,19 @@ Bracket UI:
 Responsive bracket implementation:
 
 - The winner tree is precomputed in `lib/tournament/knockout-tree.ts`
-- `TournamentClient.tsx` now renders a mobile-first vertical tree instead of a scaled horizontal canvas
-- The flow is top-to-bottom: Round of 32 at the top, then Round of 16, quarter-finals, semi-finals, and the final block at the bottom
-- Each round is grouped by the actual parent match it feeds into, so the visual grouping still follows the official placeholder graph
+- `TournamentClient.tsx` now renders a split vertical bracket instead of a horizontal canvas
+- The top bracket flows downward:
+  Round of 32 `73-80` -> Round of 16 `89-92` -> quarter-finals `97-98` -> semi-final `101`
+- The bottom bracket flows upward:
+  Round of 32 `81-88` -> Round of 16 `93-96` -> quarter-finals `99-100` -> semi-final `102`
+- The center block holds the climax matches:
+  final `104` and 3rd-place match `103`
 - The bracket no longer uses helper copy like `To Match X` to explain progression
-- Each grouped pair now draws visible downward connector branches so users can follow the path into the next match visually
-- Stage headers stay sticky while scrolling so the current round remains obvious on mobile
-- The Final and 3rd Place matches sit together in the bottom decision block
+- Pair cells and merge bands now draw the connector branches visually, with the upper half pointing down and the lower half pointing up toward the center
+- Early-round cards are intentionally compact (`max-w-[220px]`) so the bracket stays readable on mobile without horizontal scrolling
 - The Final card keeps the gold treatment and explicit label `הגמר`
-- The 3rd Place card uses a bronze accent and the explicit label `משחק על המקום השלישי`
-- The bracket now relies on vertical scrolling and comfortable card spacing instead of shrinking the whole tree to fit the viewport
+- The 3rd Place card uses a bronze accent and the explicit label `מקום 3`
+- The bracket now relies on vertical scrolling, compact cards, and centered grids instead of shrinking the whole tree to fit the viewport
 
 ## Global Elimination Sync
 
