@@ -556,7 +556,7 @@ function DevMatchRowEditor({
       <td className="px-3 py-3 text-xs text-wc-fg2">{getStageLabelHe(match.stage)}</td>
       <td className="px-3 py-3 text-xs text-wc-fg1">{homeName}</td>
       <td className="px-3 py-3">
-        <div className="flex items-center justify-center gap-1">
+        <div dir="ltr" className="flex items-center justify-center gap-1">
           <input
             type="number"
             value={match.home_score ?? ""}
@@ -615,7 +615,7 @@ function DevMatchRowEditor({
       </td>
       <td className="px-3 py-3">
         {knockout ? (
-          <div className="flex items-center justify-center gap-1">
+          <div dir="ltr" className="flex items-center justify-center gap-1">
             <input
               type="number"
               value={match.home_penalty_score ?? ""}

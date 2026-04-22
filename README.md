@@ -219,6 +219,40 @@ Still intentionally out of scope for this phase:
 
 - match scoring logic for prediction points
 
+## April 22, 2026 - Phase 2.6 RTL + Opponent View Polish
+
+What changed in this pass:
+
+- all score strings that can be visually flipped by RTL now render inside explicit `dir="ltr"` containers
+- this includes:
+  match result panels
+  saved prediction badges
+  read-only opponent cards
+  dev-tools score editors
+- exact hit + Joker now uses the same deep purple / magenta visual family as the booster cards instead of cyan-gold
+- the `/game` gamer header is now route-aware:
+  it stays visible for the user's own game surfaces
+  the Joker inventory is only shown on `/game/predictions`
+  it is hidden on `/game/leagues` and all `/game/users/[id]` opponent routes
+- opponent pages now show the opponent's own context in the hero area:
+  avatar
+  display name
+  total score
+  total hits
+- locked outright badges on opponent pages were enlarged for readability
+- group standings now replace the generic `LIVE` pill with the actual current score for each live team
+- live group-score pills are color-coded by the row team's current state:
+  green when winning
+  amber when drawing
+  red when losing
+
+Validation:
+
+- `npm run lint`
+  passed
+- `npm run build`
+  passed
+
 ## Phase 2.5 UI / Outrights Polish
 
 As of April 22, 2026, the Predictions Hub received another polish pass focused on match-card clarity and outright locking.

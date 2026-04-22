@@ -259,6 +259,68 @@ Current UI behavior:
 - the table itself is live and reactive:
   it always extracts the team currently sitting 3rd in each group table and re-sorts the 12 rows immediately from live scores
 
+## RTL Score Rendering
+
+Because the app is Hebrew-first and the document direction is `rtl`, score strings must never rely on plain inline text flow.
+
+Current rule:
+
+- any explicit `home - away` score string must render inside an element with `dir="ltr"`
+
+Implemented surfaces:
+
+- match prediction cards
+- read-only opponent prediction cards
+- saved prediction badges
+- dev-tools score editors
+- live score pills inside the group standings table
+
+## Joker Hit Theme
+
+Finished exact hits with a Joker no longer use the older cyan/gold treatment.
+
+Current visual rule:
+
+- exact hit
+  strong green
+- exact hit + Joker
+  deep purple / magenta gradient
+  purple border
+  purple glow
+
+This matches the booster-card aesthetic used in the gamer header.
+
+## Opponent View Header Rules
+
+`/game/users/[id]` must never inherit the authenticated viewer's gamer-card context.
+
+Current behavior:
+
+- the global `/game` layout hides the owner header entirely on opponent routes
+- opponent pages render their own header using the target user's:
+  avatar
+  display name
+  total score
+  total hits
+- Joker inventory is hidden on:
+  `/game/leagues`
+  `/game/users/[id]`
+- Joker inventory appears only on the user's own `/game/predictions` screen
+
+## Live Group Score Badges
+
+The group standings table no longer shows a generic `LIVE` badge next to active teams.
+
+Current behavior:
+
+- each live team row shows that team's current score in the active match
+- the score is always rendered from the row team's perspective:
+  `team goals - opponent goals`
+- the score badge is color-coded:
+  green if the row team is currently winning
+  amber if drawing
+  red if losing
+
 ## Predictions UI And Outrights Lock
 
 The `/game/predictions` experience now uses the following presentation rules:

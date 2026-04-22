@@ -21,7 +21,14 @@ type Props = {
     thirdPlaceMatchNumber: number | null;
   };
   hasLive: boolean;
-  liveTeamIds: string[];
+  liveGroupScores: Record<
+    string,
+    {
+      teamGoals: number;
+      opponentGoals: number;
+      state: "winning" | "drawing" | "losing";
+    }
+  >;
 };
 
 type Tab = "groups" | "third" | "knockout";
@@ -284,11 +291,10 @@ export default function TournamentClient({
   bracket,
   knockoutTree,
   hasLive,
-  liveTeamIds,
+  liveGroupScores,
 }: Props) {
   const [tab, setTab] = useState<Tab>("groups");
   const groupLetters = Object.keys(groupStandings).sort();
-  const liveTeamIdSet = useMemo(() => new Set(liveTeamIds), [liveTeamIds]);
   const qualifiedThirdPlaceTeamIds = useMemo(
     () =>
       new Set(
@@ -348,7 +354,7 @@ export default function TournamentClient({
             <LegendBadge colorClassName="bg-white/25" label={TEXT.lockedPositionLegend} />
             <LegendBadge colorClassName="bg-wc-neon shadow-[0_0_12px_rgba(95,255,123,0.7)]" label={TEXT.qualifiedLegend} />
             <LegendBadge colorClassName="bg-wc-danger shadow-[0_0_12px_rgba(255,92,130,0.7)]" label={TEXT.eliminatedLegend} />
-            <LegendBadge colorClassName="bg-wc-danger shadow-[0_0_12px_rgba(255,92,130,0.7)]" label={TEXT.liveLegend} pulse />
+            <LegendBadge colorClassName="bg-wc-amber shadow-[0_0_12px_rgba(255,182,73,0.7)]" label={TEXT.liveLegend} pulse />
           </div>
 
           <div className="mt-4 rounded-[1.5rem] border border-white/10 bg-white/4 p-4 text-sm leading-7 text-wc-fg2">
@@ -361,7 +367,7 @@ export default function TournamentClient({
                 key={letter}
                 letter={letter}
                 standings={groupStandings[letter]}
-                liveTeamIdSet={liveTeamIdSet}
+                liveGroupScores={liveGroupScores}
                 qualifiedThirdPlaceTeamIds={qualifiedThirdPlaceTeamIds}
                 eliminatedThirdPlaceTeamIds={eliminatedThirdPlaceTeamIds}
               />
@@ -1002,13 +1008,13 @@ function LegendBadge({
 function GroupTable({
   letter,
   standings,
-  liveTeamIdSet,
+  liveGroupScores,
   qualifiedThirdPlaceTeamIds,
   eliminatedThirdPlaceTeamIds,
 }: {
   letter: string;
   standings: TeamStanding[];
-  liveTeamIdSet: Set<string>;
+  liveGroupScores: Props["liveGroupScores"];
   qualifiedThirdPlaceTeamIds: Set<string>;
   eliminatedThirdPlaceTeamIds: Set<string>;
 }) {
@@ -1044,7 +1050,7 @@ function GroupTable({
                 qualifiedThirdPlaceTeamIds,
                 eliminatedThirdPlaceTeamIds,
               );
-              const isLive = liveTeamIdSet.has(entry.team.id);
+              const liveScore = liveGroupScores[entry.team.id] ?? null;
 
               return (
                 <tr
@@ -1069,7 +1075,7 @@ function GroupTable({
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
                           <p className="truncate font-semibold text-wc-fg1">{entry.team.name_he ?? entry.team.name}</p>
-                          {isLive && <InlineLiveBadge />}
+                          {liveScore ? <InlineLiveScoreBadge liveScore={liveScore} /> : null}
                         </div>
                         <StatusPill display={statusDisplay} />
                       </div>
@@ -1092,14 +1098,48 @@ function GroupTable({
   );
 }
 
-function InlineLiveBadge() {
+function InlineLiveScoreBadge({
+  liveScore,
+}: {
+  liveScore: {
+    teamGoals: number;
+    opponentGoals: number;
+    state: "winning" | "drawing" | "losing";
+  };
+}) {
+  const stateClassName =
+    liveScore.state === "winning"
+      ? "bg-[rgba(95,255,123,0.14)] text-wc-neon"
+      : liveScore.state === "drawing"
+        ? "bg-[rgba(255,182,73,0.16)] text-wc-amber"
+        : "bg-[rgba(255,92,130,0.16)] text-wc-danger";
+
   return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-[rgba(255,92,130,0.12)] px-2 py-0.5 text-[10px] font-bold text-wc-danger">
+    <span
+      dir="ltr"
+      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${stateClassName}`}
+    >
       <span className="relative flex h-2 w-2">
-        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-wc-danger opacity-75" />
-        <span className="relative inline-flex h-2 w-2 rounded-full bg-wc-danger" />
+        <span
+          className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-70 ${
+            liveScore.state === "winning"
+              ? "bg-wc-neon"
+              : liveScore.state === "drawing"
+                ? "bg-wc-amber"
+                : "bg-wc-danger"
+          }`}
+        />
+        <span
+          className={`relative inline-flex h-2 w-2 rounded-full ${
+            liveScore.state === "winning"
+              ? "bg-wc-neon"
+              : liveScore.state === "drawing"
+                ? "bg-wc-amber"
+                : "bg-wc-danger"
+          }`}
+        />
       </span>
-      LIVE
+      {`${liveScore.teamGoals} - ${liveScore.opponentGoals}`}
     </span>
   );
 }

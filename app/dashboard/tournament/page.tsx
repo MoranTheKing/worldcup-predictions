@@ -8,6 +8,15 @@ import { resolveKnockoutBracket } from "@/lib/bracket/knockout";
 import { buildKnockoutWinnerTree } from "@/lib/tournament/knockout-tree";
 import TournamentClient from "./TournamentClient";
 
+type LiveGroupScoreMap = Record<
+  string,
+  {
+    teamGoals: number;
+    opponentGoals: number;
+    state: "winning" | "drawing" | "losing";
+  }
+>;
+
 export const dynamic = "force-dynamic";
 
 export default async function TournamentPage() {
@@ -52,15 +61,40 @@ export default async function TournamentPage() {
   const teams = buildTournamentTeams(rawTeams, groupMatches);
 
   const tournament = buildTournamentStandings(teams, groupMatches);
-  const liveGroupTeamIds = Array.from(
-    new Set(
-      groupMatches.flatMap((match) => (
-        match.status === "live"
-          ? [match.home_team_id, match.away_team_id].filter((teamId): teamId is string => Boolean(teamId))
-          : []
-      )),
-    ),
-  );
+  const liveGroupScores = groupMatches.reduce<LiveGroupScoreMap>((accumulator, match) => {
+    if (
+      match.status !== "live" ||
+      match.home_team_id === null ||
+      match.away_team_id === null ||
+      match.home_score === null ||
+      match.away_score === null
+    ) {
+      return accumulator;
+    }
+
+    accumulator[match.home_team_id] = {
+      teamGoals: match.home_score,
+      opponentGoals: match.away_score,
+      state:
+        match.home_score > match.away_score
+          ? "winning"
+          : match.home_score < match.away_score
+            ? "losing"
+            : "drawing",
+    };
+    accumulator[match.away_team_id] = {
+      teamGoals: match.away_score,
+      opponentGoals: match.home_score,
+      state:
+        match.away_score > match.home_score
+          ? "winning"
+          : match.away_score < match.home_score
+            ? "losing"
+            : "drawing",
+    };
+
+    return accumulator;
+  }, {});
 
   const bracket = resolveKnockoutBracket({
     groupStandings: tournament.groupStandings,
@@ -84,7 +118,7 @@ export default async function TournamentPage() {
       bracket={bracket}
       knockoutTree={serializedKnockoutTree}
       hasLive={hasLive}
-      liveTeamIds={liveGroupTeamIds}
+      liveGroupScores={liveGroupScores}
     />
   );
 }

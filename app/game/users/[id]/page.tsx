@@ -5,6 +5,7 @@ import MatchPredictionCard from "@/app/game/predictions/MatchPredictionCard";
 import PredictionsClient from "@/app/game/predictions/PredictionsClient";
 import OutrightChoiceBadge from "@/components/game/OutrightChoiceBadge";
 import { loadPredictionsHubData } from "@/lib/game/predictions-hub";
+import { getUserGameStats } from "@/lib/game/stats";
 import { hasTournamentStarted } from "@/lib/game/tournament-start";
 import { attachTeamsToMatches } from "@/lib/tournament/matches";
 import type { MatchWithTeams } from "@/lib/tournament/matches";
@@ -34,11 +35,13 @@ export default async function OpponentPredictionsPage({
 
   const admin = createAdminClient();
 
-  const [{ data: currentMemberships }, { data: targetMemberships }, profile] = await Promise.all([
-    admin.from("league_members").select("league_id").eq("user_id", user.id),
-    admin.from("league_members").select("league_id").eq("user_id", targetUserId),
-    fetchAuthProfile(admin, targetUserId),
-  ]);
+  const [{ data: currentMemberships }, { data: targetMemberships }, profile, gameStats] =
+    await Promise.all([
+      admin.from("league_members").select("league_id").eq("user_id", user.id),
+      admin.from("league_members").select("league_id").eq("user_id", targetUserId),
+      fetchAuthProfile(admin, targetUserId),
+      getUserGameStats(admin, targetUserId),
+    ]);
 
   const currentLeagueIds = new Set(
     ((currentMemberships ?? []) as Array<{ league_id?: string | null }>)
@@ -144,6 +147,8 @@ export default async function OpponentPredictionsPage({
 
   const displayName = resolveDisplayName(profile, null);
   const avatarUrl = profile?.avatarUrl ?? null;
+  const totalScore = profile?.totalScore ?? 0;
+  const totalHits = gameStats.totalHits;
   const sharedLeagueNames = new Map(
     ((leagueRows ?? []) as Array<{ id: string; name?: string | null }>).map((league) => [
       league.id,
@@ -181,12 +186,14 @@ export default async function OpponentPredictionsPage({
           ← חזרה לליגה
         </Link>
         {backLeagueId ? (
-          <span className="text-xs text-wc-fg3">שיתוף ליגה: {sharedLeagueNames.get(backLeagueId) ?? "League"}</span>
+          <span className="text-xs text-wc-fg3">
+            שיתוף ליגה: {sharedLeagueNames.get(backLeagueId) ?? "League"}
+          </span>
         ) : null}
       </div>
 
       <section className="rounded-[1.75rem] border border-white/10 bg-[rgba(13,27,46,0.82)] p-5">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex items-center gap-4">
             {avatarUrl ? (
               <Image
@@ -204,15 +211,28 @@ export default async function OpponentPredictionsPage({
             )}
 
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.24em] text-wc-neon">Opponent View</p>
+              <p className="text-xs font-bold uppercase tracking-[0.24em] text-wc-neon">
+                Opponent View
+              </p>
               <h1 className="mt-2 text-3xl font-black text-wc-fg1">{displayName}</h1>
               <p className="mt-1 text-sm text-wc-fg2">
-                משחקים עתידיים נשארים נעולים. רק משחקים חיים או גמורים חושפים את הניחוש בפועל.
+                משחקים עתידיים נשארים נעולים. רק משחקים חיים או גמורים חושפים את
+                הניחוש בפועל.
               </p>
             </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-2 xl:min-w-[28rem]">
+            <OpponentStatCard
+              label="Total Score"
+              value={String(totalScore)}
+              accentClassName="text-wc-neon"
+            />
+            <OpponentStatCard
+              label="Total Hits"
+              value={String(totalHits)}
+              accentClassName="text-[#C9B2FF]"
+            />
             <OutrightChoiceBadge
               kind="winner"
               label="זוכת הטורניר"
@@ -220,6 +240,7 @@ export default async function OpponentPredictionsPage({
               logoUrl={winnerTeam?.logoUrl ?? null}
               hidden={!tournamentStarted}
               locked
+              size="hero"
             />
             <OutrightChoiceBadge
               kind="topScorer"
@@ -227,6 +248,7 @@ export default async function OpponentPredictionsPage({
               value={tournamentResult.data?.predicted_top_scorer_name ?? null}
               hidden={!tournamentStarted}
               locked
+              size="hero"
             />
           </div>
         </div>
@@ -258,6 +280,23 @@ export default async function OpponentPredictionsPage({
           </div>
         )}
       </section>
+    </div>
+  );
+}
+
+function OpponentStatCard({
+  label,
+  value,
+  accentClassName,
+}: {
+  label: string;
+  value: string;
+  accentClassName: string;
+}) {
+  return (
+    <div className="rounded-[1.2rem] border border-white/10 bg-[rgba(6,13,26,0.46)] px-4 py-3 text-start">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-wc-fg3">{label}</p>
+      <p className={`wc-display mt-2 text-4xl ${accentClassName}`}>{value}</p>
     </div>
   );
 }

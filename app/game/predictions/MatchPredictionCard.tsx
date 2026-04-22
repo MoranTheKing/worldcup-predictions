@@ -113,14 +113,14 @@ export default function MatchPredictionCard({
             className="pointer-events-none absolute inset-0 animate-pulse"
             style={{
               background:
-                "linear-gradient(130deg, rgba(72,232,255,0.24), rgba(129,92,255,0.28), rgba(255,214,66,0.18), rgba(255,90,201,0.22))",
+                "linear-gradient(130deg, rgba(58,12,163,0.34), rgba(123,31,162,0.34), rgba(192,38,211,0.26), rgba(236,72,153,0.24))",
             }}
           />
           <div
             className="pointer-events-none absolute inset-[1px] rounded-[1.45rem]"
             style={{
               boxShadow:
-                "0 0 20px 5px rgba(255,215,0,0.45), 0 0 44px rgba(64,224,255,0.32), 0 0 56px rgba(155,92,255,0.28), inset 0 0 24px rgba(255,255,255,0.08)",
+                "0 0 22px 4px rgba(168,85,247,0.48), 0 0 44px rgba(192,38,211,0.34), 0 0 58px rgba(217,70,239,0.3), inset 0 0 24px rgba(255,255,255,0.08)",
             }}
           />
         </>
@@ -138,8 +138,8 @@ export default function MatchPredictionCard({
             <span className="text-[11px] font-semibold text-wc-fg3">{stageLabel}</span>
             <StatusPill isFinished={isFinished} isLive={isLive} />
             {tone === "jackpot" ? (
-              <span className="rounded-full bg-[rgba(64,224,255,0.16)] px-2 py-0.5 text-[10px] font-black text-[#8CF3FF] shadow-[0_0_18px_rgba(64,224,255,0.32)]">
-                👑 DIAMOND JOKER HIT
+              <span className="rounded-full bg-[rgba(168,85,247,0.18)] px-2 py-0.5 text-[10px] font-black text-[#F1B7FF] shadow-[0_0_18px_rgba(168,85,247,0.38)]">
+                👑 JOKER EXACT HIT
               </span>
             ) : tone === "success" ? (
               <span className="rounded-full bg-[rgba(34,197,94,0.16)] px-2 py-0.5 text-[10px] font-bold text-[#7BFFB1]">
@@ -173,15 +173,29 @@ export default function MatchPredictionCard({
         <div className="px-4 py-4">
           {isEditable ? (
             <form action={formAction} className="space-y-3">
-              <input type="hidden" name="is_joker_applied" value={isJokerSelected ? "true" : "false"} />
+              <input
+                type="hidden"
+                name="is_joker_applied"
+                value={isJokerSelected ? "true" : "false"}
+              />
 
               <div className="flex items-center gap-3">
                 <TeamSide align="right" name={homeTeamName} logoUrl={match.homeTeam?.logo_url ?? null} />
 
-                <div className="flex flex-shrink-0 items-center gap-2">
-                  <ScoreInput name="home_score" value={homeDraft} disabled={isPending} onChange={setHomeDraft} />
+                <div dir="ltr" className="flex flex-shrink-0 items-center gap-2">
+                  <ScoreInput
+                    name="home_score"
+                    value={homeDraft}
+                    disabled={isPending}
+                    onChange={setHomeDraft}
+                  />
                   <span className="text-sm font-black text-wc-fg3">-</span>
-                  <ScoreInput name="away_score" value={awayDraft} disabled={isPending} onChange={setAwayDraft} />
+                  <ScoreInput
+                    name="away_score"
+                    value={awayDraft}
+                    disabled={isPending}
+                    onChange={setAwayDraft}
+                  />
                 </div>
 
                 <TeamSide align="left" name={awayTeamName} logoUrl={match.awayTeam?.logo_url ?? null} />
@@ -193,9 +207,9 @@ export default function MatchPredictionCard({
                     <span className="rounded-full bg-white/8 px-2 py-0.5 text-[10px] font-bold text-wc-fg2">
                       {predictionOwnerLabel}
                     </span>
-                    <span dir="ltr" className="inline-flex font-black tracking-[0.08em]">
+                    <ScoreText className="inline-flex font-black tracking-[0.08em]">
                       {predictionScore}
-                    </span>
+                    </ScoreText>
                     {optimisticIsJoker ? <span className="ms-auto text-wc-violet">🎏</span> : null}
                   </div>
                 </div>
@@ -253,7 +267,7 @@ export default function MatchPredictionCard({
               <div className="flex items-center gap-3">
                 <TeamSide align="right" name={homeTeamName} logoUrl={match.homeTeam?.logo_url ?? null} />
 
-                <div className="flex flex-shrink-0 items-center gap-2">
+                <div dir="ltr" className="flex flex-shrink-0 items-center gap-2">
                   <ReadOnlyScore score={actualSummary?.displayScore ?? "—"} />
                 </div>
 
@@ -262,7 +276,13 @@ export default function MatchPredictionCard({
 
               <div className="mt-4 grid gap-3 md:grid-cols-3">
                 <ResultPanel
-                  label={isLive ? "התוצאה כרגע" : match.status === "scheduled" ? "טרם התחיל" : "התוצאה בפועל"}
+                  label={
+                    isLive
+                      ? "התוצאה כרגע"
+                      : match.status === "scheduled"
+                        ? "טרם התחיל"
+                        : "התוצאה בפועל"
+                  }
                   value={actualSummary?.displayScore ?? "—"}
                   tone={isLive ? "live" : tone}
                   isScore
@@ -362,24 +382,41 @@ function ResultPanel({
   return (
     <div className={`rounded-2xl border px-4 py-3 ${getResultPanelClass(tone)}`}>
       <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-wc-fg3">{label}</p>
-      <p
-        dir={isScore ? "ltr" : undefined}
+      <ScoreText
         className={`mt-2 font-black ${emphasize ? "text-3xl" : "text-lg"} ${isScore ? "text-left" : ""}`}
+        enabled={isScore}
       >
         {value}
-      </p>
+      </ScoreText>
     </div>
   );
 }
 
 function ReadOnlyScore({ score }: { score: string }) {
   return (
-    <div
-      dir="ltr"
-      className="min-w-[118px] rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-center text-lg font-black text-wc-fg1"
-    >
+    <ScoreText className="min-w-[118px] rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-center text-lg font-black text-wc-fg1">
       {score}
-    </div>
+    </ScoreText>
+  );
+}
+
+function ScoreText({
+  children,
+  className,
+  enabled = true,
+}: {
+  children: string;
+  className: string;
+  enabled?: boolean;
+}) {
+  if (!enabled) {
+    return <p className={className}>{children}</p>;
+  }
+
+  return (
+    <p dir="ltr" className={`${className} inline-block`}>
+      {children}
+    </p>
   );
 }
 
@@ -421,7 +458,7 @@ function StatusPill({
   if (isLive) {
     return (
       <span className="inline-flex items-center gap-1 rounded-full bg-[rgba(34,211,238,0.12)] px-2 py-0.5 text-[10px] font-bold text-cyan-300">
-        <span className="h-1.5 w-1.5 rounded-full bg-cyan-300 animate-pulse" />
+        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-cyan-300" />
         LIVE
       </span>
     );
@@ -473,10 +510,10 @@ function getCardChrome(
 ): CSSProperties {
   if (tone === "jackpot") {
     return {
-      borderColor: "rgba(64,224,255,0.92)",
-      background: "linear-gradient(135deg, rgba(6,12,30,0.98), rgba(24,13,40,0.98))",
+      borderColor: "rgba(168,85,247,0.9)",
+      background: "linear-gradient(135deg, rgba(20,9,44,0.98), rgba(53,12,65,0.96), rgba(74,12,70,0.95))",
       boxShadow:
-        "0 0 0 1px rgba(255,215,0,0.35), 0 0 20px 5px rgba(255,215,0,0.32), 0 0 34px rgba(64,224,255,0.24), 0 0 56px rgba(155,92,255,0.26)",
+        "0 0 0 1px rgba(168,85,247,0.45), 0 0 20px 4px rgba(168,85,247,0.36), 0 0 34px rgba(217,70,239,0.3), 0 0 56px rgba(192,38,211,0.28)",
     };
   }
 
@@ -533,7 +570,7 @@ function getCardChrome(
 
 function getResultPanelClass(tone: PredictionTone) {
   if (tone === "jackpot") {
-    return "border-[rgba(64,224,255,0.46)] bg-[linear-gradient(135deg,rgba(64,224,255,0.12),rgba(155,92,255,0.12))] text-[#9AF4FF]";
+    return "border-[rgba(168,85,247,0.46)] bg-[linear-gradient(135deg,rgba(88,28,135,0.24),rgba(131,24,67,0.18))] text-[#F1B7FF]";
   }
 
   if (tone === "success") {
