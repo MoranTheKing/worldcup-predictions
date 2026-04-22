@@ -247,6 +247,8 @@ function getBestThirdStatusDisplay(
   qualifiedThirdPlaceTeamIds: Set<string>,
   eliminatedThirdPlaceTeamIds: Set<string>,
 ): StatusDisplay | null {
+  if (!entry.isLocked || entry.status === "pending") return null;
+
   const effectiveStatus =
     qualifiedThirdPlaceTeamIds.has(entry.team.id)
       ? "qualified"
@@ -284,11 +286,21 @@ export default function TournamentClient({
   const groupLetters = Object.keys(groupStandings).sort();
   const liveTeamIdSet = useMemo(() => new Set(liveTeamIds), [liveTeamIds]);
   const qualifiedThirdPlaceTeamIds = useMemo(
-    () => new Set(bestThirdStandings.slice(0, 8).map((entry) => entry.team.id)),
+    () =>
+      new Set(
+        bestThirdStandings
+          .filter((entry) => entry.isLocked && entry.status === "qualified")
+          .map((entry) => entry.team.id),
+      ),
     [bestThirdStandings],
   );
   const eliminatedThirdPlaceTeamIds = useMemo(
-    () => new Set(bestThirdStandings.slice(8).map((entry) => entry.team.id)),
+    () =>
+      new Set(
+        bestThirdStandings
+          .filter((entry) => entry.isLocked && entry.status === "eliminated")
+          .map((entry) => entry.team.id),
+      ),
     [bestThirdStandings],
   );
 
@@ -1039,7 +1051,6 @@ function BestThirdHead() {
       <tr className="border-b border-white/8">
         <th className="py-3 pe-2 ps-4 text-start font-semibold text-wc-fg3">#</th>
         <th className="px-3 py-3 text-start font-semibold text-wc-fg3">{TEXT.team}</th>
-        <th className="px-3 py-3 text-center font-semibold text-wc-fg3">{TEXT.group}</th>
         <th className="px-3 py-3 text-center font-semibold text-wc-fg3">{TEXT.played}</th>
         <th className="px-3 py-3 text-center font-semibold text-wc-fg3">{TEXT.points}</th>
         <th className="px-3 py-3 text-center font-semibold text-wc-fg3">{TEXT.goalDifference}</th>
@@ -1065,16 +1076,20 @@ function BestThirdRow({
     eliminatedThirdPlaceTeamIds,
   );
   const effectiveStatus =
-    qualifiedThirdPlaceTeamIds.has(entry.team.id)
+    entry.isLocked && qualifiedThirdPlaceTeamIds.has(entry.team.id)
       ? "qualified"
-      : eliminatedThirdPlaceTeamIds.has(entry.team.id)
+      : entry.isLocked && eliminatedThirdPlaceTeamIds.has(entry.team.id)
         ? "eliminated"
-        : entry.status;
-  const isBelowCutoff = entry.rank > 8;
+        : "pending";
+  const isBelowCutoff = entry.isLocked && entry.rank > 8;
+  const isAboveCutoff = entry.isLocked && entry.rank <= 8;
   const rowAccentClassName = isBelowCutoff
     ? "bg-[linear-gradient(90deg,rgba(255,92,130,0.08),rgba(255,92,130,0.02))]"
-    : "bg-[linear-gradient(90deg,rgba(95,255,123,0.06),rgba(95,255,123,0.01))]";
-  const dividerClassName = entry.rank === 9 ? "border-t-2 border-t-[rgba(255,92,130,0.45)]" : "";
+    : isAboveCutoff
+      ? "bg-[linear-gradient(90deg,rgba(95,255,123,0.06),rgba(95,255,123,0.01))]"
+      : "";
+  const dividerClassName =
+    entry.isLocked && entry.rank === 9 ? "border-t-2 border-t-[rgba(255,92,130,0.45)]" : "";
   const rankClassName = isBelowCutoff ? "text-wc-danger" : "text-wc-fg2";
 
   return (
@@ -1099,7 +1114,6 @@ function BestThirdRow({
           <span className="truncate font-semibold text-wc-fg1">{entry.team.name_he ?? entry.team.name}</span>
         </div>
       </td>
-      <td className="px-3 py-3 text-center text-wc-fg2">{entry.team.group_letter}</td>
       <td className="px-3 py-3 text-center text-wc-fg2">{entry.played}</td>
       <td className="px-3 py-3 text-center font-bold text-wc-fg1">{entry.pts}</td>
       <td className="px-3 py-3 text-center text-wc-fg2">{entry.gd}</td>

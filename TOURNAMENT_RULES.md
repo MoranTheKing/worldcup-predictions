@@ -209,6 +209,7 @@ The local group standings table keeps the 3rd-place pill text compact:
 - Green means the team is globally inside the top 8 third-place qualifiers
 - Red means the team is globally outside the top 8 and mathematically out
 - The Tournament parent computes the global Best 3rd Place ranking first and passes those team IDs down to each group table
+- The group table now waits for locked Best 3rd Place status before coloring a locked 3rd-place team green or red
 
 ## Extra Time And Penalties
 
@@ -248,3 +249,14 @@ These sources must stay identical.
 Important rule:
 
 - future bracket seeding must preserve the official non-sequential FIFA crossings exactly as encoded in the placeholder graph
+
+## Best 3rd Place Table UI
+
+The `המקום השלישי` table on the Tournament page is now intentionally neutral until status is sealed.
+
+Current UI behavior:
+
+- `העפלה` and `הדחה` badges only render when `entry.isLocked === true`
+- green and red row highlights only render when the locked status is final
+- pending rows stay neutral even if they are currently inside the top 8 or bottom 4 by array order
+- the `בית` column has been removed from this table to keep it focused on ranking metrics only
