@@ -14,9 +14,16 @@ export async function createLeague(
   formData: FormData
 ): Promise<LeagueActionState> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+
+  let user;
+  try {
+    const { data, error: authError } = await supabase.auth.getUser();
+    if (authError) throw authError;
+    user = data.user;
+  } catch (err) {
+    console.error("[createLeague] auth.getUser failed:", err);
+    return { error: "שגיאת אימות — נסה שוב" };
+  }
 
   if (!user) {
     return { error: "עליך להתחבר כדי ליצור ליגה" };
@@ -27,26 +34,47 @@ export async function createLeague(
     return { error: "שם הליגה הוא שדה חובה", field: "name" };
   }
 
-  const { data: league, error } = await supabase
-    .from("leagues")
-    .insert({ name, owner_id: user.id })
-    .select("id")
-    .single();
+  let leagueId: string;
 
-  if (error || !league) {
-    return { error: "שגיאה ביצירת הליגה — נסה שוב" };
+  try {
+    // Use admin client to bypass potential RLS edge-cases on insert;
+    // auth is already verified above via getUser().
+    const admin = createAdminClient();
+
+    const { data: league, error: insertError } = await admin
+      .from("leagues")
+      .insert({ name, owner_id: user.id })
+      .select("id")
+      .single();
+
+    if (insertError) {
+      console.error("[createLeague] leagues insert error:", insertError);
+      return {
+        error: `שגיאה ביצירת הליגה: ${insertError.message ?? "נסה שוב"}`,
+      };
+    }
+
+    if (!league?.id) {
+      console.error("[createLeague] no league id returned");
+      return { error: "שגיאה ביצירת הליגה — לא התקבל מזהה" };
+    }
+
+    leagueId = league.id as string;
+
+    const { error: memberError } = await admin
+      .from("league_members")
+      .insert({ user_id: user.id, league_id: leagueId });
+
+    if (memberError) {
+      // Non-fatal: league was created; owner will still be redirected there.
+      console.error("[createLeague] league_members insert error:", memberError);
+    }
+  } catch (err) {
+    console.error("[createLeague] unexpected error:", err);
+    return { error: "שגיאה בלתי צפויה — נסה שוב מאוחר יותר" };
   }
 
-  const { error: memberError } = await supabase
-    .from("league_members")
-    .insert({ user_id: user.id, league_id: league.id });
-
-  if (memberError) {
-    // League was created but member insert failed — still redirect to league page
-    console.error("league_members insert failed:", memberError.message);
-  }
-
-  redirect(`/game/leagues/${league.id}`);
+  redirect(`/game/leagues/${leagueId}`);
 }
 
 export async function joinLeague(
@@ -54,9 +82,16 @@ export async function joinLeague(
   formData: FormData
 ): Promise<LeagueActionState> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+
+  let user;
+  try {
+    const { data, error: authError } = await supabase.auth.getUser();
+    if (authError) throw authError;
+    user = data.user;
+  } catch (err) {
+    console.error("[joinLeague] auth.getUser failed:", err);
+    return { error: "שגיאת אימות — נסה שוב" };
+  }
 
   if (!user) {
     return { error: "עליך להתחבר כדי להצטרף לליגה" };
@@ -68,28 +103,40 @@ export async function joinLeague(
   }
   const inviteCode = rawCode.toUpperCase();
 
-  // Use admin client — RLS blocks unauthenticated lookup by invite_code for non-members
-  const admin = createAdminClient();
-  const { data: league } = await admin
-    .from("leagues")
-    .select("id")
-    .eq("invite_code", inviteCode)
-    .single();
+  let leagueId: string;
 
-  if (!league) {
-    return { error: "קוד הזמנה לא תקין", field: "invite_code" };
-  }
+  try {
+    // Admin client bypasses RLS — non-members cannot see the leagues table.
+    const admin = createAdminClient();
 
-  const { error } = await supabase
-    .from("league_members")
-    .insert({ user_id: user.id, league_id: league.id });
+    const { data: league, error: lookupError } = await admin
+      .from("leagues")
+      .select("id")
+      .eq("invite_code", inviteCode)
+      .single();
 
-  if (error) {
-    if (error.code === "23505") {
-      return { error: "אתה כבר חבר בליגה זו" };
+    if (lookupError || !league) {
+      console.error("[joinLeague] invite_code lookup:", lookupError);
+      return { error: "קוד הזמנה לא תקין", field: "invite_code" };
     }
-    return { error: "שגיאה בהצטרפות לליגה — נסה שוב" };
+
+    leagueId = league.id as string;
+
+    const { error: memberError } = await supabase
+      .from("league_members")
+      .insert({ user_id: user.id, league_id: leagueId });
+
+    if (memberError) {
+      if (memberError.code === "23505") {
+        return { error: "אתה כבר חבר בליגה זו" };
+      }
+      console.error("[joinLeague] league_members insert error:", memberError);
+      return { error: `שגיאה בהצטרפות: ${memberError.message ?? "נסה שוב"}` };
+    }
+  } catch (err) {
+    console.error("[joinLeague] unexpected error:", err);
+    return { error: "שגיאה בלתי צפויה — נסה שוב מאוחר יותר" };
   }
 
-  redirect(`/game/leagues/${league.id}`);
+  redirect(`/game/leagues/${leagueId}`);
 }

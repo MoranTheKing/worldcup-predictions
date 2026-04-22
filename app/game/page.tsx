@@ -1,5 +1,5 @@
-import GameClient from "./GameClient";
+import { redirect } from "next/navigation";
 
-export default function GamePage() {
-  return <GameClient />;
+export default function GameRootPage() {
+  redirect("/game/leagues");
 }
