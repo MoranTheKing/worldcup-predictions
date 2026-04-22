@@ -305,3 +305,30 @@ Current joker behavior:
 - the server action validates joker uniqueness by scanning the user's existing predictions before allowing a new joker save
 - disabled joker buttons now explain why they cannot be activated
 - prediction score inputs default to `0`, so untouched fields still submit a legal score
+
+
+## Phase 2 Security And Game UX Hardening
+
+As of April 22, 2026, the `/game` hub also includes the security and league-management layer needed for real social play.
+
+What changed:
+
+- league join/create on `/game/leagues` now opens inline action panels instead of bouncing the user away on first click
+- league invite links can now be shared as `/game/leagues?invite=AB12`, and the join panel pre-fills from that query param
+- `/game/leagues/[id]` now supports owner-only `Remove Member` and `Delete League`, plus `Leave League` for regular members
+- all league management actions now verify ownership or self-targeting server-side before mutating the DB
+- scheduled prediction cards are now rendered only when both teams are actually known
+- joker toggles now lock the rest of the stage immediately in local UI state before the save round-trip finishes
+
+Database hardening:
+
+- `supabase/migrations/20260422000014_harden_game_social_security.sql` adds:
+  4-character alphanumeric invite codes
+  row-by-row regeneration of legacy invite codes that do not match the new format
+  `league_join_attempts` for basic brute-force throttling on join attempts
+  flat `SELECT USING (true)` policies for `league_members`, `predictions`, and `tournament_predictions`
+
+Operational note:
+
+- `joinLeague` now rate-limits repeated invalid invite code attempts per authenticated user
+- `upsertMatchPrediction` now refuses to save if the match is no longer `scheduled` or if one side is still an unresolved placeholder

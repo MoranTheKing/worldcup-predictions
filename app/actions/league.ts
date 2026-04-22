@@ -1,142 +1,407 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
+const INVITE_CODE_REGEX = /^[A-Z0-9]{4}$/;
+const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
+const RATE_LIMIT_BLOCK_MS = 10 * 60 * 1000;
+const RATE_LIMIT_MAX_ATTEMPTS = 5;
+
 export type LeagueActionState = {
   error?: string;
   field?: "name" | "invite_code";
+  success?: boolean;
 } | null;
+
+type JoinAttemptRow = {
+  user_id: string;
+  attempt_count: number;
+  window_started_at: string;
+  last_attempt_at: string;
+  blocked_until: string | null;
+};
+
+type LeagueOwnershipRow = {
+  id: string;
+  owner_id: string | null;
+  invite_code?: string | null;
+  name?: string | null;
+};
 
 export async function createLeague(
   _prev: LeagueActionState,
-  formData: FormData
+  formData: FormData,
 ): Promise<LeagueActionState> {
-  const supabase = await createClient();
-
-  let user;
-  try {
-    const { data, error: authError } = await supabase.auth.getUser();
-    if (authError) throw authError;
-    user = data.user;
-  } catch (err) {
-    console.error("[createLeague] auth.getUser failed:", err);
-    return { error: "שגיאת אימות — נסה שוב" };
-  }
+  const user = await requireAuthenticatedUser();
 
   if (!user) {
-    return { error: "עליך להתחבר כדי ליצור ליגה" };
+    return { error: "צריך להתחבר כדי ליצור ליגה." };
   }
 
   const name = formData.get("name")?.toString().trim();
+
   if (!name) {
-    return { error: "שם הליגה הוא שדה חובה", field: "name" };
+    return { error: "שם הליגה הוא שדה חובה.", field: "name" };
   }
 
-  let leagueId: string;
+  const admin = createAdminClient();
+  const { data: league, error: insertError } = await admin
+    .from("leagues")
+    .insert({ name, owner_id: user.id })
+    .select("id")
+    .single();
 
-  try {
-    // Use admin client to bypass potential RLS edge-cases on insert;
-    // auth is already verified above via getUser().
-    const admin = createAdminClient();
-
-    const { data: league, error: insertError } = await admin
-      .from("leagues")
-      .insert({ name, owner_id: user.id })
-      .select("id")
-      .single();
-
-    if (insertError) {
-      console.error("[createLeague] leagues insert error:", insertError);
-      return {
-        error: `שגיאה ביצירת הליגה: ${insertError.message ?? "נסה שוב"}`,
-      };
-    }
-
-    if (!league?.id) {
-      console.error("[createLeague] no league id returned");
-      return { error: "שגיאה ביצירת הליגה — לא התקבל מזהה" };
-    }
-
-    leagueId = league.id as string;
-
-    const { error: memberError } = await admin
-      .from("league_members")
-      .insert({ user_id: user.id, league_id: leagueId });
-
-    if (memberError) {
-      // Non-fatal: league was created; owner will still be redirected there.
-      console.error("[createLeague] league_members insert error:", memberError);
-    }
-  } catch (err) {
-    console.error("[createLeague] unexpected error:", err);
-    return { error: "שגיאה בלתי צפויה — נסה שוב מאוחר יותר" };
+  if (insertError || !league?.id) {
+    console.error("[createLeague] insert error:", insertError);
+    return {
+      error: "לא הצלחנו ליצור את הליגה כרגע. נסה שוב בעוד רגע.",
+    };
   }
 
-  redirect(`/game/leagues/${leagueId}`);
+  const { error: memberError } = await admin
+    .from("league_members")
+    .upsert(
+      {
+        user_id: user.id,
+        league_id: league.id,
+      },
+      { onConflict: "user_id,league_id" },
+    );
+
+  if (memberError) {
+    console.error("[createLeague] owner membership upsert error:", memberError);
+  }
+
+  revalidatePath("/game");
+  revalidatePath("/game/leagues");
+  redirect(`/game/leagues/${league.id}`);
 }
 
 export async function joinLeague(
   _prev: LeagueActionState,
-  formData: FormData
+  formData: FormData,
 ): Promise<LeagueActionState> {
-  const supabase = await createClient();
-
-  let user;
-  try {
-    const { data, error: authError } = await supabase.auth.getUser();
-    if (authError) throw authError;
-    user = data.user;
-  } catch (err) {
-    console.error("[joinLeague] auth.getUser failed:", err);
-    return { error: "שגיאת אימות — נסה שוב" };
-  }
+  const user = await requireAuthenticatedUser();
 
   if (!user) {
-    return { error: "עליך להתחבר כדי להצטרף לליגה" };
+    return { error: "צריך להתחבר כדי להצטרף לליגה." };
   }
 
-  const rawCode = formData.get("invite_code")?.toString().trim();
-  if (!rawCode) {
-    return { error: "קוד הזמנה הוא שדה חובה", field: "invite_code" };
+  const inviteCode = normalizeInviteCode(formData.get("invite_code"));
+
+  if (!inviteCode) {
+    return {
+      error: "יש להזין קוד הזמנה בן 4 תווים באנגלית או ספרות.",
+      field: "invite_code",
+    };
   }
-  const inviteCode = rawCode.toUpperCase();
 
-  let leagueId: string;
+  const admin = createAdminClient();
+  const rateLimitError = await getJoinRateLimitError(admin, user.id);
 
-  try {
-    // Admin client bypasses RLS — non-members cannot see the leagues table.
-    const admin = createAdminClient();
+  if (rateLimitError) {
+    return { error: rateLimitError, field: "invite_code" };
+  }
 
-    const { data: league, error: lookupError } = await admin
-      .from("leagues")
-      .select("id")
-      .eq("invite_code", inviteCode)
-      .single();
+  const { data: league, error: lookupError } = await admin
+    .from("leagues")
+    .select("id")
+    .eq("invite_code", inviteCode)
+    .maybeSingle();
 
-    if (lookupError || !league) {
-      console.error("[joinLeague] invite_code lookup:", lookupError);
-      return { error: "קוד הזמנה לא תקין", field: "invite_code" };
+  if (lookupError || !league?.id) {
+    console.error("[joinLeague] invite lookup error:", lookupError);
+    await recordFailedJoinAttempt(admin, user.id);
+    return { error: "קוד ההזמנה לא תקין.", field: "invite_code" };
+  }
+
+  const { error: insertError } = await admin
+    .from("league_members")
+    .insert({
+      user_id: user.id,
+      league_id: league.id,
+    });
+
+  if (insertError) {
+    if (insertError.code === "23505") {
+      await clearJoinAttempts(admin, user.id);
+      redirect(`/game/leagues/${league.id}`);
     }
 
-    leagueId = league.id as string;
-
-    const { error: memberError } = await supabase
-      .from("league_members")
-      .insert({ user_id: user.id, league_id: leagueId });
-
-    if (memberError) {
-      if (memberError.code === "23505") {
-        return { error: "אתה כבר חבר בליגה זו" };
-      }
-      console.error("[joinLeague] league_members insert error:", memberError);
-      return { error: `שגיאה בהצטרפות: ${memberError.message ?? "נסה שוב"}` };
-    }
-  } catch (err) {
-    console.error("[joinLeague] unexpected error:", err);
-    return { error: "שגיאה בלתי צפויה — נסה שוב מאוחר יותר" };
+    console.error("[joinLeague] membership insert error:", insertError);
+    return { error: "לא הצלחנו לצרף אותך לליגה כרגע." };
   }
 
-  redirect(`/game/leagues/${leagueId}`);
+  await clearJoinAttempts(admin, user.id);
+  revalidatePath("/game");
+  revalidatePath("/game/leagues");
+  redirect(`/game/leagues/${league.id}`);
+}
+
+export async function leaveLeague(
+  _prev: LeagueActionState,
+  formData: FormData,
+): Promise<LeagueActionState> {
+  const user = await requireAuthenticatedUser();
+
+  if (!user) {
+    return { error: "צריך להתחבר כדי לעזוב ליגה." };
+  }
+
+  const leagueId = normalizeUuid(formData.get("league_id"));
+  const targetUserId = normalizeUuid(formData.get("target_user_id"));
+
+  if (!leagueId || !targetUserId || user.id !== targetUserId) {
+    return { error: "בקשה לא תקינה לעזיבת ליגה." };
+  }
+
+  const admin = createAdminClient();
+  const league = await getLeagueOwnership(admin, leagueId);
+
+  if (!league) {
+    return { error: "הליגה לא נמצאה." };
+  }
+
+  if (league.owner_id === user.id) {
+    return { error: "מנהל הליגה לא יכול לעזוב. אפשר למחוק את הליגה במקום זאת." };
+  }
+
+  const { error } = await admin
+    .from("league_members")
+    .delete()
+    .eq("league_id", leagueId)
+    .eq("user_id", targetUserId);
+
+  if (error) {
+    console.error("[leaveLeague] delete error:", error);
+    return { error: "לא הצלחנו להסיר אותך מהליגה." };
+  }
+
+  revalidatePath("/game");
+  revalidatePath("/game/leagues");
+  revalidatePath(`/game/leagues/${leagueId}`);
+  redirect("/game/leagues");
+}
+
+export async function removeMember(
+  _prev: LeagueActionState,
+  formData: FormData,
+): Promise<LeagueActionState> {
+  const user = await requireAuthenticatedUser();
+
+  if (!user) {
+    return { error: "צריך להתחבר כדי לנהל את הליגה." };
+  }
+
+  const leagueId = normalizeUuid(formData.get("league_id"));
+  const targetUserId = normalizeUuid(formData.get("target_user_id"));
+
+  if (!leagueId || !targetUserId) {
+    return { error: "בקשת ההסרה לא תקינה." };
+  }
+
+  const admin = createAdminClient();
+  const league = await getLeagueOwnership(admin, leagueId);
+
+  if (!league) {
+    return { error: "הליגה לא נמצאה." };
+  }
+
+  if (league.owner_id !== user.id) {
+    return { error: "רק מנהל הליגה יכול להסיר חברים." };
+  }
+
+  if (targetUserId === user.id) {
+    return { error: "מנהל הליגה לא יכול להסיר את עצמו." };
+  }
+
+  const { error } = await admin
+    .from("league_members")
+    .delete()
+    .eq("league_id", leagueId)
+    .eq("user_id", targetUserId);
+
+  if (error) {
+    console.error("[removeMember] delete error:", error);
+    return { error: "לא הצלחנו להסיר את החבר מהליגה." };
+  }
+
+  revalidatePath("/game");
+  revalidatePath("/game/leagues");
+  revalidatePath(`/game/leagues/${leagueId}`);
+
+  return { success: true };
+}
+
+export async function deleteLeague(
+  _prev: LeagueActionState,
+  formData: FormData,
+): Promise<LeagueActionState> {
+  const user = await requireAuthenticatedUser();
+
+  if (!user) {
+    return { error: "צריך להתחבר כדי למחוק ליגה." };
+  }
+
+  const leagueId = normalizeUuid(formData.get("league_id"));
+
+  if (!leagueId) {
+    return { error: "בקשת המחיקה לא תקינה." };
+  }
+
+  const admin = createAdminClient();
+  const league = await getLeagueOwnership(admin, leagueId);
+
+  if (!league) {
+    return { error: "הליגה לא נמצאה." };
+  }
+
+  if (league.owner_id !== user.id) {
+    return { error: "רק מנהל הליגה יכול למחוק את הליגה." };
+  }
+
+  const { error } = await admin.from("leagues").delete().eq("id", leagueId);
+
+  if (error) {
+    console.error("[deleteLeague] delete error:", error);
+    return { error: "לא הצלחנו למחוק את הליגה." };
+  }
+
+  revalidatePath("/game");
+  revalidatePath("/game/leagues");
+  redirect("/game/leagues");
+}
+
+async function requireAuthenticatedUser() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  if (error) {
+    console.error("[league actions] auth error:", error);
+    return null;
+  }
+
+  return user;
+}
+
+async function getLeagueOwnership(admin: ReturnType<typeof createAdminClient>, leagueId: string) {
+  const { data, error } = await admin
+    .from("leagues")
+    .select("id, owner_id, invite_code, name")
+    .eq("id", leagueId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("[getLeagueOwnership] error:", error);
+    return null;
+  }
+
+  return data as LeagueOwnershipRow | null;
+}
+
+async function getJoinRateLimitError(
+  admin: ReturnType<typeof createAdminClient>,
+  userId: string,
+) {
+  const { data, error } = await admin
+    .from("league_join_attempts")
+    .select("user_id, attempt_count, window_started_at, last_attempt_at, blocked_until")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("[getJoinRateLimitError] error:", error);
+    return null;
+  }
+
+  const row = data as JoinAttemptRow | null;
+
+  if (!row?.blocked_until) {
+    return null;
+  }
+
+  const blockedUntil = new Date(row.blocked_until).getTime();
+
+  if (Number.isNaN(blockedUntil) || blockedUntil <= Date.now()) {
+    return null;
+  }
+
+  const minutes = Math.max(1, Math.ceil((blockedUntil - Date.now()) / 60000));
+  return `נחסמת זמנית מהצטרפות לליגות. נסה שוב בעוד כ-${minutes} דקות.`;
+}
+
+async function recordFailedJoinAttempt(
+  admin: ReturnType<typeof createAdminClient>,
+  userId: string,
+) {
+  const { data, error } = await admin
+    .from("league_join_attempts")
+    .select("user_id, attempt_count, window_started_at, last_attempt_at, blocked_until")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("[recordFailedJoinAttempt] read error:", error);
+    return;
+  }
+
+  const now = Date.now();
+  const current = data as JoinAttemptRow | null;
+  const windowStartedAt = current?.window_started_at
+    ? new Date(current.window_started_at).getTime()
+    : now;
+  const isExpired = Number.isNaN(windowStartedAt) || now - windowStartedAt > RATE_LIMIT_WINDOW_MS;
+  const nextAttemptCount = isExpired ? 1 : (current?.attempt_count ?? 0) + 1;
+  const blockedUntil =
+    nextAttemptCount >= RATE_LIMIT_MAX_ATTEMPTS
+      ? new Date(now + RATE_LIMIT_BLOCK_MS).toISOString()
+      : null;
+
+  const { error: upsertError } = await admin.from("league_join_attempts").upsert(
+    {
+      user_id: userId,
+      attempt_count: nextAttemptCount,
+      window_started_at: isExpired
+        ? new Date(now).toISOString()
+        : current?.window_started_at ?? new Date(now).toISOString(),
+      last_attempt_at: new Date(now).toISOString(),
+      blocked_until: blockedUntil,
+    },
+    { onConflict: "user_id" },
+  );
+
+  if (upsertError) {
+    console.error("[recordFailedJoinAttempt] upsert error:", upsertError);
+  }
+}
+
+async function clearJoinAttempts(
+  admin: ReturnType<typeof createAdminClient>,
+  userId: string,
+) {
+  const { error } = await admin.from("league_join_attempts").delete().eq("user_id", userId);
+
+  if (error) {
+    console.error("[clearJoinAttempts] delete error:", error);
+  }
+}
+
+function normalizeInviteCode(value: FormDataEntryValue | null) {
+  const normalized = value?.toString().trim().toUpperCase() ?? "";
+  return INVITE_CODE_REGEX.test(normalized) ? normalized : null;
+}
+
+function normalizeUuid(value: FormDataEntryValue | null) {
+  const normalized = value?.toString().trim() ?? "";
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    normalized,
+  )
+    ? normalized
+    : null;
 }

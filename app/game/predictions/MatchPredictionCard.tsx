@@ -1,19 +1,9 @@
 "use client";
 
-import { useActionState, useEffect, useState, useTransition } from "react";
+import { useActionState, useEffect, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { upsertMatchPrediction, type PredictionActionState } from "@/app/actions/predictions";
-import { getJokerBucket } from "@/lib/game/boosters";
 import type { MatchWithTeams } from "@/lib/tournament/matches";
-
-interface Props {
-  match: MatchWithTeams;
-  existingHome: number | null;
-  existingAway: number | null;
-  existingIsJoker: boolean;
-  groupJokerUsed: boolean;
-  knockoutJokerUsed: boolean;
-}
 
 const STAGE_LABELS: Record<string, string> = {
   group: "שלב הבתים",
@@ -30,18 +20,25 @@ export default function MatchPredictionCard({
   existingHome,
   existingAway,
   existingIsJoker,
-  groupJokerUsed,
-  knockoutJokerUsed,
-}: Props) {
+  isJokerSelected,
+  canUseJoker,
+  onToggleJoker,
+}: {
+  match: MatchWithTeams;
+  existingHome: number | null;
+  existingAway: number | null;
+  existingIsJoker: boolean;
+  isJokerSelected: boolean;
+  canUseJoker: boolean;
+  onToggleJoker: () => void;
+}) {
   const router = useRouter();
+  const [, startTransition] = useTransition();
   const boundAction = upsertMatchPrediction.bind(null, match.match_number, match.stage);
   const [state, formAction, isPending] = useActionState<PredictionActionState, FormData>(
     boundAction,
     null,
   );
-  const [, startTransition] = useTransition();
-  const [jokerOverride, setJokerOverride] = useState<boolean | null>(null);
-  const isJoker = jokerOverride ?? existingIsJoker;
 
   useEffect(() => {
     if (!state?.success) {
@@ -53,33 +50,23 @@ export default function MatchPredictionCard({
     });
   }, [router, startTransition, state?.savedAt, state?.success]);
 
-  const jokerBucket = getJokerBucket(match.stage);
-  const stageJokerUsed =
-    jokerBucket === "group" ? groupJokerUsed : knockoutJokerUsed;
-  const canToggleJoker = isJoker || !stageJokerUsed;
-  const disabledReason =
-    jokerBucket === "group"
-      ? "ג'וקר שלב הבתים כבר נוצל."
-      : "ג'וקר הנוקאאוט כבר נוצל.";
-
-  const homeTeamName =
-    match.homeTeam?.name_he ?? match.homeTeam?.name ?? match.home_placeholder ?? "?";
-  const awayTeamName =
-    match.awayTeam?.name_he ?? match.awayTeam?.name ?? match.away_placeholder ?? "?";
+  const homeTeamName = match.homeTeam?.name_he ?? match.homeTeam?.name ?? "נבחרת בית";
+  const awayTeamName = match.awayTeam?.name_he ?? match.awayTeam?.name ?? "נבחרת חוץ";
   const stageLabel = STAGE_LABELS[match.stage] ?? match.stage;
   const matchDate = new Date(match.date_time);
+  const disabledReason = "הג'וקר כבר שמור כרגע על משחק אחר באותו שלב.";
 
   return (
     <div
       className="overflow-hidden rounded-2xl border"
       style={{
-        borderColor: isJoker
+        borderColor: isJokerSelected
           ? "rgba(111,60,255,0.5)"
           : state?.success
             ? "rgba(95,255,123,0.4)"
             : "var(--wc-border)",
         background: "var(--wc-surface)",
-        boxShadow: isJoker ? "0 0 18px rgba(111,60,255,0.2)" : undefined,
+        boxShadow: isJokerSelected ? "0 0 18px rgba(111,60,255,0.2)" : undefined,
       }}
     >
       <div
@@ -98,7 +85,11 @@ export default function MatchPredictionCard({
       </div>
 
       <form action={formAction} className="px-4 py-4">
-        <input type="hidden" name="is_joker_applied" value={isJoker ? "true" : "false"} />
+        <input
+          type="hidden"
+          name="is_joker_applied"
+          value={isJokerSelected ? "true" : "false"}
+        />
 
         <div className="flex items-center gap-3">
           <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
@@ -139,12 +130,12 @@ export default function MatchPredictionCard({
         <div className="mt-3">
           <button
             type="button"
-            disabled={!canToggleJoker || isPending}
-            title={!canToggleJoker ? disabledReason : ""}
-            onClick={() => setJokerOverride(!isJoker)}
+            disabled={(!canUseJoker && !isJokerSelected) || isPending}
+            title={!canUseJoker && !isJokerSelected ? disabledReason : ""}
+            onClick={onToggleJoker}
             className="w-full rounded-xl py-2 text-xs font-bold transition-all disabled:cursor-not-allowed disabled:opacity-40"
             style={
-              isJoker
+              isJokerSelected
                 ? {
                     background: "rgba(111,60,255,0.2)",
                     border: "1.5px solid rgba(111,60,255,0.6)",
@@ -158,11 +149,11 @@ export default function MatchPredictionCard({
                   }
             }
           >
-            {isJoker
-              ? "🃏 ג'וקר פעיל על המשחק הזה"
-              : canToggleJoker
-                ? "🃏 הפעל ג'וקר"
-                : `🃏 ${disabledReason}`}
+            {isJokerSelected
+              ? "🎏 הג'וקר פעיל על המשחק הזה"
+              : canUseJoker
+                ? "🎏 הפעל ג'וקר"
+                : `🎏 ${disabledReason}`}
           </button>
         </div>
 
@@ -174,12 +165,12 @@ export default function MatchPredictionCard({
               </p>
             ) : state?.success ? (
               <p className="text-xs font-semibold text-wc-neon">
-                הניחוש נשמר{isJoker ? " עם ג'וקר" : ""}.
+                הניחוש נשמר{isJokerSelected ? " עם ג'וקר" : ""}.
               </p>
             ) : existingHome !== null && existingAway !== null ? (
               <p className="text-xs text-wc-fg3">
                 ניחוש קיים: {existingHome}:{existingAway}
-                {existingIsJoker ? " 🃏" : ""}
+                {existingIsJoker ? " 🎏" : ""}
               </p>
             ) : null}
           </div>

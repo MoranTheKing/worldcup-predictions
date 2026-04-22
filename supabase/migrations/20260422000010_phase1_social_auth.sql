@@ -8,9 +8,28 @@ create extension if not exists pgcrypto;
 
 create or replace function public.generate_invite_code()
 returns text
-language sql
+language plpgsql
 as $$
-  select upper(substr(encode(gen_random_bytes(6), 'hex'), 1, 10));
+declare
+  alphabet text := 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  candidate text;
+begin
+  loop
+    candidate :=
+      substr(alphabet, 1 + floor(random() * length(alphabet))::int, 1) ||
+      substr(alphabet, 1 + floor(random() * length(alphabet))::int, 1) ||
+      substr(alphabet, 1 + floor(random() * length(alphabet))::int, 1) ||
+      substr(alphabet, 1 + floor(random() * length(alphabet))::int, 1);
+
+    exit when not exists (
+      select 1
+      from public.leagues
+      where invite_code = candidate
+    );
+  end loop;
+
+  return candidate;
+end;
 $$;
 
 create table if not exists public.profiles (

@@ -40,6 +40,11 @@ export default async function PredictionsPage() {
     (teamsData ?? []) as Parameters<typeof attachTeamsToMatches>[1],
   ) as MatchWithTeams[];
 
+  const readyMatches = scheduledMatches.filter(
+    (match) => Boolean(match.homeTeam && match.awayTeam),
+  );
+  const hiddenMatchCount = scheduledMatches.length - readyMatches.length;
+
   const teams: PickerTeam[] = (teamsData ?? []).map((team) => ({
     id: String((team as { id: string }).id),
     name: (team as { name: string }).name,
@@ -108,7 +113,7 @@ export default async function PredictionsPage() {
 
   return (
     <PredictionsClient
-      matches={scheduledMatches}
+      matches={readyMatches}
       teams={teams}
       players={players}
       existingPredictions={existingPredictions}
@@ -116,6 +121,7 @@ export default async function PredictionsPage() {
       isAuthenticated={Boolean(user)}
       groupJokerUsed={groupJokerUsed}
       knockoutJokerUsed={knockoutJokerUsed}
+      hiddenMatchCount={hiddenMatchCount}
     />
   );
 }

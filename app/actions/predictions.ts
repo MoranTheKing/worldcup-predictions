@@ -31,6 +31,29 @@ export async function upsertMatchPrediction(
     return { error: "עליך להתחבר כדי לשמור ניחוש." };
   }
 
+  const { data: matchRow, error: matchError } = await supabase
+    .from("matches")
+    .select("status, home_team_id, away_team_id")
+    .eq("match_number", matchId)
+    .maybeSingle();
+
+  if (matchError) {
+    console.error("[upsertMatchPrediction] match lookup error:", matchError);
+    return { error: "לא הצלחנו לאמת את המשחק הזה כרגע." };
+  }
+
+  const matchStatus = (matchRow as { status?: string } | null)?.status ?? null;
+  const homeTeamId = (matchRow as { home_team_id?: string | null } | null)?.home_team_id ?? null;
+  const awayTeamId = (matchRow as { away_team_id?: string | null } | null)?.away_team_id ?? null;
+
+  if (matchStatus !== "scheduled") {
+    return { error: "אפשר לנחש רק משחקים שעוד לא התחילו." };
+  }
+
+  if (!homeTeamId || !awayTeamId) {
+    return { error: "המשחק הזה עדיין לא נקבע סופית ולכן אינו פתוח לניחוש." };
+  }
+
   const homeScore = parseScore(formData.get("home_score"));
   const awayScore = parseScore(formData.get("away_score"));
 
