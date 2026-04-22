@@ -1,8 +1,8 @@
-# מונדיאל 2026 — Design System
+﻿# ׳׳•׳ ׳“׳™׳׳ 2026 ג€” Design System
 
 ## Product Context
 
-**תחזיות מונדיאל 2026** is a Hebrew-first, RTL, mobile-first Progressive Web App for predicting FIFA World Cup 2026 match results. Users log in, submit match-by-match score predictions, use Joker boosts for score multipliers, compete in private leagues with friends, and track their standing on leaderboards.
+**׳×׳—׳–׳™׳•׳× ׳׳•׳ ׳“׳™׳׳ 2026** is a Hebrew-first, RTL, mobile-first Progressive Web App for predicting FIFA World Cup 2026 match results. Users log in, submit match-by-match score predictions, use Joker boosts for score multipliers, compete in private leagues with friends, and track their standing on leaderboards.
 
 - **Stack:** Next.js 15 (App Router) + Supabase (auth + DB) + Tailwind CSS v4
 - **Language:** Hebrew (RTL), direction=`rtl`, logical CSS properties throughout
@@ -10,8 +10,8 @@
 - **Data:** api-football.com for live match sync; Supabase for user predictions, leagues, standings
 
 ### Sources Provided
-- **Codebase:** `worldcup-predictions/` (mounted local folder — Next.js source)
-- **Logo:** `assets/wc2026-logo.jpg` — Official FIFA World Cup 2026 logo (trophy graphic + USA | CANADA | MÉXICO wordmark)
+- **Codebase:** `worldcup-predictions/` (mounted local folder ג€” Next.js source)
+- **Logo:** `assets/wc2026-logo.jpg` ג€” Official FIFA World Cup 2026 logo (trophy graphic + USA | CANADA | Mֳ‰XICO wordmark)
 - **GitHub:** `MoranTheKing/worldcup-predictions@master` (same codebase, accessible via GitHub API)
 
 ---
@@ -23,9 +23,9 @@
 | Login | `/login` | Email + Google OAuth |
 | Signup | `/signup` | Email flow + Google |
 | Onboarding | `/onboarding` | Post-signup setup (nickname, outright bets) |
-| Dashboard / Matches | `/dashboard` | Main tab — match cards grid with prediction inputs |
-| Tournament — Groups | `/dashboard/tournament` | 12-group table with standings |
-| Tournament — Knockout | `/dashboard/tournament` | Bracket tree (32→Final) |
+| Dashboard / Matches | `/dashboard` | Main tab ג€” match cards grid with prediction inputs |
+| Tournament ג€” Groups | `/dashboard/tournament` | 12-group table with standings |
+| Tournament ג€” Knockout | `/dashboard/tournament` | Bracket tree (32ג†’Final) |
 | Leagues | `/dashboard/leagues` | Create/join private leagues |
 | Profile | `/dashboard/profile` | Nickname edit, jokers display, outright bet pickers |
 
@@ -34,30 +34,30 @@
 ## CONTENT FUNDAMENTALS
 
 ### Language & Tone
-- **Language:** Hebrew (עברית) — all UI copy is in Hebrew; only brand terms like "Predictions" and team names may appear in Latin
+- **Language:** Hebrew (׳¢׳‘׳¨׳™׳×) ג€” all UI copy is in Hebrew; only brand terms like "Predictions" and team names may appear in Latin
 - **Voice:** Energetic, gamified, sport-fan enthusiasm. Short punchy phrases. Uses football slang naturally.
 - **Casing:** Title case is NOT used in Hebrew (language-inherent). Sentence starts with capital first letter of first word only.
-- **Emoji:** Used selectively for gamification signals only — `🔥` (hot streak ≥3), `🐢` (cold streak ≤-5), `🏆` (winner/trophy), `⚽` (branding), `➕`/`🔑` (action buttons in Leagues). Not used decoratively in forms or body text.
+- **Emoji:** Used selectively for gamification signals only ג€” `נ”¥` (hot streak ג‰¥3), `נ¢` (cold streak ג‰₪-5), `נ†` (winner/trophy), `ג½` (branding), `ג•`/`נ”‘` (action buttons in Leagues). Not used decoratively in forms or body text.
 - **Numbers:** Arabic numerals throughout (standard in Hebrew UI)
 - **Tone examples:**
-  - "לוח המשחקים של מונדיאל 2026" (neutral, factual)
-  - "ג׳וקר = ×3 על תוצאה מדויקת" (gamified, punchy)
-  - "התחרה מול חברים בליגות פרטיות" (social, competitive)
-  - "בדוק את האימייל שלך" (friendly, direct)
-- **I/You:** Second person "אתה/את" implied; UI uses direct imperative ("בחר", "הזן", "שמור") without pronoun
-- **Error messages:** Short, specific, non-technical: "אימייל או סיסמה שגויים", "הכינוי הזה תפוס, בחר אחר"
+  - "׳׳•׳— ׳”׳׳©׳—׳§׳™׳ ׳©׳ ׳׳•׳ ׳“׳™׳׳ 2026" (neutral, factual)
+  - "׳’׳³׳•׳§׳¨ = ֳ—3 ׳¢׳ ׳×׳•׳¦׳׳” ׳׳“׳•׳™׳§׳×" (gamified, punchy)
+  - "׳”׳×׳—׳¨׳” ׳׳•׳ ׳—׳‘׳¨׳™׳ ׳‘׳׳™׳’׳•׳× ׳₪׳¨׳˜׳™׳•׳×" (social, competitive)
+  - "׳‘׳“׳•׳§ ׳׳× ׳”׳׳™׳׳™׳™׳ ׳©׳׳" (friendly, direct)
+- **I/You:** Second person "׳׳×׳”/׳׳×" implied; UI uses direct imperative ("׳‘׳—׳¨", "׳”׳–׳", "׳©׳׳•׳¨") without pronoun
+- **Error messages:** Short, specific, non-technical: "׳׳™׳׳™׳™׳ ׳׳• ׳¡׳™׳¡׳׳” ׳©׳’׳•׳™׳™׳", "׳”׳›׳™׳ ׳•׳™ ׳”׳–׳” ׳×׳₪׳•׳¡, ׳‘׳—׳¨ ׳׳—׳¨"
 
 ### Key Terms Glossary
 | Hebrew | English | Context |
 |---|---|---|
-| ניחוש / ניחושים | Prediction/s | Core mechanic |
-| ג׳וקר | Joker | Score multiplier boost (×3) |
-| רצף | Streak | Consecutive correct/wrong predictions |
-| מלך השערים | Top Scorer | Golden Boot |
-| בית | Group | Tournament group (Beit = house) |
-| נוקאאוט | Knockout | Bracket stage |
-| שלב הבתים | Group Stage | |
-| ליגה / ליגות | League/s | Private friend leagues |
+| ׳ ׳™׳—׳•׳© / ׳ ׳™׳—׳•׳©׳™׳ | Prediction/s | Core mechanic |
+| ׳’׳³׳•׳§׳¨ | Joker | Score multiplier boost (ֳ—3) |
+| ׳¨׳¦׳£ | Streak | Consecutive correct/wrong predictions |
+| ׳׳׳ ׳”׳©׳¢׳¨׳™׳ | Top Scorer | Golden Boot |
+| ׳‘׳™׳× | Group | Tournament group (Beit = house) |
+| ׳ ׳•׳§׳׳׳•׳˜ | Knockout | Bracket stage |
+| ׳©׳׳‘ ׳”׳‘׳×׳™׳ | Group Stage | |
+| ׳׳™׳’׳” / ׳׳™׳’׳•׳× | League/s | Private friend leagues |
 
 ---
 
@@ -66,7 +66,7 @@
 ### Color System
 Palette extracted from the official FIFA World Cup 2026 logo:
 
-#### Base Palette (Dark Mode — Default)
+#### Base Palette (Dark Mode ג€” Default)
 | Token | Value | Usage |
 |---|---|---|
 | `--wc-bg` | `#060D1A` | Page background (ultra-dark navy) |
@@ -90,7 +90,7 @@ Palette extracted from the official FIFA World Cup 2026 logo:
 | `--wc-neon-green-glow` | `rgba(0,230,90,0.15)` | Glow shadow on neon elements |
 | `--wc-purple` | `#7C3AED` | Joker boost, premium gamification elements |
 | `--wc-gold` | `#F5C518` | Trophy, winner highlights, final match |
-| `--wc-fire` | `#FF4D1C` | Fire streak badge (🔥), hot states |
+| `--wc-fire` | `#FF4D1C` | Fire streak badge (נ”¥), hot states |
 
 #### Text
 | Token | Value | Usage |
@@ -100,19 +100,19 @@ Palette extracted from the official FIFA World Cup 2026 logo:
 | `--wc-fg3` | `#4A6080` | Placeholder, disabled |
 
 ### Typography
-- **Display font:** `Secular One` (Google Fonts) — Bold, geometric, excellent Hebrew RTL support. Used for major headings, score displays, group labels, gamification titles. Conveys the energetic World Cup feel.
-- **Functional font:** `Heebo` (Google Fonts) — Clean, highly readable Hebrew font. Used for ALL functional UI: forms, inputs, body text, nav labels, descriptions, error messages.
+- **Display font:** `Secular One` (Google Fonts) ג€” Bold, geometric, excellent Hebrew RTL support. Used for major headings, score displays, group labels, gamification titles. Conveys the energetic World Cup feel.
+- **Functional font:** `Heebo` (Google Fonts) ג€” Clean, highly readable Hebrew font. Used for ALL functional UI: forms, inputs, body text, nav labels, descriptions, error messages.
 - **Font stacks:**
   - Display: `'Secular One', 'Heebo', sans-serif`
   - Body: `'Heebo', Arial, sans-serif`
-- **Scale:** 11px (micro labels) → 13px (body small) → 15px (body) → 20px (section heads) → 28px (page titles) → 40px+ (hero/score display)
+- **Scale:** 11px (micro labels) ג†’ 13px (body small) ג†’ 15px (body) ג†’ 20px (section heads) ג†’ 28px (page titles) ג†’ 40px+ (hero/score display)
 - **Weight:** Heebo 400 (body), 600 (semibold), 700 (bold); Secular One is inherently 400 (display-weight)
 
 ### Backgrounds & Surfaces
-- **Default:** Ultra-dark navy `#060D1A` — feels like night stadium lighting
-- **Cards:** `#0D1B2E` with `1px solid #1E2F4A` border — glassmorphism variant uses `backdrop-blur-md` + `rgba(13,27,46,0.7)`
+- **Default:** Ultra-dark navy `#060D1A` ג€” feels like night stadium lighting
+- **Cards:** `#0D1B2E` with `1px solid #1E2F4A` border ג€” glassmorphism variant uses `backdrop-blur-md` + `rgba(13,27,46,0.7)`
 - **Active card highlight:** subtle neon green left border (4px) or neon green glow box-shadow
-- **NO pure black (#000)** — always keep navy undertone for warmth
+- **NO pure black (#000)** ג€” always keep navy undertone for warmth
 
 ### Spacing & Layout
 - Mobile-first; design width: 390px (iPhone 14)
@@ -137,7 +137,7 @@ Palette extracted from the official FIFA World Cup 2026 logo:
 - Hover states: slightly lighter surface (`--wc-surface-raised`), no dramatic color changes for functional elements
 - Active/press: `scale(0.97)` for tappable cards
 - Neon glow pulse: `animation: glow-pulse 2s ease-in-out infinite` for active joker
-- No bouncy spring animations — athletic confidence, not playful
+- No bouncy spring animations ג€” athletic confidence, not playful
 
 ### Hover & Press States
 - Buttons: `opacity: 0.85` on hover, `scale(0.97)` on press
@@ -147,7 +147,7 @@ Palette extracted from the official FIFA World Cup 2026 logo:
 
 ### Iconography (see ICONOGRAPHY below)
 - Emoji for gamification signals only
-- No custom SVG icon system currently — app uses emoji
+- No custom SVG icon system currently ג€” app uses emoji
 - Google Material or Phosphor icons recommended for future expansion
 
 ### Corner Radii
@@ -167,30 +167,60 @@ Palette extracted from the official FIFA World Cup 2026 logo:
 ## ICONOGRAPHY
 
 The app currently uses **emoji as icons** exclusively:
-- `⚽` — app branding, matches
-- `🏆` — tournament, winner
-- `🏅` — leagues
-- `👤` — profile
-- `🗓️` — matches/calendar
-- `🔥` — hot streak (≥3 consecutive correct)
-- `🐢` — cold streak (≤-5)
-- `➕` — create action
-- `🔑` — join action
-- `📧` — email confirmation
-- `✏️` — edit action
-- `🔒` — locked state
+- `ג½` ג€” app branding, matches
+- `נ†` ג€” tournament, winner
+- `נ…` ג€” leagues
+- `נ‘₪` ג€” profile
+- `נ—“ן¸` ג€” matches/calendar
+- `נ”¥` ג€” hot streak (ג‰¥3 consecutive correct)
+- `נ¢` ג€” cold streak (ג‰₪-5)
+- `ג•` ג€” create action
+- `נ”‘` ג€” join action
+- `נ“§` ג€” email confirmation
+- `גן¸` ג€” edit action
+- `נ”’` ג€” locked state
 
 **No SVG icon library is used.** The only SVG is:
-- `public/avatar-player.svg` — generic player silhouette avatar
-- `public/globe.svg`, `public/next.svg` etc. — Next.js boilerplate (not used in UI)
+- `public/avatar-player.svg` ג€” generic player silhouette avatar
+- `public/globe.svg`, `public/next.svg` etc. ג€” Next.js boilerplate (not used in UI)
 
-**Recommendation:** Adopt [Phosphor Icons](https://phosphoricons.com/) — excellent RTL-neutral stroke icons that work well in dark UIs. Or keep emoji for the gamified personality of the product.
+**Recommendation:** Adopt [Phosphor Icons](https://phosphoricons.com/) ג€” excellent RTL-neutral stroke icons that work well in dark UIs. Or keep emoji for the gamified personality of the product.
 
 ---
 
 ## File Index
 
 ```
+
+## Phase 1 Social Layer
+
+As of April 22, 2026, Phase 1 of the social prediction architecture is now wired into the app.
+
+What is live:
+
+- Global Supabase auth is now initialized at the root layout, so one auth state wraps the whole application
+- A shared auth provider hydrates `auth.users` plus the app profile snapshot from `profiles`, with a fallback to legacy `users`
+- The public navbar outside the dashboard now switches between `Login` and `display_name + Logout`
+- The dashboard shell now reads the same global auth state instead of owning a separate auth island
+- `proxy.ts` now protects authenticated surfaces such as `/dashboard`, `/dashboard/matches`, `/dashboard/profile`, `/dashboard/leagues`, `/leagues`, `/predictions`, `/onboarding`, and `/dev-tools`
+- Public viewing remains available for `/dashboard/tournament`
+- `/login` and `/signup` now preserve the requested `next` route so protected-route redirects return users to the page they originally requested
+
+Supabase schema work:
+
+- Safe migration: `supabase/migrations/20260422000010_phase1_social_auth.sql`
+- The migration creates or extends:
+  `profiles`, `leagues.invite_code`, `league_members`, `predictions`, `tournament_predictions`
+- It backfills legacy data where possible:
+  `users -> profiles`, `league_participants -> league_members`, `bets -> predictions`, `outright_bets -> tournament_predictions`
+- RLS policies are included for all new Phase 1 social tables
+
+Still intentionally out of scope for this phase:
+
+- match scoring logic for prediction points
+- prediction entry UI on match cards
+- league leaderboards powered by the new prediction tables
+- social invite/join UX beyond the schema, auth, and protection groundwork
 
 ## Tournament Engine Snapshot
 
@@ -204,7 +234,7 @@ As of April 21, 2026, the live tournament implementation also includes:
 - An intentionally non-sequential render order for knockout rows, matching the official FIFA crossing graph so the branches stay untangled
 - Compact knockout cards (`max-w-[220px]`) and centered grids for the early rounds
 - A nested `flex-nowrap` tree shell with horizontal scrolling, so responsive wrapping never breaks connector alignment
-- A center finals block that highlights `הגמר` in gold and `מקום 3` in bronze
+- A center finals block that highlights `׳”׳’׳׳¨` in gold and `׳׳§׳•׳ 3` in bronze
 - Global elimination persistence in `teams.is_eliminated`, covering eliminated 4th-place teams, locked bottom-4 third-place teams, and knockout losers with the semi-final / 3rd-place exception
 - Dev Tools flows where `Finish All Matches` and per-match `RESET` save immediately and trigger tournament sync without needing an extra manual save step
 - Neutral Best 3rd Place table rendering until qualification/elimination is locked, with the Group column removed from that table
@@ -218,27 +248,28 @@ Operational source files:
 - `app/dashboard/matches/MatchesClient.tsx`
 - `TOURNAMENT_RULES.md`
 - `HANDOFF_2026-04-21.md`
-README.md                    — This file
-SKILL.md                     — Agent skill definition
-colors_and_type.css          — CSS custom properties (colors + typography)
+README.md                    ג€” This file
+SKILL.md                     ג€” Agent skill definition
+colors_and_type.css          ג€” CSS custom properties (colors + typography)
 assets/
-  wc2026-logo.jpg            — Official FIFA World Cup 2026 logo
+  wc2026-logo.jpg            ג€” Official FIFA World Cup 2026 logo
 preview/
-  colors-brand.html          — Brand color swatches
-  colors-semantic.html       — Semantic / state colors
-  colors-gamification.html   — Gamification accent colors
-  type-display.html          — Display type specimens (Secular One)
-  type-body.html             — Body type specimens (Heebo)
-  type-scale.html            — Full type scale
-  spacing-tokens.html        — Spacing, radius, shadow tokens
-  components-buttons.html    — Button states
-  components-cards.html      — Match card, league card variants
-  components-nav.html        — Bottom nav + sidebar
-  components-badges.html     — Streak badges, joker pill, status tags
-  components-inputs.html     — Form inputs + dropdowns
-  components-tables.html     — Group standings table
+  colors-brand.html          ג€” Brand color swatches
+  colors-semantic.html       ג€” Semantic / state colors
+  colors-gamification.html   ג€” Gamification accent colors
+  type-display.html          ג€” Display type specimens (Secular One)
+  type-body.html             ג€” Body type specimens (Heebo)
+  type-scale.html            ג€” Full type scale
+  spacing-tokens.html        ג€” Spacing, radius, shadow tokens
+  components-buttons.html    ג€” Button states
+  components-cards.html      ג€” Match card, league card variants
+  components-nav.html        ג€” Bottom nav + sidebar
+  components-badges.html     ג€” Streak badges, joker pill, status tags
+  components-inputs.html     ג€” Form inputs + dropdowns
+  components-tables.html     ג€” Group standings table
 ui_kits/
   app/
-    README.md                — UI kit documentation
-    index.html               — Interactive mobile prototype (main deliverable)
+    README.md                ג€” UI kit documentation
+    index.html               ג€” Interactive mobile prototype (main deliverable)
 ```
+

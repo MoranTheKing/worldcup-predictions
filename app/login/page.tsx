@@ -2,12 +2,14 @@
 
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = createClient();
+  const nextPath = searchParams.get("next") || "/dashboard";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -18,25 +20,37 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
-      setError("אימייל או סיסמה שגויים");
+
+    const { error: authError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (authError) {
+      setError("האימייל או הסיסמה שגויים");
     } else {
-      router.push("/dashboard");
+      router.push(nextPath);
       router.refresh();
     }
+
     setLoading(false);
   }
 
   async function handleGoogleLogin() {
     setLoading(true);
     setError(null);
-    const { error } = await supabase.auth.signInWithOAuth({
+
+    const { error: authError } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`,
+      },
     });
-    if (error) setError("שגיאה בהתחברות עם Google");
-    setLoading(false);
+
+    if (authError) {
+      setError("שגיאה בהתחברות עם Google");
+      setLoading(false);
+    }
   }
 
   return (
@@ -44,13 +58,13 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
           <div className="wc-badge mx-auto w-fit text-sm text-wc-fg2">
-            <span className="text-wc-magenta">●</span>
+            <span className="text-wc-magenta">✦</span>
             <span>כניסה לאפליקציית התחזיות</span>
           </div>
-          <div className="mt-5 text-5xl">⚽</div>
+          <div className="mt-5 text-5xl">🏆</div>
           <h1 className="wc-display mt-4 text-5xl text-wc-fg1">מונדיאל 2026</h1>
           <p className="mt-3 text-sm leading-7 text-wc-fg2">
-            התחבר כדי להמשיך אל הליגות, התחזיות והטורניר החי.
+            התחבר כדי להמשיך לליגות, תחזיות ודפים אישיים מתוך session גלובלי אחד.
           </p>
         </div>
 
@@ -104,7 +118,7 @@ export default function LoginPage() {
               disabled={loading}
               className="wc-button-primary mt-2 w-full px-4 py-3.5 text-sm disabled:opacity-50"
             >
-              {loading ? "מתחבר..." : "התחברות"}
+              {loading ? "מתחבר..." : "Login"}
             </button>
           </form>
         </div>

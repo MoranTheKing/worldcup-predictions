@@ -1,42 +1,35 @@
 "use client";
 
-import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 const NAV_ITEMS = [
   { href: "/dashboard/matches", icon: "🎯", label: "משחקים" },
   { href: "/dashboard/tournament", icon: "🏆", label: "טורניר" },
   { href: "/dashboard/leagues", icon: "👥", label: "ליגות" },
-  { href: "/dashboard/profile", icon: "🧤", label: "פרופיל" },
+  { href: "/dashboard/profile", icon: "🧭", label: "פרופיל" },
 ];
 
 interface Props {
-  username: string;
-  streak: number;
   children: React.ReactNode;
 }
 
-export default function DashboardShell({ username, streak, children }: Props) {
+export default function DashboardShell({ children }: Props) {
   const pathname = usePathname();
-  const router = useRouter();
+  const { displayName, isAuthenticated, isSigningOut, profile, signOut } = useAuth();
 
   function isActive(href: string) {
     if (href === "/dashboard/matches") {
       return pathname === "/dashboard" || pathname.startsWith("/dashboard/matches");
     }
+
     return pathname.startsWith(href);
   }
 
-  async function handleSignOut() {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.push("/login");
-    router.refresh();
-  }
-
+  const streak = profile?.currentStreak ?? 0;
   const streakBadge = streak >= 3 ? "🔥" : streak <= -5 ? "🐢" : null;
-  const initial = username.charAt(0).toUpperCase();
+  const initial = displayName.charAt(0).toUpperCase();
   const streakTone =
     streak > 0
       ? "bg-[rgba(95,255,123,0.12)] text-wc-neon"
@@ -53,10 +46,12 @@ export default function DashboardShell({ username, streak, children }: Props) {
               <div className="text-start">
                 <p className="text-xs font-semibold uppercase tracking-[0.32em] text-wc-neon">FIFA 2026</p>
                 <div className="wc-display mt-3 text-4xl text-wc-fg1">מונדיאל</div>
-                <p className="mt-2 text-sm text-wc-fg3">תחזיות, ליגות וטורניר בעיצוב גיימיפייד</p>
+                <p className="mt-2 text-sm text-wc-fg3">
+                  תחזיות, ליגות וטורניר בעיצוב גיימיפייד עם התחברות גלובלית.
+                </p>
               </div>
               <div className="rounded-2xl bg-[radial-gradient(circle_at_center,_rgba(95,255,123,0.45),_rgba(95,255,123,0.06)_64%,_transparent_70%)] p-3 text-2xl">
-                ⚽
+                🏟️
               </div>
             </div>
           </div>
@@ -91,28 +86,46 @@ export default function DashboardShell({ username, streak, children }: Props) {
 
           <div className="border-t border-white/10 p-4">
             <div className="rounded-[1.5rem] border border-white/8 bg-white/5 p-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,var(--wc-violet),var(--wc-magenta))] text-base font-black text-white">
-                  {initial}
-                </div>
-                <div className="min-w-0 flex-1 text-start">
-                  <p className="truncate text-sm font-bold text-wc-fg1">
-                    {username} {streakBadge}
-                  </p>
-                  <p className="mt-1 text-xs text-wc-fg3">פרופיל פעיל לעונת התחזיות</p>
-                </div>
-              </div>
+              {isAuthenticated ? (
+                <>
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,var(--wc-violet),var(--wc-magenta))] text-base font-black text-white">
+                      {initial}
+                    </div>
+                    <div className="min-w-0 flex-1 text-start">
+                      <p className="truncate text-sm font-bold text-wc-fg1">
+                        {displayName} {streakBadge}
+                      </p>
+                      <p className="mt-1 text-xs text-wc-fg3">פרופיל פעיל לעונת התחזיות</p>
+                    </div>
+                  </div>
 
-              <div className={`mt-4 inline-flex rounded-full px-3 py-1 text-xs font-semibold ${streakTone}`}>
-                {streak > 0 ? `+${streak} רצף חם` : streak < 0 ? `${streak} רצף` : "ללא רצף"}
-              </div>
+                  <div className={`mt-4 inline-flex rounded-full px-3 py-1 text-xs font-semibold ${streakTone}`}>
+                    {streak > 0 ? `+${streak} רצף חם` : streak < 0 ? `${streak} רצף` : "ללא רצף"}
+                  </div>
 
-              <button
-                onClick={handleSignOut}
-                className="wc-button-secondary mt-4 w-full px-4 py-3 text-sm"
-              >
-                יציאה מהחשבון
-              </button>
+                  <button
+                    onClick={signOut}
+                    disabled={isSigningOut}
+                    className="wc-button-secondary mt-4 w-full px-4 py-3 text-sm disabled:opacity-50"
+                  >
+                    {isSigningOut ? "מתנתק..." : "Logout"}
+                  </button>
+                </>
+              ) : (
+                <div className="space-y-4 text-start">
+                  <div>
+                    <p className="text-sm font-bold text-wc-fg1">כניסה גלובלית</p>
+                    <p className="mt-1 text-xs text-wc-fg3">
+                      ליגות, תחזיות ודפים אישיים נפתחים אחרי התחברות אחת לכל האפליקציה.
+                    </p>
+                  </div>
+
+                  <Link href="/login" className="wc-button-primary block w-full px-4 py-3 text-center text-sm">
+                    Login
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -126,12 +139,20 @@ export default function DashboardShell({ username, streak, children }: Props) {
           </div>
 
           <div className="flex items-center gap-2">
-            <span className={`rounded-full px-3 py-1 text-[11px] font-semibold ${streakTone}`}>
-              {streak > 0 ? `+${streak}` : streak < 0 ? `${streak}` : "0"}
-            </span>
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,var(--wc-neon),var(--wc-violet))] font-black text-[color:var(--wc-text-inverse)]">
-              {initial}
-            </div>
+            {isAuthenticated ? (
+              <>
+                <span className={`rounded-full px-3 py-1 text-[11px] font-semibold ${streakTone}`}>
+                  {streak > 0 ? `+${streak}` : streak < 0 ? `${streak}` : "0"}
+                </span>
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,var(--wc-neon),var(--wc-violet))] font-black text-[color:var(--wc-text-inverse)]">
+                  {initial}
+                </div>
+              </>
+            ) : (
+              <Link href="/login" className="wc-button-primary px-4 py-2 text-xs">
+                Login
+              </Link>
+            )}
           </div>
         </div>
       </header>

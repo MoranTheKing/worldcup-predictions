@@ -2,10 +2,13 @@
 
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 
 export default function SignupPage() {
+  const searchParams = useSearchParams();
   const supabase = createClient();
+  const nextPath = searchParams.get("next") || "/dashboard";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -17,28 +20,39 @@ export default function SignupPage() {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    const { error } = await supabase.auth.signUp({
+
+    const { error: authError } = await supabase.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`,
+      },
     });
-    if (error) {
-      setError(error.message === "User already registered" ? "האימייל הזה כבר רשום" : "שגיאה בהרשמה, נסה שוב");
+
+    if (authError) {
+      setError(authError.message === "User already registered" ? "האימייל הזה כבר רשום" : "שגיאה בהרשמה, נסה שוב");
     } else {
       setSuccess(true);
     }
+
     setLoading(false);
   }
 
   async function handleGoogleLogin() {
     setLoading(true);
     setError(null);
-    const { error } = await supabase.auth.signInWithOAuth({
+
+    const { error: authError } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`,
+      },
     });
-    if (error) setError("שגיאה בהתחברות עם Google");
-    setLoading(false);
+
+    if (authError) {
+      setError("שגיאה בהתחברות עם Google");
+      setLoading(false);
+    }
   }
 
   if (success) {
@@ -48,7 +62,7 @@ export default function SignupPage() {
           <div className="text-5xl">📨</div>
           <h2 className="wc-display mt-4 text-4xl text-wc-fg1">בדוק את האימייל שלך</h2>
           <p className="mt-4 text-sm leading-7 text-wc-fg2">
-            שלחנו לך קישור אימות ל-{email}. לאחר אישור תוכל להתחבר.
+            שלחנו לך קישור אימות ל-{email}. אחרי האישור תוכל להיכנס ולהמשיך למסך שביקשת.
           </p>
           <Link href="/login" className="mt-6 inline-block text-sm font-semibold text-wc-neon underline underline-offset-4">
             חזרה לדף ההתחברות
@@ -63,13 +77,13 @@ export default function SignupPage() {
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
           <div className="wc-badge mx-auto w-fit text-sm text-wc-fg2">
-            <span className="text-wc-neon">●</span>
+            <span className="text-wc-neon">✦</span>
             <span>פתיחת חשבון חדש</span>
           </div>
-          <div className="mt-5 text-5xl">⚽</div>
+          <div className="mt-5 text-5xl">🏆</div>
           <h1 className="wc-display mt-4 text-5xl text-wc-fg1">הרשמה</h1>
           <p className="mt-3 text-sm leading-7 text-wc-fg2">
-            הצטרף לליגות, בחר זוכה ומלך שערים ותתחיל לאסוף נקודות.
+            הצטרף לליגות, נחש תוצאות והתחל לצבור נקודות עם זהות גלובלית אחת לכל האפליקציה.
           </p>
         </div>
 
@@ -119,7 +133,7 @@ export default function SignupPage() {
               disabled={loading}
               className="wc-button-primary mt-2 w-full px-4 py-3.5 text-sm disabled:opacity-50"
             >
-              {loading ? "נרשם..." : "יצירת חשבון"}
+              {loading ? "נרשם..." : "Create account"}
             </button>
           </form>
         </div>

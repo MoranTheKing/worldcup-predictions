@@ -1,4 +1,4 @@
-# Official FIFA World Cup 2026 Tournament Rules
+﻿# Official FIFA World Cup 2026 Tournament Rules
 
 This repo calculates standings and knockout progression from the `matches` table. The rules below describe the current implemented behavior as of April 21, 2026.
 
@@ -159,10 +159,10 @@ Responsive bracket implementation:
 - The bracket now uses a nested flexbox tree instead of flat wrapped rows, so every parent match stays centered over or under its exact child branch
 - Connectors are drawn inside each branch container with simple CSS line segments, which keeps them locked to the correct child pair
 - The outer bracket shell uses `overflow-x-auto`, `overflow-y-hidden`, `min-w-max`, and `flex-nowrap` so the tree never wraps
-- The UI no longer shows labels such as `המסלול העליון` or `המסלול התחתון`
+- The UI no longer shows labels such as `׳”׳׳¡׳׳•׳ ׳”׳¢׳׳™׳•׳` or `׳”׳׳¡׳׳•׳ ׳”׳×׳—׳×׳•׳`
 - Early-round cards are intentionally compact (`max-w-[220px]`) so the bracket stays readable on mobile without horizontal scrolling
-- The Final card keeps the gold treatment and explicit label `הגמר`
-- The 3rd Place card uses a bronze accent and the explicit label `מקום 3`
+- The Final card keeps the gold treatment and explicit label `׳”׳’׳׳¨`
+- The 3rd Place card uses a bronze accent and the explicit label `׳׳§׳•׳ 3`
 - The bracket now relies on vertical scrolling, compact cards, and centered grids instead of shrinking the whole tree to fit the viewport
 
 ## Global Elimination Sync
@@ -205,7 +205,7 @@ Operational behavior:
 
 The local group standings table keeps the 3rd-place pill text compact:
 
-- The pill text is always `מקום 3`
+- The pill text is always `׳׳§׳•׳ 3`
 - Green means the team is globally inside the top 8 third-place qualifiers
 - Red means the team is globally outside the top 8 and mathematically out
 - The Tournament parent computes the global Best 3rd Place ranking first and passes those team IDs down to each group table
@@ -252,7 +252,7 @@ Important rule:
 
 ## Best 3rd Place Table UI
 
-The `המקום השלישי` table on the Tournament page is now intentionally neutral until status is sealed.
+The `׳”׳׳§׳•׳ ׳”׳©׳׳™׳©׳™` table on the Tournament page is now intentionally neutral until status is sealed.
 
 Current UI behavior:
 
@@ -260,7 +260,44 @@ Current UI behavior:
   it always extracts the team currently sitting 3rd in each group table and re-sorts the 12 rows immediately from live scores
 - live ordering uses the global tiebreak stack for this table:
   points -> goal difference -> goals scored -> fair play -> FIFA ranking
-- `העפלה` and `הדחה` badges only render when `entry.isLocked === true`
+- `׳”׳¢׳₪׳׳”` and `׳”׳“׳—׳”` badges only render when `entry.isLocked === true`
 - green and red row highlights only render when the locked status is final
 - pending rows stay neutral even if they are currently inside the top 8 or bottom 4 by array order
-- the `בית` column has been removed from this table to keep it focused on ranking metrics only
+- the `׳‘׳™׳×` column has been removed from this table to keep it focused on ranking metrics only
+
+## Phase 1 Auth And Social Foundation
+
+As of April 22, 2026, authentication is now global for the full app instead of being isolated inside the dashboard.
+
+Current architecture:
+
+- `app/layout.tsx` now hydrates the Supabase user plus the app profile snapshot before rendering the rest of the tree
+- `components/auth/AuthProvider.tsx` owns the shared client auth context for the whole application
+- `components/AppNavbar.tsx` reads that global auth state and switches between `Login` and `display_name + Logout`
+- `components/DashboardShell.tsx` now consumes the same shared auth context instead of relying on dashboard-only props
+
+Protected routing:
+
+- `proxy.ts` is now the single route-protection entrypoint (Next.js 16 replaces middleware with proxy for this project)
+- protected surfaces currently include:
+  `/dashboard`, `/dashboard/matches`, `/dashboard/profile`, `/dashboard/leagues`, `/leagues`, `/predictions`, `/onboarding`, `/dev-tools`
+- `/dashboard/tournament` remains intentionally public so the live tournament view stays accessible without login
+- `/login` and `/signup` redirect authenticated users back to `/dashboard`
+- protected-route redirects preserve the original requested path through the `next` query param
+
+Supabase schema work:
+
+- Safe migration file:
+  `supabase/migrations/20260422000010_phase1_social_auth.sql`
+- The migration uses `create table if not exists` plus `alter table ... add column if not exists`
+- It creates or extends:
+  `profiles`, `leagues.invite_code`, `league_members`, `predictions`, `tournament_predictions`
+- It also backfills from the legacy tables already used by the app:
+  `users`, `league_participants`, `bets`, `outright_bets`
+
+Still intentionally out of scope for this phase:
+
+- prediction scoring rules
+- league ranking logic based on the new `predictions` tables
+- full invite/join UX on top of the new `invite_code` schema
+
