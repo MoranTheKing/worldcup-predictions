@@ -208,6 +208,7 @@ As of April 21, 2026, the live tournament implementation also includes:
 - Global elimination persistence in `teams.is_eliminated`, covering eliminated 4th-place teams, locked bottom-4 third-place teams, and knockout losers with the semi-final / 3rd-place exception
 - Dev Tools flows where `Finish All Matches` and per-match `RESET` save immediately and trigger tournament sync without needing an extra manual save step
 - Neutral Best 3rd Place table rendering until qualification/elimination is locked, with the Group column removed from that table
+- Live-reactive Best 3rd Place ordering driven by the current 3rd-place team in each group, while badges/colors remain locked-state only
 
 Operational source files:
 

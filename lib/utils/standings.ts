@@ -569,10 +569,14 @@ export function buildGroupStandings(
 
 export function buildBestThirdPlaceStandings(groupStandings: Record<string, TeamStanding[]>): TeamStanding[] {
   const thirdPlaceEntries = Object.values(groupStandings)
-    .map((standings) => standings.find((entry) => entry.rank === 3))
+    // Snapshot the team currently sitting in 3rd place in each live group table,
+    // regardless of whether that group is finished yet.
+    .map((standings) => standings[2] ?? null)
     .filter((entry): entry is TeamStanding => Boolean(entry))
     .map((entry) => ({
       ...entry,
+      lockedRank: null,
+      isLocked: false,
       status: "pending" as StandingStatus,
     }));
 
@@ -640,22 +644,6 @@ export function buildTournamentStandings(
 
   const isTerminalGroupStage = allGroupsFinalized || allGroupsAllTeamsPlayed3;
 
-  const bestThirdStandings = buildBestThirdPlaceStandings(initialGroupStandings).map((entry) => {
-    if (isTerminalGroupStage) {
-      // All group matches decided: top-8 are in, bottom-4 are out. No exceptions.
-      const status: StandingStatus = entry.rank <= 8 ? "qualified" : "eliminated";
-      return { ...entry, lockedRank: null, isLocked: true, status };
-    }
-
-    const status = determineBestThirdStatus(entry, groupSummaries);
-    return {
-      ...entry,
-      lockedRank: null,
-      isLocked: status !== "pending",
-      status,
-    };
-  });
-
   const groupStandings = Object.fromEntries(
     Object.entries(initialGroupStandings).map(([letter, standings]) => [
       letter,
@@ -699,6 +687,22 @@ export function buildTournamentStandings(
       }),
     ]),
   );
+
+  const bestThirdStandings = buildBestThirdPlaceStandings(groupStandings).map((entry) => {
+    if (isTerminalGroupStage) {
+      // All group matches decided: top-8 are in, bottom-4 are out. No exceptions.
+      const status: StandingStatus = entry.rank <= 8 ? "qualified" : "eliminated";
+      return { ...entry, lockedRank: null, isLocked: true, status };
+    }
+
+    const status = determineBestThirdStatus(entry, groupSummaries);
+    return {
+      ...entry,
+      lockedRank: null,
+      isLocked: status !== "pending",
+      status,
+    };
+  });
 
   const eliminatedCount = teams.filter((team) => team.is_eliminated).length;
 

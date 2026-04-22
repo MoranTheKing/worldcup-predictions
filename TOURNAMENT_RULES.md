@@ -256,6 +256,10 @@ The `המקום השלישי` table on the Tournament page is now intentionally 
 
 Current UI behavior:
 
+- the table itself is live and reactive:
+  it always extracts the team currently sitting 3rd in each group table and re-sorts the 12 rows immediately from live scores
+- live ordering uses the global tiebreak stack for this table:
+  points -> goal difference -> goals scored -> fair play -> FIFA ranking
 - `העפלה` and `הדחה` badges only render when `entry.isLocked === true`
 - green and red row highlights only render when the locked status is final
 - pending rows stay neutral even if they are currently inside the top 8 or bottom 4 by array order
