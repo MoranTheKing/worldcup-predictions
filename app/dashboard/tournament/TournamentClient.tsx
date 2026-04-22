@@ -3,7 +3,7 @@
 import type { ResolvedBracketMatch, ResolvedSeed } from "@/lib/bracket/knockout";
 import type { StandingStatus, TeamStanding } from "@/lib/utils/standings";
 import Image from "next/image";
-import { type ReactNode, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 type Props = {
   groupStandings: Record<string, TeamStanding[]>;
@@ -25,6 +25,16 @@ type Tab = "groups" | "third" | "knockout";
 type StatusDisplay = {
   label: string;
   pillClassName: string;
+};
+
+type LeafBranchConfig = {
+  roundOf16MatchNumber: number;
+  roundOf32MatchNumbers: readonly [number, number];
+};
+
+type QuarterBranchConfig = {
+  quarterFinalMatchNumber: number;
+  roundOf16Branches: readonly [LeafBranchConfig, LeafBranchConfig];
 };
 
 const TEXT = {
@@ -103,31 +113,39 @@ const ELIMINATED_PILL_CLASS = "bg-[rgba(255,92,130,0.14)] text-wc-danger";
 const LOCKED_POSITION_PILL_CLASS = "bg-white/8 text-wc-fg2";
 const CONNECTOR_CLASS = "bg-[rgba(255,255,255,0.18)]";
 const CARD_WIDTH_CLASS = "mx-auto w-full max-w-[220px]";
-const TOP_ROUND_OF_32_ORDER = [74, 77, 73, 75, 83, 84, 81, 82] as const;
-const TOP_ROUND_OF_32_PAIRS = [
-  [74, 77],
-  [73, 75],
-  [83, 84],
-  [81, 82],
+const TOP_HALF_BRANCHES: readonly QuarterBranchConfig[] = [
+  {
+    quarterFinalMatchNumber: 97,
+    roundOf16Branches: [
+      { roundOf16MatchNumber: 89, roundOf32MatchNumbers: [74, 77] },
+      { roundOf16MatchNumber: 90, roundOf32MatchNumbers: [73, 75] },
+    ],
+  },
+  {
+    quarterFinalMatchNumber: 98,
+    roundOf16Branches: [
+      { roundOf16MatchNumber: 93, roundOf32MatchNumbers: [83, 84] },
+      { roundOf16MatchNumber: 94, roundOf32MatchNumbers: [81, 82] },
+    ],
+  },
 ] as const;
-const TOP_ROUND_OF_16_PAIRS = [
-  [89, 90],
-  [93, 94],
-] as const;
-const TOP_QUARTERS = [97, 98] as const;
 const TOP_SEMI = 101;
-const BOTTOM_ROUND_OF_32_ORDER = [76, 78, 79, 80, 86, 88, 85, 87] as const;
-const BOTTOM_ROUND_OF_32_PAIRS = [
-  [76, 78],
-  [79, 80],
-  [86, 88],
-  [85, 87],
+const BOTTOM_HALF_BRANCHES: readonly QuarterBranchConfig[] = [
+  {
+    quarterFinalMatchNumber: 99,
+    roundOf16Branches: [
+      { roundOf16MatchNumber: 91, roundOf32MatchNumbers: [76, 78] },
+      { roundOf16MatchNumber: 92, roundOf32MatchNumbers: [79, 80] },
+    ],
+  },
+  {
+    quarterFinalMatchNumber: 100,
+    roundOf16Branches: [
+      { roundOf16MatchNumber: 95, roundOf32MatchNumbers: [86, 88] },
+      { roundOf16MatchNumber: 96, roundOf32MatchNumbers: [85, 87] },
+    ],
+  },
 ] as const;
-const BOTTOM_ROUND_OF_16_PAIRS = [
-  [91, 92],
-  [95, 96],
-] as const;
-const BOTTOM_QUARTERS = [99, 100] as const;
 const BOTTOM_SEMI = 102;
 
 function getLockedPositionLabel(rank: number) {
@@ -412,8 +430,12 @@ function KnockoutBracket({
       ? matchesByNumber.get(knockoutTree.thirdPlaceMatchNumber)
       : null) ?? bracket.find((match) => match.round === "third_place") ?? null;
   const hasWinnerTree =
-    TOP_ROUND_OF_32_PAIRS.flat().some((matchNumber) => matchesByNumber.has(matchNumber)) ||
-    BOTTOM_ROUND_OF_32_PAIRS.flat().some((matchNumber) => matchesByNumber.has(matchNumber));
+    collectBranchMatchNumbers(TOP_HALF_BRANCHES).some((matchNumber) =>
+      matchesByNumber.has(matchNumber),
+    ) ||
+    collectBranchMatchNumbers(BOTTOM_HALF_BRANCHES).some((matchNumber) =>
+      matchesByNumber.has(matchNumber),
+    );
 
   if (!hasWinnerTree) {
     return (
@@ -424,299 +446,235 @@ function KnockoutBracket({
   }
 
   return (
-    <div className="mt-6 space-y-6 pb-6">
-      <SplitBracketSection
-        direction="down"
-        matchesByNumber={matchesByNumber}
-        roundOf32Order={TOP_ROUND_OF_32_ORDER}
-        roundOf32Pairs={TOP_ROUND_OF_32_PAIRS}
-        roundOf16Pairs={TOP_ROUND_OF_16_PAIRS}
-        quarterFinals={TOP_QUARTERS}
-        semiFinal={TOP_SEMI}
-      />
+    <div className="mt-6 overflow-x-auto overflow-y-hidden rounded-[1.75rem] border border-white/10 bg-[rgba(255,255,255,0.02)]">
+      <div className="min-w-max w-full p-4 sm:p-6">
+        <div className="flex flex-col items-center gap-8">
+          <HalfBracketTree
+            direction="down"
+            branches={TOP_HALF_BRANCHES}
+            semiFinalMatch={matchesByNumber.get(TOP_SEMI) ?? null}
+            matchesByNumber={matchesByNumber}
+          />
 
-      <CenterClimaxBlock finalMatch={finalMatch} thirdPlaceMatch={thirdPlaceMatch} />
+          <CenterClimaxBlock finalMatch={finalMatch} thirdPlaceMatch={thirdPlaceMatch} />
 
-      <SplitBracketSection
-        direction="up"
-        matchesByNumber={matchesByNumber}
-        roundOf32Order={BOTTOM_ROUND_OF_32_ORDER}
-        roundOf32Pairs={BOTTOM_ROUND_OF_32_PAIRS}
-        roundOf16Pairs={BOTTOM_ROUND_OF_16_PAIRS}
-        quarterFinals={BOTTOM_QUARTERS}
-        semiFinal={BOTTOM_SEMI}
-      />
+          <HalfBracketTree
+            direction="up"
+            branches={BOTTOM_HALF_BRANCHES}
+            semiFinalMatch={matchesByNumber.get(BOTTOM_SEMI) ?? null}
+            matchesByNumber={matchesByNumber}
+          />
+        </div>
+      </div>
     </div>
   );
 }
 
-function SplitBracketSection({
+function collectBranchMatchNumbers(branches: readonly QuarterBranchConfig[]) {
+  return branches.flatMap((branch) => [
+    branch.quarterFinalMatchNumber,
+    ...branch.roundOf16Branches.flatMap((leafBranch) => [
+      leafBranch.roundOf16MatchNumber,
+      ...leafBranch.roundOf32MatchNumbers,
+    ]),
+  ]);
+}
+
+function HalfBracketTree({
   direction,
+  branches,
+  semiFinalMatch,
   matchesByNumber,
-  roundOf32Order,
-  roundOf32Pairs,
-  roundOf16Pairs,
-  quarterFinals,
-  semiFinal,
 }: {
   direction: "down" | "up";
+  branches: readonly QuarterBranchConfig[];
+  semiFinalMatch: ResolvedBracketMatch | null;
   matchesByNumber: Map<number, ResolvedBracketMatch>;
-  roundOf32Order: readonly number[];
-  roundOf32Pairs: readonly (readonly [number, number])[];
-  roundOf16Pairs: readonly (readonly [number, number])[];
-  quarterFinals: readonly number[];
-  semiFinal: number;
 }) {
-  const roundOf32Matches = roundOf32Order
-    .map((matchNumber) => matchesByNumber.get(matchNumber))
-    .filter((match): match is ResolvedBracketMatch => Boolean(match));
-  const pairMatches = roundOf32Pairs
-    .map(([left, right]) => {
-      const leftMatch = matchesByNumber.get(left);
-      const rightMatch = matchesByNumber.get(right);
-      if (!leftMatch || !rightMatch) return null;
-      return [leftMatch, rightMatch] as const;
+  const quarterBranches = branches
+    .map((branch) => {
+      const quarterMatch = matchesByNumber.get(branch.quarterFinalMatchNumber);
+      if (!quarterMatch) return null;
+      return (
+        <QuarterBranchTree
+          key={`${direction}-${branch.quarterFinalMatchNumber}`}
+          direction={direction}
+          branch={branch}
+          quarterMatch={quarterMatch}
+          matchesByNumber={matchesByNumber}
+        />
+      );
     })
-    .filter((pair): pair is readonly [ResolvedBracketMatch, ResolvedBracketMatch] => Boolean(pair));
-
-  const roundOf16PairMatches = roundOf16Pairs
-    .map(([left, right]) => {
-      const leftMatch = matchesByNumber.get(left);
-      const rightMatch = matchesByNumber.get(right);
-      if (!leftMatch || !rightMatch) return null;
-      return [leftMatch, rightMatch] as const;
-    })
-    .filter((pair): pair is readonly [ResolvedBracketMatch, ResolvedBracketMatch] => Boolean(pair));
-  const quarterFinalMatches = quarterFinals
-    .map((matchNumber) => matchesByNumber.get(matchNumber))
-    .filter((match): match is ResolvedBracketMatch => Boolean(match));
-  const semiFinalMatch = matchesByNumber.get(semiFinal) ?? null;
-
-  const orderedRows =
-    direction === "down"
-      ? [
-          <StageRow key="round32" label={TEXT.round32}>
-            <OrderedMatchGrid matches={roundOf32Matches} columnsClassName="grid-cols-2 xl:grid-cols-4" />
-          </StageRow>,
-          <ParallelConnectorBand key="parallel" count={pairMatches.length} direction="down" />,
-          <StageRow key="round16" label={TEXT.round16}>
-            <PairMatchesGrid pairs={roundOf16PairMatches} direction="down" />
-          </StageRow>,
-          <MergeConnectorBand key="merge-quarters" count={quarterFinalMatches.length} direction="down" />,
-          <StageRow key="quarters" label={TEXT.quarterFinal}>
-            <CompactMatchGrid matches={quarterFinalMatches} columnsClassName="grid-cols-1 sm:grid-cols-2" />
-          </StageRow>,
-          <MergeConnectorBand key="merge-semi" count={1} direction="down" />,
-          <StageRow key="semi" label={TEXT.semiFinal}>
-            <SingleMatchSlot match={semiFinalMatch} />
-          </StageRow>,
-        ]
-      : [
-          <StageRow key="semi" label={TEXT.semiFinal}>
-            <SingleMatchSlot match={semiFinalMatch} />
-          </StageRow>,
-          <MergeConnectorBand key="merge-semi" count={1} direction="up" />,
-          <StageRow key="quarters" label={TEXT.quarterFinal}>
-            <CompactMatchGrid matches={quarterFinalMatches} columnsClassName="grid-cols-1 sm:grid-cols-2" />
-          </StageRow>,
-          <MergeConnectorBand key="merge-round16" count={quarterFinalMatches.length} direction="up" />,
-          <StageRow key="round16" label={TEXT.round16}>
-            <PairMatchesGrid pairs={roundOf16PairMatches} direction="up" />
-          </StageRow>,
-          <ParallelConnectorBand key="parallel" count={pairMatches.length} direction="up" />,
-          <StageRow key="round32" label={TEXT.round32}>
-            <OrderedMatchGrid matches={roundOf32Matches} columnsClassName="grid-cols-2 xl:grid-cols-4" />
-          </StageRow>,
-        ];
+    .filter(Boolean);
 
   return (
     <section className="rounded-[1.75rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.015))] p-4 sm:p-5">
-      <div className="space-y-4">{orderedRows}</div>
+      <div className="flex flex-col items-center gap-4">
+        {direction === "down" ? (
+          <>
+            <div className="flex flex-nowrap items-start justify-center gap-8">
+              {quarterBranches}
+            </div>
+            <BracketConnector direction="down" span="wide" />
+            {semiFinalMatch ? (
+              <div className="flex justify-center">
+                <KnockoutMatchCard match={semiFinalMatch} variant="default" compact />
+              </div>
+            ) : null}
+          </>
+        ) : (
+          <>
+            {semiFinalMatch ? (
+              <div className="flex justify-center">
+                <KnockoutMatchCard match={semiFinalMatch} variant="default" compact />
+              </div>
+            ) : null}
+            <BracketConnector direction="up" span="wide" />
+            <div className="flex flex-nowrap items-end justify-center gap-8">
+              {quarterBranches}
+            </div>
+          </>
+        )}
+      </div>
     </section>
   );
 }
 
-function StageRow({
-  label,
-  children,
-}: {
-  label: string;
-  children: ReactNode;
-}) {
-  return (
-    <div className="space-y-3">
-      <div className="flex justify-center">
-        <div className="rounded-full border border-white/10 bg-white/6 px-3 py-1 text-[11px] font-semibold tracking-[0.18em] text-wc-fg2">
-          {label}
-        </div>
-      </div>
-      {children}
-    </div>
-  );
-}
-
-function PairMatchesGrid({
-  pairs,
+function QuarterBranchTree({
   direction,
+  branch,
+  quarterMatch,
+  matchesByNumber,
 }: {
-  pairs: ReadonlyArray<readonly [ResolvedBracketMatch, ResolvedBracketMatch]>;
   direction: "down" | "up";
+  branch: QuarterBranchConfig;
+  quarterMatch: ResolvedBracketMatch;
+  matchesByNumber: Map<number, ResolvedBracketMatch>;
 }) {
-  if (pairs.length === 0) return null;
-
-  return (
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      {pairs.map(([leftMatch, rightMatch]) => (
-        <PairMatchCell
-          key={`${leftMatch.matchNumber}-${rightMatch.matchNumber}`}
-          matches={[leftMatch, rightMatch]}
+  const leafBranches = branch.roundOf16Branches
+    .map((leafBranch) => {
+      const roundOf16Match = matchesByNumber.get(leafBranch.roundOf16MatchNumber);
+      if (!roundOf16Match) return null;
+      return (
+        <RoundOf16BranchTree
+          key={`${direction}-${leafBranch.roundOf16MatchNumber}`}
           direction={direction}
+          branch={leafBranch}
+          roundOf16Match={roundOf16Match}
+          matchesByNumber={matchesByNumber}
         />
-      ))}
-    </div>
-  );
-}
-
-function OrderedMatchGrid({
-  matches,
-  columnsClassName,
-}: {
-  matches: ReadonlyArray<ResolvedBracketMatch>;
-  columnsClassName: string;
-}) {
-  if (matches.length === 0) return null;
+      );
+    })
+    .filter(Boolean);
 
   return (
-    <div className={`grid gap-4 ${columnsClassName}`}>
-      {matches.map((match) => (
-        <KnockoutMatchCard key={match.matchNumber} match={match} variant="default" compact />
-      ))}
+    <div className="flex-none">
+      <div className="flex flex-col items-center gap-4">
+        {direction === "down" ? (
+          <>
+            <div className="flex flex-nowrap items-start gap-6">{leafBranches}</div>
+            <BracketConnector direction="down" span="medium" />
+            <KnockoutMatchCard match={quarterMatch} variant="default" compact />
+          </>
+        ) : (
+          <>
+            <KnockoutMatchCard match={quarterMatch} variant="default" compact />
+            <BracketConnector direction="up" span="medium" />
+            <div className="flex flex-nowrap items-end gap-6">{leafBranches}</div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
 
-function PairMatchCell({
-  matches,
+function RoundOf16BranchTree({
   direction,
+  branch,
+  roundOf16Match,
+  matchesByNumber,
 }: {
-  matches: readonly [ResolvedBracketMatch, ResolvedBracketMatch];
   direction: "down" | "up";
+  branch: LeafBranchConfig;
+  roundOf16Match: ResolvedBracketMatch;
+  matchesByNumber: Map<number, ResolvedBracketMatch>;
 }) {
-  const cards = (
-    <div className="grid grid-cols-2 gap-2">
-      {matches.map((match) => (
-        <KnockoutMatchCard key={match.matchNumber} match={match} variant="default" compact />
-      ))}
-    </div>
-  );
+  const roundOf32Matches = branch.roundOf32MatchNumbers
+    .map((matchNumber) => matchesByNumber.get(matchNumber))
+    .filter((match): match is ResolvedBracketMatch => Boolean(match));
+
+  if (roundOf32Matches.length !== 2) return null;
 
   return (
-    <div className="flex flex-col items-center gap-2">
-      {direction === "up" && <PairConnector direction="up" />}
-      <div className="w-full max-w-[460px]">{cards}</div>
-      {direction === "down" && <PairConnector direction="down" />}
+    <div className="flex-none">
+      <div className="flex flex-col items-center gap-3">
+        {direction === "down" ? (
+          <>
+            <div className="flex flex-nowrap items-start gap-3">
+              {roundOf32Matches.map((match) => (
+                <KnockoutMatchCard
+                  key={match.matchNumber}
+                  match={match}
+                  variant="default"
+                  compact
+                />
+              ))}
+            </div>
+            <BracketConnector direction="down" span="compact" />
+            <KnockoutMatchCard match={roundOf16Match} variant="default" compact />
+          </>
+        ) : (
+          <>
+            <KnockoutMatchCard match={roundOf16Match} variant="default" compact />
+            <BracketConnector direction="up" span="compact" />
+            <div className="flex flex-nowrap items-end gap-3">
+              {roundOf32Matches.map((match) => (
+                <KnockoutMatchCard
+                  key={match.matchNumber}
+                  match={match}
+                  variant="default"
+                  compact
+                />
+              ))}
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
 
-function PairConnector({ direction }: { direction: "down" | "up" }) {
+function BracketConnector({
+  direction,
+  span,
+}: {
+  direction: "down" | "up";
+  span: "compact" | "medium" | "wide";
+}) {
+  const widthClass =
+    span === "compact"
+      ? "w-[28rem]"
+      : span === "medium"
+        ? "w-[58rem]"
+        : "w-[122rem]";
+
   return (
-    <svg
-      className="h-10 w-full max-w-[220px]"
-      viewBox="0 0 220 40"
-      fill="none"
-      aria-hidden="true"
-    >
+    <div className={`relative h-8 flex-none ${widthClass}`}>
       {direction === "down" ? (
         <>
-          <path d="M55 0 V14 H110 V40" stroke="rgba(255,255,255,0.18)" strokeWidth="1.5" />
-          <path d="M165 0 V14 H110" stroke="rgba(255,255,255,0.18)" strokeWidth="1.5" />
+          <div className={`absolute left-1/4 top-0 h-4 w-px -translate-x-1/2 ${CONNECTOR_CLASS}`} />
+          <div className={`absolute left-3/4 top-0 h-4 w-px -translate-x-1/2 ${CONNECTOR_CLASS}`} />
+          <div className="absolute left-1/4 right-1/4 top-4 border-t border-[rgba(255,255,255,0.18)]" />
+          <div className={`absolute left-1/2 top-4 h-4 w-px -translate-x-1/2 ${CONNECTOR_CLASS}`} />
         </>
       ) : (
         <>
-          <path d="M55 40 V26 H110 V0" stroke="rgba(255,255,255,0.18)" strokeWidth="1.5" />
-          <path d="M165 40 V26 H110" stroke="rgba(255,255,255,0.18)" strokeWidth="1.5" />
+          <div className={`absolute left-1/2 top-0 h-4 w-px -translate-x-1/2 ${CONNECTOR_CLASS}`} />
+          <div className="absolute left-1/4 right-1/4 top-4 border-t border-[rgba(255,255,255,0.18)]" />
+          <div className={`absolute left-1/4 top-4 h-4 w-px -translate-x-1/2 ${CONNECTOR_CLASS}`} />
+          <div className={`absolute left-3/4 top-4 h-4 w-px -translate-x-1/2 ${CONNECTOR_CLASS}`} />
         </>
       )}
-    </svg>
-  );
-}
-
-function CompactMatchGrid({
-  matches,
-  columnsClassName,
-}: {
-  matches: ReadonlyArray<ResolvedBracketMatch>;
-  columnsClassName: string;
-}) {
-  if (matches.length === 0) return null;
-
-  return (
-    <div className={`grid gap-4 ${columnsClassName}`}>
-      {matches.map((match) => (
-        <SingleMatchSlot key={match.matchNumber} match={match} />
-      ))}
-    </div>
-  );
-}
-
-function SingleMatchSlot({ match }: { match: ResolvedBracketMatch | null }) {
-  if (!match) return null;
-
-  return <KnockoutMatchCard match={match} variant="default" compact />;
-}
-
-function ParallelConnectorBand({
-  count,
-  direction,
-}: {
-  count: number;
-  direction: "down" | "up";
-}) {
-  if (count <= 0) return null;
-
-  return (
-    <div className={`grid gap-4 ${count === 4 ? "sm:grid-cols-2 xl:grid-cols-4" : count === 2 ? "sm:grid-cols-2" : ""}`}>
-      {Array.from({ length: count }).map((_, index) => (
-        <div key={`${direction}-${count}-${index}`} className="flex justify-center">
-          <div className={`h-8 w-px ${CONNECTOR_CLASS}`} />
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function MergeConnectorBand({
-  count,
-  direction,
-}: {
-  count: number;
-  direction: "down" | "up";
-}) {
-  return (
-    <div className={`grid gap-4 ${count === 2 ? "sm:grid-cols-2" : ""}`}>
-      {Array.from({ length: count }).map((_, index) => (
-        <div key={`${direction}-merge-${count}-${index}`} className="flex justify-center">
-          <svg
-            className="h-10 w-full max-w-[220px]"
-            viewBox="0 0 220 40"
-            fill="none"
-            aria-hidden="true"
-          >
-            {direction === "down" ? (
-              <>
-                <path d="M55 0 V12 H110 V40" stroke="rgba(255,255,255,0.18)" strokeWidth="1.5" />
-                <path d="M165 0 V12 H110" stroke="rgba(255,255,255,0.18)" strokeWidth="1.5" />
-              </>
-            ) : (
-              <>
-                <path d="M55 40 V28 H110 V0" stroke="rgba(255,255,255,0.18)" strokeWidth="1.5" />
-                <path d="M165 40 V28 H110" stroke="rgba(255,255,255,0.18)" strokeWidth="1.5" />
-              </>
-            )}
-          </svg>
-        </div>
-      ))}
     </div>
   );
 }

@@ -156,7 +156,9 @@ Responsive bracket implementation:
   then `[91, 92, 95, 96]`
   then `[76, 78, 79, 80, 86, 88, 85, 87]`
 - The bracket no longer uses helper copy like `To Match X` to explain progression
-- Pair cells and merge bands now draw the connector branches visually, with the upper half pointing down and the lower half pointing up toward the center
+- The bracket now uses a nested flexbox tree instead of flat wrapped rows, so every parent match stays centered over or under its exact child branch
+- Connectors are drawn inside each branch container with simple CSS line segments, which keeps them locked to the correct child pair
+- The outer bracket shell uses `overflow-x-auto`, `overflow-y-hidden`, `min-w-max`, and `flex-nowrap` so the tree never wraps
 - The UI no longer shows labels such as `המסלול העליון` or `המסלול התחתון`
 - Early-round cards are intentionally compact (`max-w-[220px]`) so the bracket stays readable on mobile without horizontal scrolling
 - The Final card keeps the gold treatment and explicit label `הגמר`
