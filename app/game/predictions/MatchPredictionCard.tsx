@@ -107,6 +107,9 @@ export default function MatchPredictionCard({
       : tone;
   const hiddenPredictionForPrivacy =
     isReadOnly && hideScheduledPrediction && match.status === "scheduled";
+  const unsubmittedTone = !hasPrediction && (isLive || isFinished) ? "miss" : tone;
+  const predictionPanelTone = hiddenPredictionForPrivacy ? "scheduled" : hasPrediction ? livePredictionTone : unsubmittedTone;
+  const pointsPanelTone = hiddenPredictionForPrivacy ? "scheduled" : unsubmittedTone;
 
   return (
     <div className="relative overflow-hidden rounded-[1.6rem]">
@@ -311,7 +314,7 @@ export default function MatchPredictionCard({
                           )
                         : "לא נשלח"
                   }
-                  tone={hiddenPredictionForPrivacy ? "scheduled" : livePredictionTone}
+                  tone={predictionPanelTone}
                 />
                 <ResultPanel
                   label="נקודות"
@@ -322,7 +325,7 @@ export default function MatchPredictionCard({
                         ? String(pointsEarned)
                         : "0"
                   }
-                  tone={hiddenPredictionForPrivacy ? "scheduled" : tone}
+                  tone={pointsPanelTone}
                   emphasize
                 />
               </div>
