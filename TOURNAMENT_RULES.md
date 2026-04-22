@@ -141,6 +141,9 @@ Responsive bracket implementation:
 - `TournamentClient.tsx` now renders a mobile-first vertical tree instead of a scaled horizontal canvas
 - The flow is top-to-bottom: Round of 32 at the top, then Round of 16, quarter-finals, semi-finals, and the final block at the bottom
 - Each round is grouped by the actual parent match it feeds into, so the visual grouping still follows the official placeholder graph
+- The bracket no longer uses helper copy like `To Match X` to explain progression
+- Each grouped pair now draws visible downward connector branches so users can follow the path into the next match visually
+- Stage headers stay sticky while scrolling so the current round remains obvious on mobile
 - The Final and 3rd Place matches sit together in the bottom decision block
 - The Final card keeps the gold treatment and explicit label `הגמר`
 - The 3rd Place card uses a bronze accent and the explicit label `משחק על המקום השלישי`

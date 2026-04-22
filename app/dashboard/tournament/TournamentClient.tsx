@@ -85,12 +85,10 @@ const TEXT = {
     "הטבלה הגלובלית מדרגת את כל 12 הקבוצות מהמקום השלישי לפי כללי פיפ\"א, והקו מסמן את הגבול בין 8 העולות ל-4 המודחות.",
   cutoffNote: "מקום 8 מסמן את קו העלייה. מקום 9 ומטה נשארים מחוץ ל-32 האחרונות.",
   bracketNote:
-    "הנוקאאוט מוצג כעת במסלול אנכי מלמעלה למטה: 32 האחרונות בראש העמוד, וכל שלב מתכנס אל הגמר בתחתית בצורה קריאה הרבה יותר במובייל.",
+    "הנוקאאוט נשאר במסלול אנכי מלמעלה למטה, אבל כעת עם חיבורים ויזואליים אמיתיים בין זוג משחקים לבין השלב הבא, בלי טקסט עזר מיותר.",
   emptyBracket: "ברגע שיוזנו משחקי הנוקאאוט, העץ המלא יוצג כאן.",
-  pathHint: "המנצחות ממשיכות לשלב הבא",
-  semiHint: "מכאן עולים לגמר ולמשחק על המקום השלישי",
-  finalCardHint: "הקרב על הגביע",
-  thirdPlaceHint: "הקרב על מדליית הארד",
+  finalHint: "הקרב על הגביע",
+  thirdHint: "הקרב על מדליית הארד",
 };
 
 const TABS: { id: Tab; label: string }[] = [
@@ -129,6 +127,7 @@ const STATUS_META: Record<StandingStatus, { rowClassName: string }> = {
 const QUALIFIED_PILL_CLASS = "bg-[rgba(95,255,123,0.14)] text-wc-neon";
 const ELIMINATED_PILL_CLASS = "bg-[rgba(255,92,130,0.14)] text-wc-danger";
 const LOCKED_POSITION_PILL_CLASS = "bg-white/8 text-wc-fg2";
+const CONNECTOR_CLASS = "bg-[rgba(255,255,255,0.18)]";
 
 function getLockedPositionLabel(rank: number) {
   return `${TEXT.lockedPosition} ${rank}`;
@@ -420,7 +419,6 @@ function KnockoutBracket({
     (finalNode ? matchesByNumber.get(finalNode.matchNumber) : null) ??
     bracket.find((match) => match.round === "final") ??
     null;
-
   const thirdPlaceMatch =
     (knockoutTree.thirdPlaceMatchNumber
       ? matchesByNumber.get(knockoutTree.thirdPlaceMatchNumber)
@@ -439,34 +437,30 @@ function KnockoutBracket({
   }
 
   return (
-    <div className="mt-6 space-y-6 pb-6">
-      {VERTICAL_ROUND_FLOW.map((round, index) => (
+    <div className="mt-6 space-y-8 pb-6">
+      {VERTICAL_ROUND_FLOW.map((round) => (
         <RoundStageSection
           key={round}
-          round={round}
           label={ROUND_LABELS[round]}
           groups={roundGroups[round]}
           matchesByNumber={matchesByNumber}
-          nextLabel={index < VERTICAL_ROUND_FLOW.length - 1 ? ROUND_LABELS[VERTICAL_ROUND_FLOW[index + 1]] : null}
         />
       ))}
 
-      <section className="rounded-[1.75rem] border border-[rgba(255,182,73,0.16)] bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,182,73,0.04))] p-4 sm:p-5">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="wc-kicker">Matchday 104</p>
-            <h3 className="wc-display mt-2 text-3xl text-wc-fg1">ההכרעה הסופית</h3>
+      <section className="relative rounded-[1.75rem] border border-[rgba(255,182,73,0.18)] bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,182,73,0.05))] p-4 pt-10 sm:p-5 sm:pt-12">
+        <div className="absolute -top-3 left-1/2 h-12 w-px -translate-x-1/2 bg-[linear-gradient(180deg,rgba(255,255,255,0),rgba(255,255,255,0.22),rgba(255,182,73,0.35))]" />
+
+        <div className="sticky top-4 z-10 mb-5 flex justify-center">
+          <div className="rounded-full border border-[rgba(255,182,73,0.22)] bg-[rgba(7,11,18,0.88)] px-4 py-2 shadow-[0_12px_32px_rgba(0,0,0,0.26)] backdrop-blur">
+            <p className="wc-display text-xl text-wc-fg1">יום ההכרעה</p>
           </div>
-          <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold text-wc-fg2">
-            Final Day
-          </span>
         </div>
 
-        <div className="mt-5 grid gap-4 lg:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-2">
           {finalMatch && (
             <FeaturedMatchCard
               label={TEXT.final}
-              hint={TEXT.finalCardHint}
+              hint={TEXT.finalHint}
               variant="final"
               match={finalMatch}
             />
@@ -474,7 +468,7 @@ function KnockoutBracket({
           {thirdPlaceMatch && (
             <FeaturedMatchCard
               label={TEXT.thirdPlace}
-              hint={TEXT.thirdPlaceHint}
+              hint={TEXT.thirdHint}
               variant="third"
               match={thirdPlaceMatch}
             />
@@ -510,85 +504,85 @@ function buildVerticalRoundGroups(nodes: KnockoutTreeNode[]): VerticalRoundGroup
   );
 }
 
-function getRoundGridClassName(round: VerticalRound) {
-  if (round === "round_of_32") return "grid-cols-1 md:grid-cols-2 2xl:grid-cols-4";
-  if (round === "round_of_16") return "grid-cols-1 md:grid-cols-2 xl:grid-cols-4";
-  return "grid-cols-1 md:grid-cols-2";
-}
-
 function RoundStageSection({
-  round,
   label,
   groups,
   matchesByNumber,
-  nextLabel,
 }: {
-  round: VerticalRound;
   label: string;
   groups: VerticalRoundGroup[];
   matchesByNumber: Map<number, ResolvedBracketMatch>;
-  nextLabel: string | null;
 }) {
   return (
-    <section className="rounded-[1.75rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] p-4 sm:p-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <p className="wc-kicker">Knockout Stage</p>
-          <h2 className="wc-display mt-2 text-3xl text-wc-fg1">{label}</h2>
+    <section className="relative rounded-[1.75rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.015))] p-4 sm:p-5">
+      <div className="sticky top-4 z-10 mb-6 flex justify-center">
+        <div className="rounded-full border border-white/10 bg-[rgba(7,11,18,0.9)] px-4 py-2 shadow-[0_12px_32px_rgba(0,0,0,0.26)] backdrop-blur">
+          <p className="wc-display text-xl text-wc-fg1">{label}</p>
         </div>
-        <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold text-wc-fg2">
-          {groups.flatMap((group) => group.nodes).length} matches
-        </span>
       </div>
 
-      <div className={`mt-5 grid gap-4 ${getRoundGridClassName(round)}`}>
+      <div className="space-y-8">
         {groups.map((group) => (
-          <div
+          <RoundFlowGroup
             key={group.id}
-            className="rounded-[1.5rem] border border-white/10 bg-[radial-gradient(circle_at_top,rgba(95,255,123,0.06),rgba(255,255,255,0.02))] p-3"
-          >
-            <div className="mb-3 flex items-center justify-between gap-2 border-b border-white/8 pb-3">
-              <div>
-                <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-wc-fg3">
-                  {group.parentMatchNumber ? `To Match ${group.parentMatchNumber}` : "Tree Path"}
-                </p>
-                <p className="mt-1 text-xs text-wc-fg2">
-                  {round === "semi_final"
-                    ? TEXT.semiHint
-                    : group.parentMatchNumber
-                      ? `המנצחות נפגשות במשחק ${group.parentMatchNumber}`
-                      : TEXT.pathHint}
-                </p>
-              </div>
-              <span className="rounded-full bg-white/6 px-2.5 py-1 text-[10px] font-semibold text-wc-fg2">
-                {group.nodes.length} matches
-              </span>
-            </div>
-
-            <div className="space-y-3">
-              {group.nodes.map((node) => {
-                const match = matchesByNumber.get(node.matchNumber);
-                if (!match) return null;
-
-                return <KnockoutMatchCard key={node.matchNumber} match={match} variant="default" />;
-              })}
-            </div>
-          </div>
+            group={group}
+            matchesByNumber={matchesByNumber}
+          />
         ))}
       </div>
-
-      {nextLabel && <RoundConnector nextLabel={nextLabel} />}
     </section>
   );
 }
 
-function RoundConnector({ nextLabel }: { nextLabel: string }) {
+function RoundFlowGroup({
+  group,
+  matchesByNumber,
+}: {
+  group: VerticalRoundGroup;
+  matchesByNumber: Map<number, ResolvedBracketMatch>;
+}) {
+  const matches = group.nodes
+    .map((node) => matchesByNumber.get(node.matchNumber))
+    .filter((match): match is ResolvedBracketMatch => Boolean(match));
+
+  if (matches.length === 0) return null;
+
   return (
-    <div className="mt-6 flex flex-col items-center">
-      <div className="h-10 w-px bg-[linear-gradient(180deg,rgba(95,255,123,0),rgba(95,255,123,0.8),rgba(95,255,123,0))]" />
-      <div className="mt-2 rounded-full border border-[rgba(95,255,123,0.24)] bg-[rgba(95,255,123,0.08)] px-3 py-1 text-[11px] font-semibold text-wc-neon">
-        אל {nextLabel}
+    <div className="space-y-3">
+      <div className={`grid gap-3 ${matches.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}>
+        {matches.map((match) => (
+          <KnockoutMatchCard
+            key={match.matchNumber}
+            match={match}
+            variant="default"
+          />
+        ))}
       </div>
+
+      <ConvergenceConnector childCount={matches.length} />
+    </div>
+  );
+}
+
+function ConvergenceConnector({ childCount }: { childCount: number }) {
+  if (childCount <= 1) {
+    return (
+      <div className="flex flex-col items-center">
+        <div className={`h-10 w-px ${CONNECTOR_CLASS}`} />
+        <div className={`h-2 w-2 rotate-45 border-b border-r border-[rgba(255,255,255,0.22)]`} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col items-center">
+      <div className="relative h-12 w-full max-w-[18rem]">
+        <div className={`absolute left-1/4 top-0 h-4 w-px -translate-x-1/2 ${CONNECTOR_CLASS}`} />
+        <div className={`absolute left-3/4 top-0 h-4 w-px -translate-x-1/2 ${CONNECTOR_CLASS}`} />
+        <div className={`absolute left-1/4 right-1/4 top-4 border-t border-[rgba(255,255,255,0.18)]`} />
+        <div className={`absolute left-1/2 top-4 h-8 w-px -translate-x-1/2 ${CONNECTOR_CLASS}`} />
+      </div>
+      <div className="h-2 w-2 rotate-45 border-b border-r border-[rgba(255,255,255,0.22)]" />
     </div>
   );
 }
@@ -653,20 +647,20 @@ function KnockoutMatchCard({
         finalVariant
           ? "wc-bracket-final"
           : thirdVariant
-            ? "border-[rgba(205,127,50,0.8)] shadow-[0_0_0_1px_rgba(205,127,50,0.24)]"
+            ? "border-[rgba(205,127,50,0.82)] shadow-[0_0_0_1px_rgba(205,127,50,0.28)]"
             : ""
       }`}
     >
       <div
-        className={`flex items-center justify-between gap-2 px-3 py-2 text-[10px] font-bold ${
+        className={`flex items-center justify-between gap-2 px-3 py-2 text-[10px] font-semibold ${
           finalVariant
             ? "bg-[linear-gradient(90deg,var(--wc-amber),#ffd580)] text-[color:var(--wc-text-inverse)]"
             : thirdVariant
-              ? "bg-[linear-gradient(90deg,rgba(205,127,50,0.45),rgba(120,72,24,0.75))] text-wc-fg1"
+              ? "bg-[linear-gradient(90deg,rgba(205,127,50,0.48),rgba(120,72,24,0.8))] text-wc-fg1"
               : "bg-white/8 text-wc-fg3"
         }`}
       >
-        <span>{`${TEXT.matchLabel} ${match.matchNumber}`}</span>
+        <span className="opacity-80">{`${TEXT.matchLabel} ${match.matchNumber}`}</span>
         <span className="inline-flex items-center gap-1">
           {liveMatch?.is_extra_time && !hasPenalties && (
             <span className={finalVariant ? "text-[color:var(--wc-text-inverse)]/70" : "text-wc-fg3"}>ET</span>
