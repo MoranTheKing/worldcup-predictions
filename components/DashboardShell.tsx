@@ -7,7 +7,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 const NAV_ITEMS = [
   { href: "/dashboard/matches", icon: "🎯", label: "משחקים" },
   { href: "/dashboard/tournament", icon: "🏆", label: "טורניר" },
-  { href: "/dashboard/leagues", icon: "👥", label: "ליגות" },
+  { href: "/game", icon: "👥", label: "ניחושים" },
   { href: "/dashboard/profile", icon: "🧭", label: "פרופיל" },
 ];
 
@@ -22,6 +22,10 @@ export default function DashboardShell({ children }: Props) {
   function isActive(href: string) {
     if (href === "/dashboard/matches") {
       return pathname === "/dashboard" || pathname.startsWith("/dashboard/matches");
+    }
+
+    if (href === "/game") {
+      return pathname === "/game" || pathname.startsWith("/game/");
     }
 
     return pathname.startsWith(href);

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
 
-const HIDE_ON_PREFIXES = ["/dashboard", "/dev-tools"];
+const HIDE_ON_PREFIXES = ["/dashboard", "/dev-tools", "/game"];
 
 export default function AppNavbar() {
   const pathname = usePathname();
@@ -28,6 +28,12 @@ export default function AppNavbar() {
             className="hidden rounded-full border border-white/10 px-3 py-1.5 text-xs font-semibold text-wc-fg2 transition hover:border-wc-neon/50 hover:text-wc-fg1 sm:inline-flex"
           >
             טבלת הטורניר
+          </Link>
+          <Link
+            href="/game"
+            className="hidden rounded-full border border-wc-neon/30 bg-[rgba(95,255,123,0.07)] px-3 py-1.5 text-xs font-semibold text-wc-neon transition hover:border-wc-neon/70 hover:bg-[rgba(95,255,123,0.14)] sm:inline-flex"
+          >
+            משחק הניחושים
           </Link>
         </div>
 
