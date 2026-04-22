@@ -278,7 +278,7 @@ export default function MatchPredictionCard({
               <div className="flex items-center gap-3">
                 <TeamSide align="right" name={homeTeamName} logoUrl={match.homeTeam?.logo_url ?? null} />
 
-                <div dir="ltr" className="flex flex-shrink-0 items-center gap-2">
+                <div className="flex flex-shrink-0 items-center gap-2">
                   <ReadOnlyScore summary={actualSummary} />
                 </div>
 
@@ -421,7 +421,7 @@ function ScoreInline({
   className?: string;
 }) {
   return (
-    <span dir="ltr" className={`inline-flex flex-row items-center justify-center gap-1 ${className}`}>
+    <span className={`inline-flex flex-row items-center justify-center gap-1 ${className}`}>
       <span className="font-bold">{homeScore ?? "?"}</span>
       <span>-</span>
       <span className="font-bold">{awayScore ?? "?"}</span>

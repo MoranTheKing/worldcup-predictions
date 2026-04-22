@@ -281,7 +281,7 @@ function ScoreSummaryBadge({
 }) {
   return (
     <span className={`inline-flex items-center gap-2 ${className}`}>
-      <span dir="ltr" className="inline-flex items-center gap-1">
+      <span className="inline-flex items-center gap-1">
         <span className="font-bold">{summary.homeScore}</span>
         <span>-</span>
         <span className="font-bold">{summary.awayScore}</span>
@@ -289,7 +289,7 @@ function ScoreSummaryBadge({
       {summary.hasPenalties && summary.homePenaltyScore !== null && summary.awayPenaltyScore !== null ? (
         <span className="inline-flex items-center gap-1 text-sm text-wc-fg3">
           <span>(</span>
-          <span dir="ltr" className="inline-flex items-center gap-1">
+          <span className="inline-flex items-center gap-1">
             <span className="font-bold">{summary.homePenaltyScore}</span>
             <span>-</span>
             <span className="font-bold">{summary.awayPenaltyScore}</span>
