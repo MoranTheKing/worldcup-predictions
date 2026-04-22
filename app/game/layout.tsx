@@ -24,8 +24,14 @@ export default async function GameLayout({
   }
 
   const [profile, jokerUsage] = await Promise.all([
-    fetchAuthProfile(supabase, user.id),
-    getUserJokerUsage(supabase, user.id),
+    fetchAuthProfile(supabase, user.id).catch((error) => {
+      console.error("[GameLayout] profile fetch failed:", error);
+      return null;
+    }),
+    getUserJokerUsage(supabase, user.id).catch((error) => {
+      console.error("[GameLayout] joker usage failed:", error);
+      return { groupUsed: false, knockoutUsed: false };
+    }),
   ]);
 
   const displayName = resolveDisplayName(profile, user);

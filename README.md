@@ -332,3 +332,45 @@ Operational note:
 
 - `joinLeague` now rate-limits repeated invalid invite code attempts per authenticated user
 - `upsertMatchPrediction` now refuses to save if the match is no longer `scheduled` or if one side is still an unresolved placeholder
+
+
+## Predictions History UX Upgrade
+
+As of April 22, 2026, `/game/predictions` behaves more like a live season console than a narrow entry form.
+
+What changed:
+
+- the page now shows `finished`, `live`, and `scheduled` matches in one chronological stream
+- only unresolved future matches with missing team IDs are hidden from the list
+- finished matches render as read-only history cards with:
+  actual result
+  the user prediction
+  `points_earned`
+- exact score hits now receive a premium highlight, and exact hits that also used a joker get an even stronger celebratory treatment
+- on first load, the screen auto-scrolls to the first `live` or `scheduled` match so users do not land above dozens of completed fixtures
+
+Independent joker rule:
+
+- the group-stage joker and the knockout joker are now separated correctly
+- the optimistic UI only disables joker toggles inside the current bucket instead of locking the entire match list
+- bucket detection now normalizes the raw match stage value and falls back to legacy match-number ranges only when the stage is ambiguous
+
+League routing hardening:
+
+- `/game/leagues/[id]` now fetches the league and membership through the admin client and then verifies access explicitly
+- this avoids false `404` responses caused by transient RLS or membership timing issues immediately after league creation
+
+
+## Stability Fixes: Joker Query, Direct Join, And Outrights
+
+As of April 22, 2026, the game hub received another stability pass focused on prediction persistence and league-entry flow.
+
+What changed:
+
+- `lib/game/boosters.ts` now wraps joker-usage lookups defensively, so missing columns or empty Supabase responses no longer crash `GameLayout`
+- `upsertMatchPrediction` now falls back cleanly when `is_joker_applied` is not available yet, instead of failing during the existing-prediction lookup
+- successful match saves now show a stronger in-card `✓ נשמר` indicator
+- `/game/join/[code]` is now a real direct-join route for invite links
+- league invite links now target the direct-join route instead of only pre-filling the join input
+- `OutrightForm` now keeps winner and top-scorer state independent, so changing the predicted winner no longer wipes the saved/typed top-scorer value
+- `app/game/loading.tsx` now provides a stable loading shell while switching between `/game` tabs

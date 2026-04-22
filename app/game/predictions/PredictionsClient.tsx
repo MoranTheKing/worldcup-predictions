@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { MatchWithTeams } from "@/lib/tournament/matches";
 import { getJokerBucket } from "@/lib/game/boosters";
 import MatchPredictionCard from "./MatchPredictionCard";
@@ -13,6 +13,7 @@ export type MatchPredictionRow = {
   home_score_guess: number | null;
   away_score_guess: number | null;
   is_joker_applied: boolean | null;
+  points_earned?: number | null;
 };
 
 export type TournamentPredRow = {
@@ -65,7 +66,7 @@ export default function PredictionsClient({
         continue;
       }
 
-      const bucket = getJokerBucket(match.stage);
+      const bucket = getJokerBucket(match.stage, match.match_number);
       selection[bucket] = match.match_number;
     }
 
@@ -73,6 +74,31 @@ export default function PredictionsClient({
   }, [matches, predictionMap]);
 
   const [jokerSelectionOverride, setJokerSelectionOverride] = useState<JokerSelectionOverride>({});
+  const didAutoScroll = useRef(false);
+  const matchRefs = useRef<Record<number, HTMLDivElement | null>>({});
+
+  const firstOpenMatchId = useMemo(
+    () =>
+      matches.find((match) => match.status === "live" || match.status === "scheduled")?.match_number ??
+      null,
+    [matches],
+  );
+
+  useEffect(() => {
+    if (didAutoScroll.current || firstOpenMatchId === null) {
+      return;
+    }
+
+    const element = matchRefs.current[firstOpenMatchId];
+    if (!element) {
+      return;
+    }
+
+    didAutoScroll.current = true;
+    window.setTimeout(() => {
+      element.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 120);
+  }, [firstOpenMatchId]);
 
   if (!isAuthenticated) {
     return (
@@ -82,7 +108,7 @@ export default function PredictionsClient({
       >
         <div className="text-5xl">🔐</div>
         <p className="mt-3 text-base font-semibold text-wc-fg2">
-          צריך להתחבר כדי לנהל ניחושים ובוסטרים.
+          צריך להתחבר כדי לנהל ניחושים, בוסטרים והיסטוריית תוצאות.
         </p>
         <Link
           href="/login?next=/game/predictions"
@@ -103,7 +129,7 @@ export default function PredictionsClient({
               הניחושים שלי
             </p>
             <p className="mt-2 text-sm text-wc-fg2">
-              כל משחק פתוח שומר כברירת מחדל תוצאה של 0:0, ואת הג&apos;וקר מפעילים פעם אחת בכל מסלול.
+              כל משחק בטורניר מופיע כאן. המשחקים שעדיין לא התחילו נשארים פתוחים לעריכה, ומשחקים חיים או גמורים נשמרים כתיעוד מלא עם ניקוד.
             </p>
           </div>
 
@@ -120,16 +146,16 @@ export default function PredictionsClient({
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.24em] text-wc-neon">
-              ניחושי משחקים
+              היסטוריית משחקים וניחושים
             </p>
             <p className="mt-1 text-xs text-wc-fg3">
-              רק משחקים עם שתי נבחרות שהוכרעו סופית מוצגים כאן.
+              מסך אחד לכל הלו&quot;ז: עבר, הווה ועתיד.
             </p>
           </div>
           <div className="text-end text-xs font-semibold text-wc-fg3">
-            <div>{matches.length} משחקים פתוחים לניחוש</div>
+            <div>{matches.length} משחקים מוצגים</div>
             {hiddenMatchCount > 0 ? (
-              <div className="mt-1">{hiddenMatchCount} משחקים מוסתרים עד שהזהות שלהם תיקבע</div>
+              <div className="mt-1">{hiddenMatchCount} משחקים עתידיים מוסתרים עד ששתי הנבחרות ייקבעו</div>
             ) : null}
           </div>
         </div>
@@ -138,17 +164,17 @@ export default function PredictionsClient({
           <div className="rounded-2xl border border-dashed border-white/10 bg-[rgba(13,27,46,0.82)] p-10 text-center">
             <div className="text-5xl">🗓️</div>
             <p className="mt-3 text-base font-semibold text-wc-fg2">
-              אין כרגע משחקים פתוחים לניחוש.
+              אין כרגע משחקים זמינים למסך הניחושים.
             </p>
             <p className="mt-2 text-sm text-wc-fg3">
-              משחקי נוקאאוט עם placeholders יופיעו כאן אוטומטית רק אחרי ששתי הנבחרות ייקבעו.
+              משחקים עתידיים עם placeholders יופיעו כאן אוטומטית ברגע ששתי הנבחרות יהיו ידועות.
             </p>
           </div>
         ) : (
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-4">
             {matches.map((match) => {
               const existing = predictionMap.get(match.match_number);
-              const bucket = getJokerBucket(match.stage);
+              const bucket = getJokerBucket(match.stage, match.match_number);
               const savedStageUsed = bucket === "group" ? groupJokerUsed : knockoutJokerUsed;
               const selectedMatchId =
                 jokerSelectionOverride[bucket] !== undefined
@@ -158,21 +184,28 @@ export default function PredictionsClient({
               const canUseJoker = isSelected || (!savedStageUsed && selectedMatchId === null);
 
               return (
-                <MatchPredictionCard
+                <div
                   key={match.match_number}
-                  match={match}
-                  existingHome={existing?.home_score_guess ?? null}
-                  existingAway={existing?.away_score_guess ?? null}
-                  existingIsJoker={existing?.is_joker_applied ?? false}
-                  isJokerSelected={isSelected}
-                  canUseJoker={canUseJoker}
-                  onToggleJoker={() =>
-                    setJokerSelectionOverride((current) => ({
-                      ...current,
-                      [bucket]: current[bucket] === match.match_number ? null : match.match_number,
-                    }))
-                  }
-                />
+                  ref={(element) => {
+                    matchRefs.current[match.match_number] = element;
+                  }}
+                >
+                  <MatchPredictionCard
+                    match={match}
+                    existingHome={existing?.home_score_guess ?? null}
+                    existingAway={existing?.away_score_guess ?? null}
+                    existingIsJoker={existing?.is_joker_applied ?? false}
+                    pointsEarned={existing?.points_earned ?? null}
+                    isJokerSelected={isSelected}
+                    canUseJoker={canUseJoker}
+                    onToggleJoker={() =>
+                      setJokerSelectionOverride((current) => ({
+                        ...current,
+                        [bucket]: current[bucket] === match.match_number ? null : match.match_number,
+                      }))
+                    }
+                  />
+                </div>
               );
             })}
           </div>

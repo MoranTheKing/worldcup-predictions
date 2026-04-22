@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import LeaguesClient, { type LeagueRow } from "./LeaguesClient";
 
 export const dynamic = "force-dynamic";
@@ -12,39 +13,30 @@ export default async function MyLeaguesPage() {
   let leagues: LeagueRow[] = [];
 
   if (user) {
-    // Two-step query: avoid embedded-relation RLS complexity that can produce {}
-    // Step 1 — get league IDs this user belongs to
-    const { data: memberRows, error: memberErr } = await supabase
+    const admin = createAdminClient();
+
+    const { data: memberRows, error: memberError } = await admin
       .from("league_members")
       .select("league_id")
       .eq("user_id", user.id);
 
-    if (memberErr) {
-      console.error(
-        "[MyLeaguesPage] league_members error:",
-        memberErr.message,
-        memberErr.code,
-        memberErr.details
-      );
+    if (memberError) {
+      console.error("[MyLeaguesPage] league_members error:", memberError);
     }
 
-    const ids = (memberRows ?? []).map((r) => r.league_id as string).filter(Boolean);
+    const leagueIds = (memberRows ?? [])
+      .map((row) => row.league_id as string)
+      .filter(Boolean);
 
-    // Step 2 — fetch league details (RLS on leagues allows members to read their own leagues)
-    if (ids.length > 0) {
-      const { data: leagueRows, error: leagueErr } = await supabase
+    if (leagueIds.length > 0) {
+      const { data: leagueRows, error: leagueError } = await admin
         .from("leagues")
         .select("id, name, invite_code, owner_id, created_at")
-        .in("id", ids)
+        .in("id", leagueIds)
         .order("created_at", { ascending: false });
 
-      if (leagueErr) {
-        console.error(
-          "[MyLeaguesPage] leagues fetch error:",
-          leagueErr.message,
-          leagueErr.code,
-          leagueErr.details
-        );
+      if (leagueError) {
+        console.error("[MyLeaguesPage] leagues fetch error:", leagueError);
       }
 
       leagues = (leagueRows ?? []) as LeagueRow[];

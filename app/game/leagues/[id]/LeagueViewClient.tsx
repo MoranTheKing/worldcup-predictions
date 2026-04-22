@@ -143,7 +143,7 @@ function InviteCard({
       return "";
     }
 
-    return `${window.location.origin}/game/leagues?invite=${inviteCode}`;
+    return `${window.location.origin}/game/join/${inviteCode}`;
   }, [inviteCode]);
 
   async function handleShare() {

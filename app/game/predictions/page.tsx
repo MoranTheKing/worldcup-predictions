@@ -23,7 +23,6 @@ export default async function PredictionsPage() {
         .select(
           "match_number, stage, status, date_time, minute, home_team_id, away_team_id, home_placeholder, away_placeholder, home_score, away_score, is_extra_time, home_penalty_score, away_penalty_score",
         )
-        .eq("status", "scheduled")
         .order("date_time", { ascending: true }),
       supabase
         .from("teams")
@@ -35,15 +34,17 @@ export default async function PredictionsPage() {
         .order("name", { ascending: true }),
     ]);
 
-  const scheduledMatches = attachTeamsToMatches(
+  const allMatches = attachTeamsToMatches(
     (matchesData ?? []) as Parameters<typeof attachTeamsToMatches>[0],
     (teamsData ?? []) as Parameters<typeof attachTeamsToMatches>[1],
   ) as MatchWithTeams[];
 
-  const readyMatches = scheduledMatches.filter(
-    (match) => Boolean(match.homeTeam && match.awayTeam),
+  const visibleMatches = allMatches.filter(
+    (match) =>
+      match.status !== "scheduled" ||
+      Boolean(match.homeTeam && match.awayTeam),
   );
-  const hiddenMatchCount = scheduledMatches.length - readyMatches.length;
+  const hiddenMatchCount = allMatches.length - visibleMatches.length;
 
   const teams: PickerTeam[] = (teamsData ?? []).map((team) => ({
     id: String((team as { id: string }).id),
@@ -70,7 +71,7 @@ export default async function PredictionsPage() {
     const [predictionsResult, tournamentResult, jokerUsage] = await Promise.all([
       supabase
         .from("predictions")
-        .select("match_id, home_score_guess, away_score_guess, is_joker_applied")
+        .select("match_id, home_score_guess, away_score_guess, is_joker_applied, points_earned")
         .eq("user_id", user.id),
       supabase
         .from("tournament_predictions")
@@ -83,7 +84,7 @@ export default async function PredictionsPage() {
     if (predictionsResult.error) {
       const fallbackPredictions = await supabase
         .from("predictions")
-        .select("match_id, home_score_guess, away_score_guess")
+        .select("match_id, home_score_guess, away_score_guess, points_earned")
         .eq("user_id", user.id);
 
       existingPredictions = ((fallbackPredictions.data ?? []) as Omit<MatchPredictionRow, "is_joker_applied">[])
@@ -113,7 +114,7 @@ export default async function PredictionsPage() {
 
   return (
     <PredictionsClient
-      matches={readyMatches}
+      matches={visibleMatches}
       teams={teams}
       players={players}
       existingPredictions={existingPredictions}

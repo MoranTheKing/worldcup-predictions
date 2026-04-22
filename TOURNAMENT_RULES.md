@@ -356,3 +356,42 @@ Prediction behavior:
 Migration note:
 
 - `supabase/migrations/20260422000014_harden_game_social_security.sql` is the current migration for invite-code hardening, flat RLS select policies, and join attempt throttling
+
+
+## Predictions History And Joker Separation
+
+As of April 22, 2026, the `/game/predictions` surface follows these rules:
+
+Display rules:
+
+- all `finished`, `live`, and `scheduled` matches are shown in one historical feed
+- future matches are hidden only when one or both teams are still unresolved placeholders with no DB team IDs
+- finished matches are rendered read-only and show:
+  actual result
+  saved prediction
+  `points_earned`
+
+Premium hit styling:
+
+- exact score hits receive a premium green / neon success treatment
+- exact score hits that also used a joker receive a stronger gold / celebratory visual treatment
+
+Auto-focus behavior:
+
+- on initial load, the feed auto-scrolls to the first `live` or `scheduled` match with `scrollIntoView({ behavior: "smooth", block: "center" })`
+
+Independent joker behavior:
+
+- joker locking is no longer global across the whole match list
+- the group-stage joker and knockout joker are separated by normalized stage kind
+- if stage text is ambiguous, the helper falls back to legacy match-number bucketing instead of collapsing both jokers into one lock state
+
+
+## Game Hub Stability Notes
+
+As of April 22, 2026, the social game layer also follows these stability rules:
+
+- joker-usage lookups must fail soft and return `{ groupUsed: false, knockoutUsed: false }` rather than taking down the game layout
+- existing prediction lookups must support a legacy fallback if `predictions.is_joker_applied` is not queryable yet
+- invite links now support a direct `/game/join/[code]` flow instead of only pre-filling a join input
+- tournament outright fields must preserve local UI state independently, so changing the winner cannot clear the top-scorer value

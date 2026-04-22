@@ -10,6 +10,17 @@ export type PredictionActionState = {
   savedAt?: string;
 } | null;
 
+type ExistingPredictionLookup =
+  | { data: { is_joker_applied: boolean } | null; error: null }
+  | { data: null; error: SupabaseLikeError };
+
+type SupabaseLikeError = {
+  code?: string;
+  message?: string;
+  details?: string;
+  hint?: string;
+};
+
 export async function upsertMatchPrediction(
   matchId: number,
   stage: string,
@@ -23,12 +34,12 @@ export async function upsertMatchPrediction(
   } = await supabase.auth.getUser();
 
   if (authError) {
-    console.error("[upsertMatchPrediction] auth error:", authError);
+    console.error("[upsertMatchPrediction] auth error:", formatSupabaseError(authError));
     return { error: "שגיאת אימות. נסה שוב." };
   }
 
   if (!user) {
-    return { error: "עליך להתחבר כדי לשמור ניחוש." };
+    return { error: "צריך להתחבר כדי לשמור ניחוש." };
   }
 
   const { data: matchRow, error: matchError } = await supabase
@@ -38,7 +49,7 @@ export async function upsertMatchPrediction(
     .maybeSingle();
 
   if (matchError) {
-    console.error("[upsertMatchPrediction] match lookup error:", matchError);
+    console.error("[upsertMatchPrediction] match lookup error:", formatSupabaseError(matchError));
     return { error: "לא הצלחנו לאמת את המשחק הזה כרגע." };
   }
 
@@ -47,7 +58,7 @@ export async function upsertMatchPrediction(
   const awayTeamId = (matchRow as { away_team_id?: string | null } | null)?.away_team_id ?? null;
 
   if (matchStatus !== "scheduled") {
-    return { error: "אפשר לנחש רק משחקים שעוד לא התחילו." };
+    return { error: "אפשר לנחש רק משחקים שעדיין לא התחילו." };
   }
 
   if (!homeTeamId || !awayTeamId) {
@@ -62,27 +73,22 @@ export async function upsertMatchPrediction(
   }
 
   const wantsJoker = parseBooleanField(formData.get("is_joker_applied"));
+  const existingPrediction = await getExistingPrediction(supabase, user.id, matchId);
 
-  const { data: existingPrediction, error: existingError } = await supabase
-    .from("predictions")
-    .select("is_joker_applied")
-    .eq("user_id", user.id)
-    .eq("match_id", matchId)
-    .maybeSingle();
-
-  if (existingError) {
-    console.error("[upsertMatchPrediction] existing prediction error:", existingError);
+  if (existingPrediction.error) {
+    console.error(
+      "[upsertMatchPrediction] existing prediction error:",
+      formatSupabaseError(existingPrediction.error),
+    );
     return { error: "לא הצלחנו לבדוק את מצב הניחוש הקיים." };
   }
 
-  const existingIsJoker =
-    (existingPrediction as { is_joker_applied?: boolean } | null)?.is_joker_applied ?? false;
+  const existingIsJoker = existingPrediction.data?.is_joker_applied ?? false;
 
   if (wantsJoker && !existingIsJoker) {
     const usage = await getUserJokerUsage(supabase, user.id);
-    const bucket = getJokerBucket(stage);
-    const isAlreadyUsed =
-      bucket === "group" ? usage.groupUsed : usage.knockoutUsed;
+    const bucket = getJokerBucket(stage, matchId);
+    const isAlreadyUsed = bucket === "group" ? usage.groupUsed : usage.knockoutUsed;
 
     if (isAlreadyUsed) {
       return {
@@ -94,34 +100,34 @@ export async function upsertMatchPrediction(
     }
   }
 
-  const { error: upsertError } = await supabase.from("predictions").upsert(
-    {
-      user_id: user.id,
-      match_id: matchId,
-      home_score_guess: homeScore,
-      away_score_guess: awayScore,
-      is_joker_applied: wantsJoker,
-    },
-    { onConflict: "user_id,match_id" },
-  );
+  const payload = {
+    user_id: user.id,
+    match_id: matchId,
+    home_score_guess: homeScore,
+    away_score_guess: awayScore,
+    is_joker_applied: wantsJoker,
+  };
+
+  const { error: upsertError } = await supabase
+    .from("predictions")
+    .upsert(payload, { onConflict: "user_id,match_id" });
 
   if (upsertError) {
     if (!wantsJoker && upsertError.code === "42703") {
-      const { error: fallbackError } = await supabase.from("predictions").upsert(
-        {
-          user_id: user.id,
-          match_id: matchId,
-          home_score_guess: homeScore,
-          away_score_guess: awayScore,
-        },
-        { onConflict: "user_id,match_id" },
-      );
+      const { error: fallbackError } = await supabase
+        .from("predictions")
+        .upsert(
+          {
+            user_id: user.id,
+            match_id: matchId,
+            home_score_guess: homeScore,
+            away_score_guess: awayScore,
+          },
+          { onConflict: "user_id,match_id" },
+        );
 
       if (!fallbackError) {
-        revalidatePath("/game", "layout");
-        revalidatePath("/game/predictions");
-        revalidatePath("/game/leagues");
-
+        revalidatePredictionPaths();
         return {
           success: true,
           savedAt: new Date().toISOString(),
@@ -129,7 +135,7 @@ export async function upsertMatchPrediction(
       }
     }
 
-    console.error("[upsertMatchPrediction] upsert error:", upsertError);
+    console.error("[upsertMatchPrediction] upsert error:", formatSupabaseError(upsertError));
     return {
       error:
         wantsJoker && upsertError.code === "42703"
@@ -138,9 +144,7 @@ export async function upsertMatchPrediction(
     };
   }
 
-  revalidatePath("/game", "layout");
-  revalidatePath("/game/predictions");
-  revalidatePath("/game/leagues");
+  revalidatePredictionPaths();
 
   return {
     success: true,
@@ -159,12 +163,12 @@ export async function upsertTournamentPrediction(
   } = await supabase.auth.getUser();
 
   if (authError) {
-    console.error("[upsertTournamentPrediction] auth error:", authError);
+    console.error("[upsertTournamentPrediction] auth error:", formatSupabaseError(authError));
     return { error: "שגיאת אימות. נסה שוב." };
   }
 
   if (!user) {
-    return { error: "עליך להתחבר כדי לשמור ניחושי טורניר." };
+    return { error: "צריך להתחבר כדי לשמור ניחושי טורניר." };
   }
 
   const winnerTeamId = parseUuidField(formData.get("winner_team_id"));
@@ -188,16 +192,27 @@ export async function upsertTournamentPrediction(
     .from("outright_bets")
     .upsert(payload, { onConflict: "user_id" });
 
+  if (tournamentError && outrightMirrorError) {
+    console.error(
+      "[upsertTournamentPrediction] save error:",
+      formatSupabaseError(tournamentError),
+      formatSupabaseError(outrightMirrorError),
+    );
+    return { error: "שמירת ניחושי הטורניר נכשלה." };
+  }
+
   if (tournamentError) {
-    console.error("[upsertTournamentPrediction] tournament_predictions error:", tournamentError);
-    if (outrightMirrorError) {
-      return { error: "שמירת ניחושי הטורניר נכשלה." };
-    }
+    console.error(
+      "[upsertTournamentPrediction] tournament_predictions error:",
+      formatSupabaseError(tournamentError),
+    );
   }
 
   if (outrightMirrorError) {
-    console.error("[upsertTournamentPrediction] outright_bets mirror error:", outrightMirrorError);
-    return { error: "שמירת ניחושי הטורניר נכשלה." };
+    console.error(
+      "[upsertTournamentPrediction] outright_bets mirror error:",
+      formatSupabaseError(outrightMirrorError),
+    );
   }
 
   revalidatePath("/game", "layout");
@@ -207,6 +222,57 @@ export async function upsertTournamentPrediction(
     success: true,
     savedAt: new Date().toISOString(),
   };
+}
+
+async function getExistingPrediction(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  matchId: number,
+): Promise<ExistingPredictionLookup> {
+  const primary = await supabase
+    .from("predictions")
+    .select("is_joker_applied")
+    .eq("user_id", userId)
+    .eq("match_id", matchId)
+    .maybeSingle();
+
+  if (!primary.error) {
+    return {
+      data: {
+        is_joker_applied:
+          (primary.data as { is_joker_applied?: boolean } | null)?.is_joker_applied ?? false,
+      },
+      error: null,
+    };
+  }
+
+  if (primary.error.code !== "42703") {
+    return { data: null, error: primary.error };
+  }
+
+  const fallback = await supabase
+    .from("predictions")
+    .select("match_id")
+    .eq("user_id", userId)
+    .eq("match_id", matchId)
+    .maybeSingle();
+
+  if (fallback.error) {
+    return { data: null, error: fallback.error };
+  }
+
+  return {
+    data: {
+      is_joker_applied: false,
+    },
+    error: null,
+  };
+}
+
+function revalidatePredictionPaths() {
+  revalidatePath("/game", "layout");
+  revalidatePath("/game/predictions");
+  revalidatePath("/game/leagues");
 }
 
 function parseScore(value: FormDataEntryValue | null): number | null {
@@ -246,4 +312,12 @@ function parseUuidField(value: FormDataEntryValue | null): string | null | false
   )
     ? normalized
     : false;
+}
+
+function formatSupabaseError(error: SupabaseLikeError | null) {
+  if (!error) {
+    return "unknown error";
+  }
+
+  return error.message ?? error.details ?? error.hint ?? error.code ?? "unknown error";
 }

@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import LeagueViewClient, { type LeagueMemberRow } from "./LeagueViewClient";
 
 export const dynamic = "force-dynamic";
@@ -19,17 +20,40 @@ export default async function LeaguePage({
     redirect(`/login?next=/game/leagues/${id}`);
   }
 
-  const { data: league } = await supabase
+  const admin = createAdminClient();
+
+  const { data: league, error: leagueError } = await admin
     .from("leagues")
     .select("id, name, invite_code, owner_id, created_at")
     .eq("id", id)
     .maybeSingle();
 
+  if (leagueError) {
+    console.error("[LeaguePage] league error:", leagueError);
+  }
+
   if (!league) {
     notFound();
   }
 
-  const { data: rawMembers, error: membersError } = await supabase
+  const isOwner = league.owner_id === user.id;
+
+  const { data: membership, error: membershipError } = await admin
+    .from("league_members")
+    .select("user_id")
+    .eq("league_id", id)
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (membershipError) {
+    console.error("[LeaguePage] membership error:", membershipError);
+  }
+
+  if (!isOwner && !membership) {
+    redirect("/game/leagues");
+  }
+
+  const { data: rawMembers, error: membersError } = await admin
     .from("league_members")
     .select("user_id, joined_at, profiles(display_name, total_score, avatar_url)")
     .eq("league_id", id);
