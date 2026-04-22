@@ -42,8 +42,6 @@ function normalizeDraft(match: DevMatchRow): DevMatchRow {
   if (match.status === "scheduled") {
     return {
       ...match,
-      home_score: 0,
-      away_score: 0,
       minute: null,
       is_extra_time: false,
       home_penalty_score: null,
@@ -527,14 +525,14 @@ function DevMatchRowEditor({
         <div className="flex items-center justify-center gap-1">
           <input
             type="number"
-            value={match.home_score ?? 0}
+            value={match.home_score ?? ""}
             min={0}
             max={99}
             onChange={(event) => {
-              const value = Number(event.target.value);
+              const value = event.target.value;
               update((current) => ({
                 ...current,
-                home_score: Number.isFinite(value) ? value : 0,
+                home_score: value === "" ? null : Number(value),
               }));
             }}
             disabled={busy}
@@ -543,14 +541,14 @@ function DevMatchRowEditor({
           <span className="text-wc-fg3">-</span>
           <input
             type="number"
-            value={match.away_score ?? 0}
+            value={match.away_score ?? ""}
             min={0}
             max={99}
             onChange={(event) => {
-              const value = Number(event.target.value);
+              const value = event.target.value;
               update((current) => ({
                 ...current,
-                away_score: Number.isFinite(value) ? value : 0,
+                away_score: value === "" ? null : Number(value),
               }));
             }}
             disabled={busy}

@@ -1089,7 +1089,7 @@ function BestThirdRow({
       ? "bg-[linear-gradient(90deg,rgba(95,255,123,0.06),rgba(95,255,123,0.01))]"
       : "";
   const dividerClassName =
-    entry.isLocked && entry.rank === 9 ? "border-t-2 border-t-[rgba(255,92,130,0.45)]" : "";
+    entry.rank === 9 ? "border-t-2 border-t-[rgba(255,92,130,0.45)]" : "";
   const rankClassName = isBelowCutoff ? "text-wc-danger" : "text-wc-fg2";
 
   return (
