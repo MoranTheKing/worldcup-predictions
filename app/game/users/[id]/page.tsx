@@ -134,6 +134,9 @@ export default async function OpponentPredictionsPage({
     (matchesData ?? []) as Parameters<typeof attachTeamsToMatches>[0],
     (teamsData ?? []) as Parameters<typeof attachTeamsToMatches>[1],
   ) as MatchWithTeams[];
+  const visibleOpponentMatches = allMatches.filter(
+    (match) => Boolean(match.homeTeam && match.awayTeam) && (match.status === "live" || match.status === "finished"),
+  );
 
   const predictionMap = new Map(
     ((predictionsResult.data ?? []) as Array<{
@@ -255,8 +258,8 @@ export default async function OpponentPredictionsPage({
       </section>
 
       <section className="flex flex-col gap-4">
-        {allMatches.length > 0 ? (
-          allMatches.map((match) => {
+        {visibleOpponentMatches.length > 0 ? (
+          visibleOpponentMatches.map((match) => {
             const prediction = predictionMap.get(match.match_number);
             return (
               <MatchPredictionCard

@@ -1,6 +1,6 @@
 "use client";
 
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { useActionState, useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -8,7 +8,6 @@ import {
   type PredictionActionState,
 } from "@/app/actions/predictions";
 import {
-  formatScorePair,
   getMatchScoreSummary,
   getStageLabelHe,
   type MatchWithTeams,
@@ -78,10 +77,6 @@ export default function MatchPredictionCard({
   const optimisticAway = state?.success ? parseDraftValue(awayDraft) : existingAway;
   const optimisticIsJoker = state?.success ? isJokerSelected : existingIsJoker;
   const hasPrediction = optimisticHome !== null && optimisticAway !== null;
-  const predictionScore =
-    optimisticHome !== null && optimisticAway !== null
-      ? formatScorePair(optimisticHome, optimisticAway)
-      : null;
   const exactHit =
     isFinished &&
     hasPrediction &&
@@ -209,7 +204,7 @@ export default function MatchPredictionCard({
                 <TeamSide align="left" name={awayTeamName} logoUrl={match.awayTeam?.logo_url ?? null} />
               </div>
 
-              {hasPrediction && predictionScore ? (
+              {hasPrediction ? (
                 <div
                   className={`rounded-[1rem] border px-3 py-2.5 text-xs font-semibold text-wc-fg1 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-sm ${
                     isLive
@@ -221,9 +216,11 @@ export default function MatchPredictionCard({
                     <span className="rounded-full bg-white/8 px-2 py-0.5 text-[10px] font-bold text-wc-fg2">
                       {predictionOwnerLabel}
                     </span>
-                    <ScoreText className="inline-flex font-black tracking-[0.08em]">
-                      {predictionScore}
-                    </ScoreText>
+                    <ScoreInline
+                      homeScore={optimisticHome}
+                      awayScore={optimisticAway}
+                      className="inline-flex font-black tracking-[0.08em]"
+                    />
                     {optimisticIsJoker ? <span className="ms-auto text-wc-violet">🎏</span> : null}
                   </div>
                 </div>
@@ -282,7 +279,7 @@ export default function MatchPredictionCard({
                 <TeamSide align="right" name={homeTeamName} logoUrl={match.homeTeam?.logo_url ?? null} />
 
                 <div dir="ltr" className="flex flex-shrink-0 items-center gap-2">
-                  <ReadOnlyScore score={actualSummary?.displayScore ?? "—"} />
+                  <ReadOnlyScore summary={actualSummary} />
                 </div>
 
                 <TeamSide align="left" name={awayTeamName} logoUrl={match.awayTeam?.logo_url ?? null} />
@@ -297,21 +294,24 @@ export default function MatchPredictionCard({
                         ? "טרם התחיל"
                         : "התוצאה בפועל"
                   }
-                  value={actualSummary?.displayScore ?? "—"}
+                  value={<ScoreSummaryInline summary={actualSummary} />}
                   tone={isLive ? "live" : tone}
-                  isScore
                 />
                 <ResultPanel
                   label={predictionOwnerLabel}
                   value={
                     hiddenPredictionForPrivacy
-                      ? "🔒 ? - ?"
-                      : hasPrediction && predictionScore
-                        ? `${predictionScore}${optimisticIsJoker ? " 👑" : ""}`
+                      ? <LockedScoreInline />
+                      : hasPrediction
+                        ? (
+                            <span className="inline-flex items-center gap-1.5">
+                              <ScoreInline homeScore={optimisticHome} awayScore={optimisticAway} />
+                              {optimisticIsJoker ? <span>👑</span> : null}
+                            </span>
+                          )
                         : "לא נשלח"
                   }
                   tone={hiddenPredictionForPrivacy ? "scheduled" : livePredictionTone}
-                  isScore={!hiddenPredictionForPrivacy && Boolean(hasPrediction && predictionScore)}
                 />
                 <ResultPanel
                   label="נקודות"
@@ -385,52 +385,85 @@ function ResultPanel({
   value,
   tone,
   emphasize = false,
-  isScore = false,
 }: {
   label: string;
-  value: string;
+  value: ReactNode;
   tone: PredictionTone;
   emphasize?: boolean;
-  isScore?: boolean;
 }) {
   return (
     <div className={`rounded-2xl border px-4 py-3 ${getResultPanelClass(tone)}`}>
       <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-wc-fg3">{label}</p>
-      <ScoreText
-        className={`mt-2 font-black ${emphasize ? "text-3xl" : "text-lg"} ${isScore ? "text-left" : ""}`}
-        enabled={isScore}
-      >
-        {value}
-      </ScoreText>
+      <div className={`mt-2 font-black ${emphasize ? "text-3xl" : "text-lg"}`}>{value}</div>
     </div>
   );
 }
 
-function ReadOnlyScore({ score }: { score: string }) {
+function ReadOnlyScore({
+  summary,
+}: {
+  summary: ReturnType<typeof getMatchScoreSummary> | null;
+}) {
   return (
-    <ScoreText className="min-w-[118px] rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-center text-lg font-black text-wc-fg1">
-      {score}
-    </ScoreText>
+    <div className="min-w-[118px] rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-center text-lg font-black text-wc-fg1">
+      <ScoreSummaryInline summary={summary} />
+    </div>
   );
 }
 
-function ScoreText({
-  children,
-  className,
-  enabled = true,
+function ScoreInline({
+  homeScore,
+  awayScore,
+  className = "",
 }: {
-  children: string;
-  className: string;
-  enabled?: boolean;
+  homeScore: number | null;
+  awayScore: number | null;
+  className?: string;
 }) {
-  if (!enabled) {
-    return <p className={className}>{children}</p>;
+  return (
+    <span dir="ltr" className={`inline-flex flex-row items-center justify-center gap-1 ${className}`}>
+      <span className="font-bold">{homeScore ?? "?"}</span>
+      <span>-</span>
+      <span className="font-bold">{awayScore ?? "?"}</span>
+    </span>
+  );
+}
+
+function ScoreSummaryInline({
+  summary,
+}: {
+  summary: ReturnType<typeof getMatchScoreSummary> | null;
+}) {
+  if (!summary) {
+    return <span>—</span>;
   }
 
   return (
-    <p dir="ltr" className={`${className} inline-block`}>
-      {children}
-    </p>
+    <span className="inline-flex items-center gap-2">
+      <ScoreInline homeScore={summary.homeScore} awayScore={summary.awayScore} className="" />
+      {summary.hasPenalties && summary.homePenaltyScore !== null && summary.awayPenaltyScore !== null ? (
+        <span className="inline-flex items-center gap-1 text-sm text-wc-fg3">
+          <span>(</span>
+          <ScoreInline
+            homeScore={summary.homePenaltyScore}
+            awayScore={summary.awayPenaltyScore}
+            className="text-sm font-semibold"
+          />
+          <span>PEN)</span>
+        </span>
+      ) : summary.statusSuffix ? (
+        <span className="text-sm text-wc-fg3">{summary.statusSuffix}</span>
+      ) : null}
+    </span>
+  );
+}
+
+function LockedScoreInline() {
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <span>🔒</span>
+      <ScoreInline homeScore={null} awayScore={null} className="" />
+    </span>
   );
 }
 

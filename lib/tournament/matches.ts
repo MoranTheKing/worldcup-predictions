@@ -50,8 +50,13 @@ export type MatchWithTeams = TournamentMatchRecord & {
 export type MatchScoreSummary = {
   regularScore: string;
   displayScore: string;
+  homeScore: number;
+  awayScore: number;
+  homePenaltyScore: number | null;
+  awayPenaltyScore: number | null;
   hasPenalties: boolean;
   isExtraTime: boolean;
+  statusSuffix: "PEN" | "ET" | null;
 };
 
 export function formatScorePair(homeScore: number, awayScore: number) {
@@ -215,8 +220,13 @@ export function getMatchScoreSummary(match: {
     return {
       regularScore,
       displayScore: `${regularScore} (${formatScorePair(homePenaltyScore, awayPenaltyScore)} PEN)`,
+      homeScore: match.home_score,
+      awayScore: match.away_score,
+      homePenaltyScore,
+      awayPenaltyScore,
       hasPenalties: true,
       isExtraTime: Boolean(match.is_extra_time),
+      statusSuffix: "PEN",
     };
   }
 
@@ -224,15 +234,25 @@ export function getMatchScoreSummary(match: {
     return {
       regularScore,
       displayScore: `${regularScore} ET`,
+      homeScore: match.home_score,
+      awayScore: match.away_score,
+      homePenaltyScore: null,
+      awayPenaltyScore: null,
       hasPenalties: false,
       isExtraTime: true,
+      statusSuffix: "ET",
     };
   }
 
   return {
     regularScore,
     displayScore: regularScore,
+    homeScore: match.home_score,
+    awayScore: match.away_score,
+    homePenaltyScore: null,
+    awayPenaltyScore: null,
     hasPenalties: false,
     isExtraTime: false,
+    statusSuffix: null,
   };
 }

@@ -256,9 +256,10 @@ function MatchCard({ match }: { match: MatchListRow }) {
         <TeamSide logo={homeLogo} name={homeName} />
         <div className="flex shrink-0 flex-col items-center gap-1 text-center">
           {scoreSummary ? (
-            <span className={`wc-display text-wc-fg1 ${scoreSummary.hasPenalties ? "text-xl" : "text-2xl"}`}>
-              {scoreSummary.displayScore}
-            </span>
+            <ScoreSummaryBadge
+              summary={scoreSummary}
+              className={`wc-display text-wc-fg1 ${scoreSummary.hasPenalties ? "text-xl" : "text-2xl"}`}
+            />
           ) : (
             <span className="wc-display text-2xl text-wc-fg3">VS</span>
           )}
@@ -268,6 +269,37 @@ function MatchCard({ match }: { match: MatchListRow }) {
         <TeamSide logo={awayLogo} name={awayName} reverse />
       </div>
     </Link>
+  );
+}
+
+function ScoreSummaryBadge({
+  summary,
+  className,
+}: {
+  summary: NonNullable<ReturnType<typeof getMatchScoreSummary>>;
+  className: string;
+}) {
+  return (
+    <span className={`inline-flex items-center gap-2 ${className}`}>
+      <span dir="ltr" className="inline-flex items-center gap-1">
+        <span className="font-bold">{summary.homeScore}</span>
+        <span>-</span>
+        <span className="font-bold">{summary.awayScore}</span>
+      </span>
+      {summary.hasPenalties && summary.homePenaltyScore !== null && summary.awayPenaltyScore !== null ? (
+        <span className="inline-flex items-center gap-1 text-sm text-wc-fg3">
+          <span>(</span>
+          <span dir="ltr" className="inline-flex items-center gap-1">
+            <span className="font-bold">{summary.homePenaltyScore}</span>
+            <span>-</span>
+            <span className="font-bold">{summary.awayPenaltyScore}</span>
+          </span>
+          <span>PEN)</span>
+        </span>
+      ) : summary.statusSuffix ? (
+        <span className="text-sm text-wc-fg3">{summary.statusSuffix}</span>
+      ) : null}
+    </span>
   );
 }
 

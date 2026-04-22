@@ -58,9 +58,10 @@ export default function MatchDetailClient({ match }: { match: MatchDetailRow }) 
           <TeamBlock logo={homeLogo} name={homeName} />
           <div className="flex flex-col items-center text-center">
             {scoreSummary ? (
-              <p className={`wc-display text-wc-fg1 ${scoreSummary.hasPenalties ? "text-4xl" : "text-6xl"}`}>
-                {scoreSummary.displayScore}
-              </p>
+              <ScoreSummaryHero
+                summary={scoreSummary}
+                className={`wc-display text-wc-fg1 ${scoreSummary.hasPenalties ? "text-4xl" : "text-6xl"}`}
+              />
             ) : (
               <p className="wc-display text-4xl text-wc-fg3">VS</p>
             )}
@@ -82,6 +83,37 @@ export default function MatchDetailClient({ match }: { match: MatchDetailRow }) 
           או דרך מנצחת של משחק קודם, השם והדגל יוצגו אוטומטית.
         </div>
       </section>
+    </div>
+  );
+}
+
+function ScoreSummaryHero({
+  summary,
+  className,
+}: {
+  summary: NonNullable<ReturnType<typeof getMatchScoreSummary>>;
+  className: string;
+}) {
+  return (
+    <div className={`inline-flex items-center gap-3 ${className}`}>
+      <span dir="ltr" className="inline-flex items-center gap-1">
+        <span className="font-bold">{summary.homeScore}</span>
+        <span>-</span>
+        <span className="font-bold">{summary.awayScore}</span>
+      </span>
+      {summary.hasPenalties && summary.homePenaltyScore !== null && summary.awayPenaltyScore !== null ? (
+        <span className="inline-flex items-center gap-1 text-lg text-wc-fg3">
+          <span>(</span>
+          <span dir="ltr" className="inline-flex items-center gap-1">
+            <span className="font-bold">{summary.homePenaltyScore}</span>
+            <span>-</span>
+            <span className="font-bold">{summary.awayPenaltyScore}</span>
+          </span>
+          <span>PEN)</span>
+        </span>
+      ) : summary.statusSuffix ? (
+        <span className="text-lg text-wc-fg3">{summary.statusSuffix}</span>
+      ) : null}
     </div>
   );
 }
