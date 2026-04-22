@@ -112,7 +112,7 @@ const QUALIFIED_PILL_CLASS = "bg-[rgba(95,255,123,0.14)] text-wc-neon";
 const ELIMINATED_PILL_CLASS = "bg-[rgba(255,92,130,0.14)] text-wc-danger";
 const LOCKED_POSITION_PILL_CLASS = "bg-white/8 text-wc-fg2";
 const CONNECTOR_CLASS = "bg-[rgba(255,255,255,0.18)]";
-const CARD_WIDTH_CLASS = "mx-auto w-full max-w-[220px]";
+const CARD_WIDTH_CLASS = "mx-auto w-[148px] min-w-[140px] max-w-[152px]";
 const TOP_HALF_BRANCHES: readonly QuarterBranchConfig[] = [
   {
     quarterFinalMatchNumber: 97,
@@ -446,9 +446,10 @@ function KnockoutBracket({
   }
 
   return (
-    <div className="mt-6 overflow-x-auto overflow-y-hidden rounded-[1.75rem] border border-white/10 bg-[rgba(255,255,255,0.02)]">
-      <div className="min-w-max w-full p-4 sm:p-6">
-        <div className="flex flex-col items-center gap-8">
+    <div className="mt-6 w-full overflow-x-auto overflow-y-hidden">
+      <div className="w-max mx-auto px-4 pb-8">
+        <div className="rounded-[1.75rem] border border-white/10 bg-[rgba(255,255,255,0.02)] p-3 sm:p-4">
+          <div className="flex flex-col items-center gap-6">
           <HalfBracketTree
             direction="down"
             branches={TOP_HALF_BRANCHES}
@@ -464,6 +465,7 @@ function KnockoutBracket({
             semiFinalMatch={matchesByNumber.get(BOTTOM_SEMI) ?? null}
             matchesByNumber={matchesByNumber}
           />
+          </div>
         </div>
       </div>
     </div>
@@ -509,10 +511,10 @@ function HalfBracketTree({
 
   return (
     <section className="rounded-[1.75rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.015))] p-4 sm:p-5">
-      <div className="flex flex-col items-center gap-4">
+      <div className="flex flex-col items-center gap-2">
         {direction === "down" ? (
           <>
-            <div className="flex flex-nowrap items-start justify-center gap-8">
+            <div className="flex flex-nowrap items-start justify-center gap-4">
               {quarterBranches}
             </div>
             <BracketConnector direction="down" span="wide" />
@@ -530,7 +532,7 @@ function HalfBracketTree({
               </div>
             ) : null}
             <BracketConnector direction="up" span="wide" />
-            <div className="flex flex-nowrap items-end justify-center gap-8">
+            <div className="flex flex-nowrap items-end justify-center gap-4">
               {quarterBranches}
             </div>
           </>
@@ -569,10 +571,10 @@ function QuarterBranchTree({
 
   return (
     <div className="flex-none">
-      <div className="flex flex-col items-center gap-4">
+      <div className="flex flex-col items-center gap-3">
         {direction === "down" ? (
           <>
-            <div className="flex flex-nowrap items-start gap-6">{leafBranches}</div>
+            <div className="flex flex-nowrap items-start gap-3">{leafBranches}</div>
             <BracketConnector direction="down" span="medium" />
             <KnockoutMatchCard match={quarterMatch} variant="default" compact />
           </>
@@ -580,7 +582,7 @@ function QuarterBranchTree({
           <>
             <KnockoutMatchCard match={quarterMatch} variant="default" compact />
             <BracketConnector direction="up" span="medium" />
-            <div className="flex flex-nowrap items-end gap-6">{leafBranches}</div>
+            <div className="flex flex-nowrap items-end gap-3">{leafBranches}</div>
           </>
         )}
       </div>
@@ -610,7 +612,7 @@ function RoundOf16BranchTree({
       <div className="flex flex-col items-center gap-3">
         {direction === "down" ? (
           <>
-            <div className="flex flex-nowrap items-start gap-3">
+            <div className="flex flex-nowrap items-start gap-2">
               {roundOf32Matches.map((match) => (
                 <KnockoutMatchCard
                   key={match.matchNumber}
@@ -627,7 +629,7 @@ function RoundOf16BranchTree({
           <>
             <KnockoutMatchCard match={roundOf16Match} variant="default" compact />
             <BracketConnector direction="up" span="compact" />
-            <div className="flex flex-nowrap items-end gap-3">
+            <div className="flex flex-nowrap items-end gap-2">
               {roundOf32Matches.map((match) => (
                 <KnockoutMatchCard
                   key={match.matchNumber}
@@ -653,26 +655,26 @@ function BracketConnector({
 }) {
   const widthClass =
     span === "compact"
-      ? "w-[28rem]"
+      ? "w-[18.25rem]"
       : span === "medium"
-        ? "w-[58rem]"
-        : "w-[122rem]";
+        ? "w-[37.25rem]"
+        : "w-[75rem]";
 
   return (
-    <div className={`relative h-8 flex-none ${widthClass}`}>
+    <div className={`relative h-6 flex-none ${widthClass}`}>
       {direction === "down" ? (
         <>
-          <div className={`absolute left-1/4 top-0 h-4 w-px -translate-x-1/2 ${CONNECTOR_CLASS}`} />
-          <div className={`absolute left-3/4 top-0 h-4 w-px -translate-x-1/2 ${CONNECTOR_CLASS}`} />
-          <div className="absolute left-1/4 right-1/4 top-4 border-t border-[rgba(255,255,255,0.18)]" />
-          <div className={`absolute left-1/2 top-4 h-4 w-px -translate-x-1/2 ${CONNECTOR_CLASS}`} />
+          <div className={`absolute left-1/4 top-0 h-3 w-px -translate-x-1/2 ${CONNECTOR_CLASS}`} />
+          <div className={`absolute left-3/4 top-0 h-3 w-px -translate-x-1/2 ${CONNECTOR_CLASS}`} />
+          <div className="absolute left-1/4 right-1/4 top-3 border-t border-[rgba(255,255,255,0.18)]" />
+          <div className={`absolute left-1/2 top-3 h-3 w-px -translate-x-1/2 ${CONNECTOR_CLASS}`} />
         </>
       ) : (
         <>
-          <div className={`absolute left-1/2 top-0 h-4 w-px -translate-x-1/2 ${CONNECTOR_CLASS}`} />
-          <div className="absolute left-1/4 right-1/4 top-4 border-t border-[rgba(255,255,255,0.18)]" />
-          <div className={`absolute left-1/4 top-4 h-4 w-px -translate-x-1/2 ${CONNECTOR_CLASS}`} />
-          <div className={`absolute left-3/4 top-4 h-4 w-px -translate-x-1/2 ${CONNECTOR_CLASS}`} />
+          <div className={`absolute left-1/2 top-0 h-3 w-px -translate-x-1/2 ${CONNECTOR_CLASS}`} />
+          <div className="absolute left-1/4 right-1/4 top-3 border-t border-[rgba(255,255,255,0.18)]" />
+          <div className={`absolute left-1/4 top-3 h-3 w-px -translate-x-1/2 ${CONNECTOR_CLASS}`} />
+          <div className={`absolute left-3/4 top-3 h-3 w-px -translate-x-1/2 ${CONNECTOR_CLASS}`} />
         </>
       )}
     </div>
@@ -687,14 +689,14 @@ function CenterClimaxBlock({
   thirdPlaceMatch: ResolvedBracketMatch | null;
 }) {
   return (
-    <section className="rounded-[1.75rem] border border-[rgba(255,182,73,0.2)] bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,182,73,0.05))] p-4 sm:p-5">
-      <div className="mb-5 flex justify-center">
+    <section className="rounded-[1.75rem] border border-[rgba(255,182,73,0.2)] bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,182,73,0.05))] p-3 sm:p-4">
+      <div className="mb-4 flex justify-center">
         <div className="rounded-full border border-[rgba(255,182,73,0.22)] bg-[rgba(7,11,18,0.9)] px-4 py-2 shadow-[0_12px_32px_rgba(0,0,0,0.26)] backdrop-blur">
           <p className="wc-display text-xl text-wc-fg1">מרכז ההכרעה</p>
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-3 md:grid-cols-2">
         {finalMatch ? (
           <FeaturedMatchCard
             label={TEXT.final}
@@ -728,12 +730,12 @@ function FeaturedMatchCard({
   match: ResolvedBracketMatch;
 }) {
   return (
-    <div className="space-y-3 rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-4">
+    <div className="space-y-2 rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-3">
       <div className="text-center">
-        <p className={`wc-display text-2xl ${variant === "final" ? "text-wc-amber" : "text-[#CD7F32]"}`}>
+        <p className={`wc-display text-xl ${variant === "final" ? "text-wc-amber" : "text-[#CD7F32]"}`}>
           {label}
         </p>
-        <p className="mt-1 text-xs text-wc-fg2">{sublabel}</p>
+        <p className="mt-1 text-[10px] text-wc-fg2">{sublabel}</p>
       </div>
       <KnockoutMatchCard match={match} variant={variant} />
     </div>
@@ -774,7 +776,7 @@ function KnockoutMatchCard({
   return (
     <div
       dir="rtl"
-      className={`wc-bracket-card overflow-hidden text-[11px] leading-tight ${
+      className={`wc-bracket-card overflow-hidden text-[10px] leading-tight ${
         finalVariant
           ? "wc-bracket-final"
           : thirdVariant
@@ -783,7 +785,7 @@ function KnockoutMatchCard({
       } ${compact ? CARD_WIDTH_CLASS : "w-full"}`}
     >
       <div
-        className={`flex items-center justify-between gap-2 px-2.5 py-2 text-[10px] font-semibold ${
+        className={`flex items-center justify-between gap-1.5 px-2 py-1.5 text-[9px] font-semibold ${
           finalVariant
             ? "bg-[linear-gradient(90deg,var(--wc-amber),#ffd580)] text-[color:var(--wc-text-inverse)]"
             : thirdVariant
@@ -859,27 +861,27 @@ function SeedRow({
       : `font-medium ${highlight ? "text-wc-fg1" : "text-wc-fg2"}`;
 
   return (
-    <div className={`flex items-center justify-between gap-2 px-3 py-2 ${borderClass} ${bgClass}`}>
-      <div className={`flex min-w-0 items-center gap-1.5 ${textClass}`}>
+    <div className={`flex items-center justify-between gap-1.5 px-2 py-1.5 ${borderClass} ${bgClass}`}>
+      <div className={`flex min-w-0 items-center gap-1 ${textClass}`}>
         {seed.kind === "team" && seed.team.logo_url ? (
           <Image
             src={seed.team.logo_url}
             alt={seed.team.name}
-            width={14}
-            height={10}
+            width={12}
+            height={9}
             className="rounded-sm object-cover"
             unoptimized
           />
         ) : (
-          <div className="h-[10px] w-3.5 shrink-0 rounded-sm bg-white/10" />
+          <div className="h-[9px] w-3 shrink-0 rounded-sm bg-white/10" />
         )}
-        <span className="truncate text-[10.5px] sm:text-[11px]">
+        <span className="truncate text-[10px]">
           {seed.kind === "team" ? seed.team.name_he ?? seed.team.name : <span className="text-wc-fg3">{seed.labelHe}</span>}
         </span>
       </div>
 
       {score !== null && (
-        <div className={`flex shrink-0 items-center gap-1 ${textClass}`}>
+        <div className={`flex shrink-0 items-center gap-0.5 text-[10px] ${textClass}`}>
           {penaltyScore !== null && (
             <span className={isLoser ? "" : "text-wc-fg3"}>({penaltyScore})</span>
           )}
