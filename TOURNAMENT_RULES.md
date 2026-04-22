@@ -301,3 +301,35 @@ Still intentionally out of scope for this phase:
 - league ranking logic based on the new `predictions` tables
 - full invite/join UX on top of the new `invite_code` schema
 
+
+## Phase 2 Predictions Hub And RLS Repairs
+
+As of April 22, 2026, the social game layer continues with a protected `/game` hub.
+
+Routing:
+
+- `proxy.ts` now protects `/game` and `/game/*`
+- `/game` redirects to `/game/predictions`
+- `/dashboard/profile` now redirects into `/game`
+- the dynamic league page `app/game/leagues/[id]/page.tsx` exists and is part of the production route graph
+
+Booster logic:
+
+- the Gamer Card and prediction UI no longer trust legacy joker counters in `users`
+- booster availability is derived from `predictions.is_joker_applied` joined with `matches.stage`
+- there is exactly one booster for `group` and one booster for all knockout stages combined
+- server validation prevents saving a second joker in the same bucket
+
+Schema repairs:
+
+- `supabase/migrations/20260422000010_phase1_social_auth.sql` was corrected so `tournament_predictions.predicted_winner_team_id` matches `teams.id` as `uuid`
+- `supabase/migrations/20260422000012_fix_rls_recursion.sql` flattens the recursive SELECT policies that caused `42P17` on `league_members`
+- the same migration also adds `predictions.is_joker_applied` and repairs `tournament_predictions` for partially applied databases
+- `supabase/migrations/20260422000013_repair_phase2_social_schema.sql` is the manual-safe recovery script for SQL Editor runs that already failed with
+  `42804: foreign key constraint "tournament_predictions_predicted_winner_team_id_fkey" cannot be implemented`
+
+RLS behavior after the repair:
+
+- `league_members`, `predictions`, and `tournament_predictions` now use `FOR SELECT TO authenticated USING (true)`
+- writes remain restricted to `auth.uid() = user_id`
+- this removes the recursive policy path that previously broke `/game/leagues` and league saves

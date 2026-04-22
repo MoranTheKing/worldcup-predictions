@@ -273,3 +273,35 @@ ui_kits/
     index.html               ג€” Interactive mobile prototype (main deliverable)
 ```
 
+
+## Phase 2 Predictions Hub
+
+As of April 22, 2026, `/game` is now the protected Predictions Hub for the social game layer.
+
+What changed:
+
+- `proxy.ts` now protects `/game` and all nested `/game/*` routes
+- `/game` now defaults to `/game/predictions`
+- the old standalone profile flow now redirects into `/game`
+- `app/game/layout.tsx` now renders a premium Gamer Card with avatar, display name, total score, and live booster state
+- the booster state is derived from real prediction history (`predictions.is_joker_applied` + `matches.stage`), not from legacy counters in `users`
+- `/game/predictions` now combines match predictions, outright tournament picks, and joker controls in one flow
+- `/game/leagues` now acts as the social tab for create/join plus the user's leagues list
+- `/game/leagues/[id]` is present and part of the build output, so league redirects now land on a real dynamic route
+
+Database fixups:
+
+- `supabase/migrations/20260422000010_phase1_social_auth.sql` was corrected so `tournament_predictions.predicted_winner_team_id` uses `uuid`, matching `teams.id`
+- `supabase/migrations/20260422000012_fix_rls_recursion.sql` now:
+  flattens the recursive SELECT policies on `league_members`, `predictions`, and `tournament_predictions`
+  adds `predictions.is_joker_applied`
+  repairs `tournament_predictions.predicted_winner_team_id` for databases that were left in a partial/broken state
+- if Supabase SQL Editor already failed with `42804` on `tournament_predictions_predicted_winner_team_id_fkey`, run `supabase/migrations/20260422000013_repair_phase2_social_schema.sql`
+  this repair script converts legacy `bigint` winner IDs to `uuid` through `teams.legacy_id` and then reapplies the flat RLS policies
+
+Current joker behavior:
+
+- one booster for the group stage and one booster for all knockout rounds
+- the server action validates joker uniqueness by scanning the user's existing predictions before allowing a new joker save
+- disabled joker buttons now explain why they cannot be activated
+- prediction score inputs default to `0`, so untouched fields still submit a legal score

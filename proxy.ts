@@ -11,6 +11,8 @@ function isPublicDashboardPath(pathname: string) {
 
 function isProtectedPath(pathname: string) {
   if (
+    pathname === "/game" ||
+    pathname.startsWith("/game/") ||
     pathname === "/dashboard" ||
     pathname.startsWith("/dashboard/matches") ||
     pathname.startsWith("/dashboard/profile") ||

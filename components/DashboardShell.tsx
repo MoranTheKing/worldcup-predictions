@@ -8,7 +8,6 @@ const NAV_ITEMS = [
   { href: "/dashboard/matches", icon: "🎯", label: "משחקים" },
   { href: "/dashboard/tournament", icon: "🏆", label: "טורניר" },
   { href: "/game", icon: "👥", label: "ניחושים" },
-  { href: "/dashboard/profile", icon: "🧭", label: "פרופיל" },
 ];
 
 interface Props {
@@ -166,7 +165,7 @@ export default function DashboardShell({ children }: Props) {
       </main>
 
       <nav className="fixed inset-x-0 bottom-0 z-20 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] md:hidden">
-        <div className="wc-glass grid grid-cols-4 rounded-[1.75rem] px-2 py-2">
+        <div className="wc-glass grid grid-cols-3 rounded-[1.75rem] px-2 py-2">
           {NAV_ITEMS.map(({ href, icon, label }) => {
             const active = isActive(href);
 

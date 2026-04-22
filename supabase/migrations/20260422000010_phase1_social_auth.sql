@@ -192,14 +192,14 @@ on conflict (user_id, match_id) do nothing;
 create table if not exists public.tournament_predictions (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references public.profiles(id) on delete cascade,
-  predicted_winner_team_id bigint references public.teams(id) on delete set null,
+  predicted_winner_team_id uuid references public.teams(id) on delete set null,
   predicted_top_scorer_name text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   unique (user_id)
 );
 
-alter table public.tournament_predictions add column if not exists predicted_winner_team_id bigint references public.teams(id) on delete set null;
+alter table public.tournament_predictions add column if not exists predicted_winner_team_id uuid references public.teams(id) on delete set null;
 alter table public.tournament_predictions add column if not exists predicted_top_scorer_name text;
 alter table public.tournament_predictions add column if not exists created_at timestamptz not null default now();
 alter table public.tournament_predictions add column if not exists updated_at timestamptz not null default now();

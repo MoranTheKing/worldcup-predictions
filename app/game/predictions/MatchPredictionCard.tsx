@@ -1,24 +1,201 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { upsertMatchPrediction, type PredictionActionState } from "@/app/actions/predictions";
+import { getJokerBucket } from "@/lib/game/boosters";
 import type { MatchWithTeams } from "@/lib/tournament/matches";
 
 interface Props {
   match: MatchWithTeams;
   existingHome: number | null;
   existingAway: number | null;
+  existingIsJoker: boolean;
+  groupJokerUsed: boolean;
+  knockoutJokerUsed: boolean;
 }
 
 const STAGE_LABELS: Record<string, string> = {
-  group: "שלב בתים",
+  group: "שלב הבתים",
   round_of_32: "32 האחרונות",
   round_of_16: "16 האחרונות",
-  quarter_final: "רבע גמר",
-  semi_final: "חצי גמר",
-  third_place: "מקום שלישי",
-  final: "גמר",
+  quarter_final: "רבע הגמר",
+  semi_final: "חצי הגמר",
+  third_place: "מקום 3",
+  final: "הגמר",
 };
+
+export default function MatchPredictionCard({
+  match,
+  existingHome,
+  existingAway,
+  existingIsJoker,
+  groupJokerUsed,
+  knockoutJokerUsed,
+}: Props) {
+  const router = useRouter();
+  const boundAction = upsertMatchPrediction.bind(null, match.match_number, match.stage);
+  const [state, formAction, isPending] = useActionState<PredictionActionState, FormData>(
+    boundAction,
+    null,
+  );
+  const [, startTransition] = useTransition();
+  const [jokerOverride, setJokerOverride] = useState<boolean | null>(null);
+  const isJoker = jokerOverride ?? existingIsJoker;
+
+  useEffect(() => {
+    if (!state?.success) {
+      return;
+    }
+
+    startTransition(() => {
+      router.refresh();
+    });
+  }, [router, startTransition, state?.savedAt, state?.success]);
+
+  const jokerBucket = getJokerBucket(match.stage);
+  const stageJokerUsed =
+    jokerBucket === "group" ? groupJokerUsed : knockoutJokerUsed;
+  const canToggleJoker = isJoker || !stageJokerUsed;
+  const disabledReason =
+    jokerBucket === "group"
+      ? "ג'וקר שלב הבתים כבר נוצל."
+      : "ג'וקר הנוקאאוט כבר נוצל.";
+
+  const homeTeamName =
+    match.homeTeam?.name_he ?? match.homeTeam?.name ?? match.home_placeholder ?? "?";
+  const awayTeamName =
+    match.awayTeam?.name_he ?? match.awayTeam?.name ?? match.away_placeholder ?? "?";
+  const stageLabel = STAGE_LABELS[match.stage] ?? match.stage;
+  const matchDate = new Date(match.date_time);
+
+  return (
+    <div
+      className="overflow-hidden rounded-2xl border"
+      style={{
+        borderColor: isJoker
+          ? "rgba(111,60,255,0.5)"
+          : state?.success
+            ? "rgba(95,255,123,0.4)"
+            : "var(--wc-border)",
+        background: "var(--wc-surface)",
+        boxShadow: isJoker ? "0 0 18px rgba(111,60,255,0.2)" : undefined,
+      }}
+    >
+      <div
+        className="flex items-center justify-between border-b px-4 py-2"
+        style={{ borderColor: "var(--wc-border)" }}
+      >
+        <span className="text-[11px] font-semibold text-wc-fg3">{stageLabel}</span>
+        <span className="text-[11px] font-semibold text-wc-fg3">
+          {matchDate.toLocaleDateString("he-IL", {
+            day: "numeric",
+            month: "short",
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
+        </span>
+      </div>
+
+      <form action={formAction} className="px-4 py-4">
+        <input type="hidden" name="is_joker_applied" value={isJoker ? "true" : "false"} />
+
+        <div className="flex items-center gap-3">
+          <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
+            {match.homeTeam?.logo_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={match.homeTeam.logo_url}
+                alt=""
+                className="h-7 w-7 flex-shrink-0 object-contain"
+              />
+            ) : null}
+            <span className="truncate text-right text-sm font-bold text-wc-fg1">
+              {homeTeamName}
+            </span>
+          </div>
+
+          <div className="flex flex-shrink-0 items-center gap-2">
+            <ScoreInput name="home_score" defaultValue={existingHome} disabled={isPending} />
+            <span className="text-sm font-black text-wc-fg3">:</span>
+            <ScoreInput name="away_score" defaultValue={existingAway} disabled={isPending} />
+          </div>
+
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            {match.awayTeam?.logo_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={match.awayTeam.logo_url}
+                alt=""
+                className="h-7 w-7 flex-shrink-0 object-contain"
+              />
+            ) : null}
+            <span className="truncate text-left text-sm font-bold text-wc-fg1">
+              {awayTeamName}
+            </span>
+          </div>
+        </div>
+
+        <div className="mt-3">
+          <button
+            type="button"
+            disabled={!canToggleJoker || isPending}
+            title={!canToggleJoker ? disabledReason : ""}
+            onClick={() => setJokerOverride(!isJoker)}
+            className="w-full rounded-xl py-2 text-xs font-bold transition-all disabled:cursor-not-allowed disabled:opacity-40"
+            style={
+              isJoker
+                ? {
+                    background: "rgba(111,60,255,0.2)",
+                    border: "1.5px solid rgba(111,60,255,0.6)",
+                    color: "var(--wc-violet)",
+                    boxShadow: "0 0 12px rgba(111,60,255,0.25)",
+                  }
+                : {
+                    background: "var(--wc-raised)",
+                    border: "1.5px solid var(--wc-border)",
+                    color: "var(--wc-fg2)",
+                  }
+            }
+          >
+            {isJoker
+              ? "🃏 ג'וקר פעיל על המשחק הזה"
+              : canToggleJoker
+                ? "🃏 הפעל ג'וקר"
+                : `🃏 ${disabledReason}`}
+          </button>
+        </div>
+
+        <div className="mt-3 flex items-center justify-between gap-3">
+          <div className="min-h-[1.25rem] flex-1">
+            {state?.error ? (
+              <p role="alert" className="text-xs font-semibold text-wc-danger">
+                {state.error}
+              </p>
+            ) : state?.success ? (
+              <p className="text-xs font-semibold text-wc-neon">
+                הניחוש נשמר{isJoker ? " עם ג'וקר" : ""}.
+              </p>
+            ) : existingHome !== null && existingAway !== null ? (
+              <p className="text-xs text-wc-fg3">
+                ניחוש קיים: {existingHome}:{existingAway}
+                {existingIsJoker ? " 🃏" : ""}
+              </p>
+            ) : null}
+          </div>
+
+          <button
+            type="submit"
+            disabled={isPending}
+            className="wc-button-primary flex-shrink-0 px-4 py-2 text-xs font-bold disabled:opacity-50"
+          >
+            {isPending ? "שומר..." : "שמור ניחוש"}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
 
 function ScoreInput({
   name,
@@ -37,147 +214,10 @@ function ScoreInput({
       max="99"
       required
       disabled={disabled}
-      defaultValue={defaultValue ?? ""}
+      defaultValue={defaultValue ?? 0}
       placeholder="0"
       className="wc-input w-16 text-center text-lg font-black"
       style={{ padding: "0.5rem 0.25rem" }}
     />
-  );
-}
-
-export default function MatchPredictionCard({ match, existingHome, existingAway }: Props) {
-  const boundAction = upsertMatchPrediction.bind(null, match.match_number);
-  const [state, formAction, isPending] = useActionState<PredictionActionState, FormData>(
-    boundAction,
-    null
-  );
-
-  const homeTeamName = match.homeTeam?.name_he ?? match.homeTeam?.name ?? match.home_placeholder ?? "?";
-  const awayTeamName = match.awayTeam?.name_he ?? match.awayTeam?.name ?? match.away_placeholder ?? "?";
-  const stageLabel = STAGE_LABELS[match.stage] ?? match.stage;
-
-  const matchDate = new Date(match.date_time);
-  const dateStr = matchDate.toLocaleDateString("he-IL", {
-    day: "numeric",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-
-  const hasSaved = existingHome !== null && existingAway !== null;
-  const justSaved = state?.success === true;
-
-  return (
-    <div
-      className="rounded-2xl overflow-hidden"
-      style={{
-        background: "var(--wc-surface)",
-        border: `1px solid ${justSaved ? "rgba(95,255,123,0.4)" : "var(--wc-border)"}`,
-        transition: "border-color 300ms",
-      }}
-    >
-      {/* Header */}
-      <div
-        className="flex items-center justify-between px-4 py-2 border-b"
-        style={{ borderColor: "var(--wc-border)" }}
-      >
-        <span className="text-[11px] font-semibold" style={{ color: "var(--wc-fg3)" }}>
-          {stageLabel}
-        </span>
-        <span className="text-[11px] font-semibold" style={{ color: "var(--wc-fg3)" }}>
-          {dateStr}
-        </span>
-      </div>
-
-      {/* Teams + score inputs */}
-      <form action={formAction} className="px-4 py-4">
-        <div className="flex items-center gap-3">
-          {/* Home team */}
-          <div className="flex flex-1 items-center gap-2 justify-end min-w-0">
-            {match.homeTeam?.logo_url && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={match.homeTeam.logo_url}
-                alt=""
-                className="h-7 w-7 object-contain flex-shrink-0"
-              />
-            )}
-            <span
-              className="truncate text-sm font-bold text-right"
-              style={{ color: "var(--wc-fg1)" }}
-            >
-              {homeTeamName}
-            </span>
-          </div>
-
-          {/* Score inputs */}
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <ScoreInput name="home_score" defaultValue={existingHome} disabled={isPending} />
-            <span className="text-sm font-black" style={{ color: "var(--wc-fg3)" }}>:</span>
-            <ScoreInput name="away_score" defaultValue={existingAway} disabled={isPending} />
-          </div>
-
-          {/* Away team */}
-          <div className="flex flex-1 items-center gap-2 min-w-0">
-            {match.awayTeam?.logo_url && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={match.awayTeam.logo_url}
-                alt=""
-                className="h-7 w-7 object-contain flex-shrink-0"
-              />
-            )}
-            <span
-              className="truncate text-sm font-bold text-left"
-              style={{ color: "var(--wc-fg1)" }}
-            >
-              {awayTeamName}
-            </span>
-          </div>
-        </div>
-
-        {/* Status / error */}
-        <div className="mt-3 flex items-center justify-between gap-3">
-          <div className="flex-1 min-h-[1.25rem]">
-            {state?.error && (
-              <p
-                role="alert"
-                className="text-xs font-semibold"
-                style={{ color: "var(--wc-danger)" }}
-              >
-                {state.error}
-              </p>
-            )}
-            {justSaved && (
-              <p className="text-xs font-semibold" style={{ color: "var(--wc-neon)" }}>
-                ✓ הניחוש נשמר
-              </p>
-            )}
-            {hasSaved && !justSaved && !state?.error && (
-              <p className="text-xs" style={{ color: "var(--wc-fg3)" }}>
-                ניחוש קיים: {existingHome}:{existingAway}
-              </p>
-            )}
-          </div>
-          <button
-            type="submit"
-            disabled={isPending}
-            className="wc-button-primary px-4 py-2 text-xs font-bold flex-shrink-0 disabled:opacity-50"
-          >
-            {isPending ? (
-              <span className="inline-flex items-center gap-1.5">
-                <svg className="h-3 w-3 animate-spin" viewBox="0 0 24 24" fill="none">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                </svg>
-                שומר
-              </span>
-            ) : (
-              "שמור ניחוש"
-            )}
-          </button>
-        </div>
-      </form>
-    </div>
   );
 }

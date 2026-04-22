@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useTransition } from "react";
+import { useActionState } from "react";
 import { createLeague, joinLeague, type LeagueActionState } from "@/app/actions/league";
 
 function SubmitButton({ label, pending }: { label: string; pending: boolean }) {

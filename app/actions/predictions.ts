@@ -1,133 +1,226 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { getJokerBucket, getUserJokerUsage } from "@/lib/game/boosters";
 
 export type PredictionActionState = {
   error?: string;
   success?: boolean;
+  savedAt?: string;
 } | null;
-
-// ── Match Prediction ────────────────────────────────────────────────────────
 
 export async function upsertMatchPrediction(
   matchId: number,
+  stage: string,
   _prev: PredictionActionState,
-  formData: FormData
+  formData: FormData,
 ): Promise<PredictionActionState> {
   const supabase = await createClient();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
 
-  let user;
-  try {
-    const { data, error: authError } = await supabase.auth.getUser();
-    if (authError) throw authError;
-    user = data.user;
-  } catch (err) {
-    console.error("[upsertMatchPrediction] auth error:", err);
-    return { error: "שגיאת אימות — נסה שוב" };
+  if (authError) {
+    console.error("[upsertMatchPrediction] auth error:", authError);
+    return { error: "שגיאת אימות. נסה שוב." };
   }
 
   if (!user) {
-    return { error: "עליך להתחבר כדי לשמור ניחוש" };
+    return { error: "עליך להתחבר כדי לשמור ניחוש." };
   }
 
-  const homeRaw = formData.get("home_score");
-  const awayRaw = formData.get("away_score");
-  const homeScore = homeRaw !== null ? parseInt(homeRaw.toString(), 10) : NaN;
-  const awayScore = awayRaw !== null ? parseInt(awayRaw.toString(), 10) : NaN;
+  const homeScore = parseScore(formData.get("home_score"));
+  const awayScore = parseScore(formData.get("away_score"));
 
-  if (isNaN(homeScore) || isNaN(awayScore) || homeScore < 0 || awayScore < 0) {
-    return { error: "יש להזין תוצאה חוקית (מספרים אי-שליליים)" };
+  if (homeScore === null || awayScore === null) {
+    return { error: "יש להזין תוצאה חוקית עם מספרים אי-שליליים." };
   }
 
-  try {
-    const { error } = await supabase.from("predictions").upsert(
-      {
-        user_id: user.id,
-        match_id: matchId,
-        home_score_guess: homeScore,
-        away_score_guess: awayScore,
-      },
-      { onConflict: "user_id,match_id" }
-    );
+  const wantsJoker = parseBooleanField(formData.get("is_joker_applied"));
 
-    if (error) {
-      console.error("[upsertMatchPrediction] upsert error:", error);
-      return { error: `שגיאה בשמירה: ${error.message}` };
+  const { data: existingPrediction, error: existingError } = await supabase
+    .from("predictions")
+    .select("is_joker_applied")
+    .eq("user_id", user.id)
+    .eq("match_id", matchId)
+    .maybeSingle();
+
+  if (existingError) {
+    console.error("[upsertMatchPrediction] existing prediction error:", existingError);
+    return { error: "לא הצלחנו לבדוק את מצב הניחוש הקיים." };
+  }
+
+  const existingIsJoker =
+    (existingPrediction as { is_joker_applied?: boolean } | null)?.is_joker_applied ?? false;
+
+  if (wantsJoker && !existingIsJoker) {
+    const usage = await getUserJokerUsage(supabase, user.id);
+    const bucket = getJokerBucket(stage);
+    const isAlreadyUsed =
+      bucket === "group" ? usage.groupUsed : usage.knockoutUsed;
+
+    if (isAlreadyUsed) {
+      return {
+        error:
+          bucket === "group"
+            ? "ג'וקר שלב הבתים כבר נוצל."
+            : "ג'וקר הנוקאאוט כבר נוצל.",
+      };
+    }
+  }
+
+  const { error: upsertError } = await supabase.from("predictions").upsert(
+    {
+      user_id: user.id,
+      match_id: matchId,
+      home_score_guess: homeScore,
+      away_score_guess: awayScore,
+      is_joker_applied: wantsJoker,
+    },
+    { onConflict: "user_id,match_id" },
+  );
+
+  if (upsertError) {
+    if (!wantsJoker && upsertError.code === "42703") {
+      const { error: fallbackError } = await supabase.from("predictions").upsert(
+        {
+          user_id: user.id,
+          match_id: matchId,
+          home_score_guess: homeScore,
+          away_score_guess: awayScore,
+        },
+        { onConflict: "user_id,match_id" },
+      );
+
+      if (!fallbackError) {
+        revalidatePath("/game", "layout");
+        revalidatePath("/game/predictions");
+        revalidatePath("/game/leagues");
+
+        return {
+          success: true,
+          savedAt: new Date().toISOString(),
+        };
+      }
     }
 
-    return { success: true };
-  } catch (err) {
-    console.error("[upsertMatchPrediction] unexpected error:", err);
-    return { error: "שגיאה בלתי צפויה — נסה שוב" };
+    console.error("[upsertMatchPrediction] upsert error:", upsertError);
+    return {
+      error:
+        wantsJoker && upsertError.code === "42703"
+          ? "כדי להשתמש בג'וקר צריך להריץ קודם את מיגרציית Phase 2."
+          : "שמירת הניחוש נכשלה. נסה שוב.",
+    };
   }
-}
 
-// ── Tournament Outrights ────────────────────────────────────────────────────
+  revalidatePath("/game", "layout");
+  revalidatePath("/game/predictions");
+  revalidatePath("/game/leagues");
+
+  return {
+    success: true,
+    savedAt: new Date().toISOString(),
+  };
+}
 
 export async function upsertTournamentPrediction(
   _prev: PredictionActionState,
-  formData: FormData
+  formData: FormData,
 ): Promise<PredictionActionState> {
   const supabase = await createClient();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
 
-  let user;
-  try {
-    const { data, error: authError } = await supabase.auth.getUser();
-    if (authError) throw authError;
-    user = data.user;
-  } catch (err) {
-    console.error("[upsertTournamentPrediction] auth error:", err);
-    return { error: "שגיאת אימות — נסה שוב" };
+  if (authError) {
+    console.error("[upsertTournamentPrediction] auth error:", authError);
+    return { error: "שגיאת אימות. נסה שוב." };
   }
 
   if (!user) {
-    return { error: "עליך להתחבר כדי לשמור ניחושי טורניר" };
+    return { error: "עליך להתחבר כדי לשמור ניחושי טורניר." };
   }
 
-  const winnerRaw = formData.get("winner_team_id")?.toString().trim() || null;
-  const topScorer = formData.get("top_scorer")?.toString().trim() || null;
+  const winnerTeamId = parseUuidField(formData.get("winner_team_id"));
+  const topScorerName = normalizeText(formData.get("top_scorer"));
 
-  // winner_team_id is BIGINT in tournament_predictions; coerce from string.
-  const winnerId = winnerRaw ? parseInt(winnerRaw, 10) : null;
-
-  try {
-    // Write to tournament_predictions (new table, used by scoring system).
-    const { error: tpError } = await supabase
-      .from("tournament_predictions")
-      .upsert(
-        {
-          user_id: user.id,
-          predicted_winner_team_id: winnerId ?? null,
-          predicted_top_scorer_name: topScorer,
-        },
-        { onConflict: "user_id" }
-      );
-
-    if (tpError) {
-      console.error("[upsertTournamentPrediction] tournament_predictions error:", tpError);
-      return { error: `שגיאה בשמירה: ${tpError.message}` };
-    }
-
-    // Also mirror to outright_bets so ProfileClient stays in sync.
-    const { error: obError } = await supabase
-      .from("outright_bets")
-      .upsert(
-        {
-          user_id: user.id,
-          predicted_winner_team_id: winnerId ?? null,
-          predicted_top_scorer_name: topScorer,
-        },
-        { onConflict: "user_id" }
-      );
-
-    if (obError) {
-      // Non-fatal: main write succeeded; just log.
-      console.error("[upsertTournamentPrediction] outright_bets mirror error:", obError);
-    }
-
-    return { success: true };
-  } catch (err) {
-    console.error("[upsertTournamentPrediction] unexpected error:", err);
-    return { error: "שגיאה בלתי צפויה — נסה שוב" };
+  if (winnerTeamId === false) {
+    return { error: "נבחרה קבוצה לא תקינה לזכייה בטורניר." };
   }
+
+  const payload = {
+    user_id: user.id,
+    predicted_winner_team_id: winnerTeamId,
+    predicted_top_scorer_name: topScorerName,
+  };
+
+  const { error: tournamentError } = await supabase
+    .from("tournament_predictions")
+    .upsert(payload, { onConflict: "user_id" });
+
+  const { error: outrightMirrorError } = await supabase
+    .from("outright_bets")
+    .upsert(payload, { onConflict: "user_id" });
+
+  if (tournamentError) {
+    console.error("[upsertTournamentPrediction] tournament_predictions error:", tournamentError);
+    if (outrightMirrorError) {
+      return { error: "שמירת ניחושי הטורניר נכשלה." };
+    }
+  }
+
+  if (outrightMirrorError) {
+    console.error("[upsertTournamentPrediction] outright_bets mirror error:", outrightMirrorError);
+    return { error: "שמירת ניחושי הטורניר נכשלה." };
+  }
+
+  revalidatePath("/game", "layout");
+  revalidatePath("/game/predictions");
+
+  return {
+    success: true,
+    savedAt: new Date().toISOString(),
+  };
+}
+
+function parseScore(value: FormDataEntryValue | null): number | null {
+  if (value === null) {
+    return 0;
+  }
+
+  const normalized = value.toString().trim();
+  const parsed = normalized === "" ? 0 : Number.parseInt(normalized, 10);
+
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    return null;
+  }
+
+  return parsed;
+}
+
+function parseBooleanField(value: FormDataEntryValue | null): boolean {
+  const normalized = value?.toString().trim().toLowerCase();
+  return normalized === "true" || normalized === "1" || normalized === "on";
+}
+
+function normalizeText(value: FormDataEntryValue | null): string | null {
+  const normalized = value?.toString().trim();
+  return normalized ? normalized : null;
+}
+
+function parseUuidField(value: FormDataEntryValue | null): string | null | false {
+  const normalized = value?.toString().trim();
+
+  if (!normalized) {
+    return null;
+  }
+
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    normalized,
+  )
+    ? normalized
+    : false;
 }

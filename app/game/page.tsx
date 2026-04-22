@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
 export default function GameRootPage() {
-  redirect("/game/leagues");
+  redirect("/game/predictions");
 }

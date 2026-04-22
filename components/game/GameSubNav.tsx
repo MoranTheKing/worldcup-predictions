@@ -4,8 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const TABS = [
-  { href: "/game/leagues", label: "הליגות שלי", icon: "👥" },
   { href: "/game/predictions", label: "הניחושים שלי", icon: "🎯" },
+  { href: "/game/leagues", label: "הליגות שלי", icon: "👥" },
 ];
 
 export default function GameSubNav() {
@@ -15,7 +15,8 @@ export default function GameSubNav() {
     if (href === "/game/leagues") {
       return pathname === "/game/leagues" || pathname.startsWith("/game/leagues/");
     }
-    return pathname.startsWith(href);
+
+    return pathname === href || pathname.startsWith(`${href}/`);
   }
 
   return (
@@ -25,6 +26,7 @@ export default function GameSubNav() {
     >
       {TABS.map(({ href, label, icon }) => {
         const active = isActive(href);
+
         return (
           <Link
             key={href}

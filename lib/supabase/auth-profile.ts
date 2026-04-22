@@ -9,17 +9,28 @@ export type AuthProfile = {
   currentStreak: number;
 };
 
+type AuthProfileClient = {
+  from: (table: string) => {
+    select: (columns: string) => {
+      eq: (column: string, value: string) => {
+        maybeSingle: () => Promise<{ data: Record<string, unknown> | null }>;
+      };
+    };
+  };
+};
+
 export async function fetchAuthProfile(
-  supabase: any,
+  supabase: unknown,
   userId: string,
 ): Promise<AuthProfile | null> {
+  const client = supabase as AuthProfileClient;
   const [{ data: profileRow }, { data: legacyRow }] = await Promise.all([
-    supabase
+    client
       .from("profiles")
       .select("id, display_name, avatar_url, total_score")
       .eq("id", userId)
       .maybeSingle(),
-    supabase
+    client
       .from("users")
       .select("id, username, avatar_url, current_streak")
       .eq("id", userId)
