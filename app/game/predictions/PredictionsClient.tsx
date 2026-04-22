@@ -3,17 +3,13 @@
 import type { MatchWithTeams } from "@/lib/tournament/matches";
 import MatchPredictionCard from "./MatchPredictionCard";
 import OutrightForm from "./OutrightForm";
+import type { PickerTeam, PickerPlayer } from "./OutrightForm";
 import Link from "next/link";
 
 export type MatchPredictionRow = {
   match_id: number;
   home_score_guess: number | null;
   away_score_guess: number | null;
-};
-
-export type TeamOption = {
-  id: string;
-  name: string;
 };
 
 export type TournamentPredRow = {
@@ -23,7 +19,8 @@ export type TournamentPredRow = {
 
 interface Props {
   matches: MatchWithTeams[];
-  teams: TeamOption[];
+  teams: PickerTeam[];
+  players: PickerPlayer[];
   existingPredictions: MatchPredictionRow[];
   tournamentPrediction: TournamentPredRow | null;
   isAuthenticated: boolean;
@@ -32,13 +29,12 @@ interface Props {
 export default function PredictionsClient({
   matches,
   teams,
+  players,
   existingPredictions,
   tournamentPrediction,
   isAuthenticated,
 }: Props) {
-  const predMap = new Map(
-    existingPredictions.map((p) => [p.match_id, p])
-  );
+  const predMap = new Map(existingPredictions.map((p) => [p.match_id, p]));
 
   if (!isAuthenticated) {
     return (
@@ -50,7 +46,10 @@ export default function PredictionsClient({
         <p className="text-base font-semibold" style={{ color: "var(--wc-fg2)" }}>
           עליך להתחבר כדי לשמור ניחושים
         </p>
-        <Link href="/login?next=/game/predictions" className="wc-button-primary px-6 py-2.5 text-sm font-bold">
+        <Link
+          href="/login?next=/game/predictions"
+          className="wc-button-primary px-6 py-2.5 text-sm font-bold"
+        >
           התחבר עכשיו
         </Link>
       </div>
@@ -67,7 +66,11 @@ export default function PredictionsClient({
         >
           ניחושי טורניר
         </p>
-        <OutrightForm teams={teams} existing={tournamentPrediction} />
+        <OutrightForm
+          teams={teams}
+          players={players}
+          existing={tournamentPrediction}
+        />
       </section>
 
       {/* Match Predictions */}
@@ -76,20 +79,23 @@ export default function PredictionsClient({
           className="mb-3 text-xs font-bold uppercase tracking-widest"
           style={{ color: "var(--wc-neon)" }}
         >
-          ניחושי משחקים ({matches.length} משחקים קרובים)
+          ניחושי משחקים ({matches.length} משחקים פתוחים לניחוש)
         </p>
 
         {matches.length === 0 ? (
           <div
             className="rounded-2xl p-10 flex flex-col items-center gap-3 text-center"
-            style={{ background: "var(--wc-surface)", border: "1.5px dashed var(--wc-border)" }}
+            style={{
+              background: "var(--wc-surface)",
+              border: "1.5px dashed var(--wc-border)",
+            }}
           >
-            <span className="text-5xl">✅</span>
+            <span className="text-5xl">⏳</span>
             <p className="text-base font-semibold" style={{ color: "var(--wc-fg2)" }}>
               אין משחקים פתוחים לניחוש כרגע
             </p>
             <p className="text-sm" style={{ color: "var(--wc-fg3)" }}>
-              כל המשחקים הקרובים מוצגים כאן
+              משחקים יופיעו כאן כאשר שתי הנבחרות יהיו ידועות
             </p>
           </div>
         ) : (

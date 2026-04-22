@@ -1,7 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 import { attachTeamsToMatches } from "@/lib/tournament/matches";
 import type { MatchWithTeams } from "@/lib/tournament/matches";
-import PredictionsClient, { type MatchPredictionRow, type TeamOption, type TournamentPredRow } from "./PredictionsClient";
+import PredictionsClient, {
+  type MatchPredictionRow,
+  type TournamentPredRow,
+} from "./PredictionsClient";
+import type { PickerTeam, PickerPlayer } from "./OutrightForm";
 
 export const dynamic = "force-dynamic";
 
@@ -11,30 +15,56 @@ export default async function PredictionsPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Scheduled matches + teams (same pattern as /dashboard/matches)
-  const [{ data: matchesData }, { data: teamsData }] = await Promise.all([
-    supabase
-      .from("matches")
-      .select(
-        "match_number, stage, status, date_time, minute, home_team_id, away_team_id, home_placeholder, away_placeholder, home_score, away_score, is_extra_time, home_penalty_score, away_penalty_score"
-      )
-      .eq("status", "scheduled")
-      .order("date_time", { ascending: true }),
-    supabase
-      .from("teams")
-      .select("id, name, name_he, logo_url, group_letter")
-      .order("name_he", { ascending: true }),
-  ]);
+  // Fetch scheduled matches + teams + players in parallel
+  const [{ data: matchesData }, { data: teamsData }, { data: playersData }] =
+    await Promise.all([
+      supabase
+        .from("matches")
+        .select(
+          "match_number, stage, status, date_time, minute, home_team_id, away_team_id, home_placeholder, away_placeholder, home_score, away_score, is_extra_time, home_penalty_score, away_penalty_score"
+        )
+        .eq("status", "scheduled")
+        // Only matches where BOTH teams are finalized (not null)
+        .not("home_team_id", "is", null)
+        .not("away_team_id", "is", null)
+        .order("date_time", { ascending: true }),
+      supabase
+        .from("teams")
+        .select("id, name, name_he, logo_url, group_letter")
+        .order("name_he", { ascending: true }),
+      supabase
+        .from("players")
+        .select("id, name, team_id, position")
+        .order("name", { ascending: true }),
+    ]);
 
-  const scheduledMatches = attachTeamsToMatches(
+  // Build matches with team objects attached
+  const allMatches = attachTeamsToMatches(
     (matchesData ?? []) as Parameters<typeof attachTeamsToMatches>[0],
     (teamsData ?? []) as Parameters<typeof attachTeamsToMatches>[1]
   ) as MatchWithTeams[];
 
-  // Teams for the outright winner dropdown
-  const teamOptions: TeamOption[] = (teamsData ?? []).map((t) => ({
+  // Secondary JS filter: ensure homeTeam and awayTeam resolved from the teams table
+  const scheduledMatches = allMatches.filter(
+    (m) => m.homeTeam !== null && m.awayTeam !== null
+  );
+
+  // Full team data for premium picker
+  const teams: PickerTeam[] = (teamsData ?? []).map((t) => ({
     id: String(t.id),
-    name: (t as { name_he?: string; name: string }).name_he ?? (t as { name: string }).name,
+    name: (t as { name: string }).name,
+    name_he: (t as { name_he?: string | null }).name_he ?? null,
+    logo_url: (t as { logo_url?: string | null }).logo_url ?? null,
+  }));
+
+  // Player data for premium picker
+  const players: PickerPlayer[] = (playersData ?? []).map((p) => ({
+    id: (p as { id: number }).id,
+    name: (p as { name: string }).name,
+    team_id: (p as { team_id?: string | null }).team_id
+      ? String((p as { team_id: unknown }).team_id)
+      : null,
+    position: (p as { position?: string | null }).position ?? null,
   }));
 
   // Existing user predictions
@@ -61,7 +91,8 @@ export default async function PredictionsPage() {
   return (
     <PredictionsClient
       matches={scheduledMatches}
-      teams={teamOptions}
+      teams={teams}
+      players={players}
       existingPredictions={existingPredictions}
       tournamentPrediction={tournamentPrediction}
       isAuthenticated={Boolean(user)}

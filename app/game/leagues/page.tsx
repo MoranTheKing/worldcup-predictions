@@ -12,30 +12,44 @@ export default async function MyLeaguesPage() {
   let leagues: LeagueRow[] = [];
 
   if (user) {
-    const { data, error } = await supabase
+    // Two-step query: avoid embedded-relation RLS complexity that can produce {}
+    // Step 1 — get league IDs this user belongs to
+    const { data: memberRows, error: memberErr } = await supabase
       .from("league_members")
-      .select(
-        "league_id, leagues(id, name, invite_code, owner_id, created_at)"
-      )
-      .eq("user_id", user.id)
-      .order("league_id");
+      .select("league_id")
+      .eq("user_id", user.id);
 
-    if (error) {
-      console.error("[MyLeaguesPage] fetch error:", error);
+    if (memberErr) {
+      console.error(
+        "[MyLeaguesPage] league_members error:",
+        memberErr.message,
+        memberErr.code,
+        memberErr.details
+      );
     }
 
-    leagues = ((data ?? [])
-      .map((row) => {
-        const l = Array.isArray(row.leagues) ? row.leagues[0] : row.leagues;
-        return l as LeagueRow | null;
-      })
-      .filter(Boolean) as LeagueRow[]);
+    const ids = (memberRows ?? []).map((r) => r.league_id as string).filter(Boolean);
+
+    // Step 2 — fetch league details (RLS on leagues allows members to read their own leagues)
+    if (ids.length > 0) {
+      const { data: leagueRows, error: leagueErr } = await supabase
+        .from("leagues")
+        .select("id, name, invite_code, owner_id, created_at")
+        .in("id", ids)
+        .order("created_at", { ascending: false });
+
+      if (leagueErr) {
+        console.error(
+          "[MyLeaguesPage] leagues fetch error:",
+          leagueErr.message,
+          leagueErr.code,
+          leagueErr.details
+        );
+      }
+
+      leagues = (leagueRows ?? []) as LeagueRow[];
+    }
   }
 
-  return (
-    <LeaguesClient
-      leagues={leagues}
-      isAuthenticated={Boolean(user)}
-    />
-  );
+  return <LeaguesClient leagues={leagues} isAuthenticated={Boolean(user)} />;
 }
