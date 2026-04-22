@@ -152,12 +152,16 @@ function getLockedPositionLabel(rank: number) {
   return `${TEXT.lockedPosition} ${rank}`;
 }
 
+function hasLockedGroupPosition(entry: TeamStanding) {
+  return entry.lockedRank !== null;
+}
+
 function getEffectiveThirdPlaceStatus(
   entry: TeamStanding,
   qualifiedThirdPlaceTeamIds: Set<string>,
   eliminatedThirdPlaceTeamIds: Set<string>,
 ): StandingStatus | null {
-  if (entry.rank !== 3) return null;
+  if (!hasLockedGroupPosition(entry) || entry.lockedRank !== 3) return null;
   if (qualifiedThirdPlaceTeamIds.has(entry.team.id)) return "qualified";
   if (eliminatedThirdPlaceTeamIds.has(entry.team.id)) return "eliminated";
   return null;
@@ -168,6 +172,8 @@ function getEffectiveGroupStatus(
   qualifiedThirdPlaceTeamIds: Set<string>,
   eliminatedThirdPlaceTeamIds: Set<string>,
 ): StandingStatus {
+  if (!hasLockedGroupPosition(entry)) return "pending";
+
   const thirdPlaceStatus = getEffectiveThirdPlaceStatus(
     entry,
     qualifiedThirdPlaceTeamIds,
@@ -177,7 +183,7 @@ function getEffectiveGroupStatus(
   if (thirdPlaceStatus) return thirdPlaceStatus;
   if (entry.lockedRank !== null && entry.lockedRank <= 2) return "qualified";
   if (entry.lockedRank !== null && entry.lockedRank >= 4) return "eliminated";
-  return entry.status;
+  return "pending";
 }
 
 function getGroupStatusDisplay(
@@ -185,13 +191,15 @@ function getGroupStatusDisplay(
   qualifiedThirdPlaceTeamIds: Set<string>,
   eliminatedThirdPlaceTeamIds: Set<string>,
 ): StatusDisplay | null {
+  if (!hasLockedGroupPosition(entry)) return null;
+
   const effectiveStatus = getEffectiveGroupStatus(
     entry,
     qualifiedThirdPlaceTeamIds,
     eliminatedThirdPlaceTeamIds,
   );
 
-  if (entry.rank === 3) {
+  if (entry.lockedRank === 3) {
     if (effectiveStatus === "qualified") {
       return {
         label: getLockedPositionLabel(3),
