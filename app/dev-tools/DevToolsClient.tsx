@@ -556,46 +556,40 @@ function DevMatchRowEditor({
       <td className="px-3 py-3 text-xs text-wc-fg2">{getStageLabelHe(match.stage)}</td>
       <td className="px-3 py-3 text-xs text-wc-fg1">{homeName}</td>
       <td className="px-3 py-3">
-        <div dir="ltr" className="flex items-end justify-center gap-1">
-          <div className="flex flex-col items-center gap-1">
-            <span className="text-[9px] font-bold uppercase tracking-[0.16em] text-wc-fg3">Home</span>
-            <input
-              type="number"
-              value={match.home_score ?? ""}
-              min={0}
-              max={99}
-              aria-label={`Home score for ${homeName}`}
-              onChange={(event) => {
-                const value = event.target.value;
-                update((current) => ({
-                  ...current,
-                  home_score: value === "" ? null : Number(value),
-                }));
-              }}
-              disabled={busy}
-              className="w-14 rounded-lg border border-white/10 bg-black/30 px-2 py-1 text-center font-bold text-wc-fg1 outline-none focus:border-wc-neon"
-            />
-          </div>
+        <div dir="ltr" className="flex flex-row-reverse items-center justify-center gap-1">
+          <input
+            type="number"
+            value={match.home_score ?? ""}
+            min={0}
+            max={99}
+            aria-label={`Home score for ${homeName}`}
+            onChange={(event) => {
+              const value = event.target.value;
+              update((current) => ({
+                ...current,
+                home_score: value === "" ? null : Number(value),
+              }));
+            }}
+            disabled={busy}
+            className="w-14 rounded-lg border border-white/10 bg-black/30 px-2 py-1 text-center font-bold text-wc-fg1 outline-none focus:border-wc-neon"
+          />
           <span className="text-wc-fg3">-</span>
-          <div className="flex flex-col items-center gap-1">
-            <span className="text-[9px] font-bold uppercase tracking-[0.16em] text-wc-fg3">Away</span>
-            <input
-              type="number"
-              value={match.away_score ?? ""}
-              min={0}
-              max={99}
-              aria-label={`Away score for ${awayName}`}
-              onChange={(event) => {
-                const value = event.target.value;
-                update((current) => ({
-                  ...current,
-                  away_score: value === "" ? null : Number(value),
-                }));
-              }}
-              disabled={busy}
-              className="w-14 rounded-lg border border-white/10 bg-black/30 px-2 py-1 text-center font-bold text-wc-fg1 outline-none focus:border-wc-neon"
-            />
-          </div>
+          <input
+            type="number"
+            value={match.away_score ?? ""}
+            min={0}
+            max={99}
+            aria-label={`Away score for ${awayName}`}
+            onChange={(event) => {
+              const value = event.target.value;
+              update((current) => ({
+                ...current,
+                away_score: value === "" ? null : Number(value),
+              }));
+            }}
+            disabled={busy}
+            className="w-14 rounded-lg border border-white/10 bg-black/30 px-2 py-1 text-center font-bold text-wc-fg1 outline-none focus:border-wc-neon"
+          />
         </div>
       </td>
       <td className="px-3 py-3 text-xs text-wc-fg1">{awayName}</td>
@@ -623,48 +617,42 @@ function DevMatchRowEditor({
       </td>
       <td className="px-3 py-3">
         {knockout ? (
-          <div dir="ltr" className="flex items-end justify-center gap-1">
-            <div className="flex flex-col items-center gap-1">
-              <span className="text-[9px] font-bold uppercase tracking-[0.16em] text-wc-fg3">Home</span>
-              <input
-                type="number"
-                value={match.home_penalty_score ?? ""}
-                min={0}
-                max={30}
-                placeholder="-"
-                aria-label={`Home penalty score for ${homeName}`}
-                onChange={(event) => {
-                  const value = event.target.value;
-                  update((current) => ({
-                    ...current,
-                    home_penalty_score: value === "" ? null : Number(value),
-                  }));
-                }}
-                disabled={busy || !regularDraw}
-                className="w-12 rounded-lg border border-white/10 bg-black/30 px-2 py-1 text-center text-xs text-wc-fg1 outline-none focus:border-wc-neon disabled:opacity-40"
-              />
-            </div>
+          <div dir="ltr" className="flex flex-row-reverse items-center justify-center gap-1">
+            <input
+              type="number"
+              value={match.home_penalty_score ?? ""}
+              min={0}
+              max={30}
+              placeholder="-"
+              aria-label={`Home penalty score for ${homeName}`}
+              onChange={(event) => {
+                const value = event.target.value;
+                update((current) => ({
+                  ...current,
+                  home_penalty_score: value === "" ? null : Number(value),
+                }));
+              }}
+              disabled={busy || !regularDraw}
+              className="w-12 rounded-lg border border-white/10 bg-black/30 px-2 py-1 text-center text-xs text-wc-fg1 outline-none focus:border-wc-neon disabled:opacity-40"
+            />
             <span className="text-wc-fg3">-</span>
-            <div className="flex flex-col items-center gap-1">
-              <span className="text-[9px] font-bold uppercase tracking-[0.16em] text-wc-fg3">Away</span>
-              <input
-                type="number"
-                value={match.away_penalty_score ?? ""}
-                min={0}
-                max={30}
-                placeholder="-"
-                aria-label={`Away penalty score for ${awayName}`}
-                onChange={(event) => {
-                  const value = event.target.value;
-                  update((current) => ({
-                    ...current,
-                    away_penalty_score: value === "" ? null : Number(value),
-                  }));
-                }}
-                disabled={busy || !regularDraw}
-                className="w-12 rounded-lg border border-white/10 bg-black/30 px-2 py-1 text-center text-xs text-wc-fg1 outline-none focus:border-wc-neon disabled:opacity-40"
-              />
-            </div>
+            <input
+              type="number"
+              value={match.away_penalty_score ?? ""}
+              min={0}
+              max={30}
+              placeholder="-"
+              aria-label={`Away penalty score for ${awayName}`}
+              onChange={(event) => {
+                const value = event.target.value;
+                update((current) => ({
+                  ...current,
+                  away_penalty_score: value === "" ? null : Number(value),
+                }));
+              }}
+              disabled={busy || !regularDraw}
+              className="w-12 rounded-lg border border-white/10 bg-black/30 px-2 py-1 text-center text-xs text-wc-fg1 outline-none focus:border-wc-neon disabled:opacity-40"
+            />
           </div>
         ) : (
           <span className="text-xs text-wc-fg3">-</span>

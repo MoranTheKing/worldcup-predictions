@@ -253,6 +253,27 @@ Validation:
 - `npm run build`
   passed
 
+## April 22, 2026 - Phase 2.8 Physical RTL Binding + Locked Outrights Unification
+
+What changed in this pass:
+
+- the score-entry rule is now explicit across editable match surfaces:
+  the input physically on the right is always bound to `home_score`
+  the input physically on the left is always bound to `away_score`
+- in practice this is enforced with LTR score clusters plus `flex-row-reverse`, so Hebrew page direction can no longer silently swap the visual meaning of the boxes
+- the dev-tools grid no longer uses `HOME` / `AWAY` helper labels above the numeric boxes
+- instead, the score boxes now sit directly between the two teams with strict right=home / left=away mapping
+- the same right=home / left=away mapping was applied to editable prediction cards, so typing `2` next to the right-side home team now always saves `home_score_guess = 2`
+- locked outright picks on the user's own predictions page now render with the same premium read-only badge components used in opponent view
+- editable dropdowns are fully unmounted once the tournament starts; no disabled form controls remain in the locked state
+
+Validation:
+
+- `npm run lint`
+  passed
+- `npm run build`
+  passed
+
 ## April 22, 2026 - Phase 2.7 Live UX + RTL Data Entry Hardening
 
 What changed in this pass:

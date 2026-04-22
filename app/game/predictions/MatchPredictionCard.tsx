@@ -190,7 +190,7 @@ export default function MatchPredictionCard({
               <div className="flex items-center gap-3">
                 <TeamSide align="right" name={homeTeamName} logoUrl={match.homeTeam?.logo_url ?? null} />
 
-                <div dir="ltr" className="flex flex-shrink-0 items-center gap-2">
+                <div dir="ltr" className="flex flex-shrink-0 flex-row-reverse items-center gap-2">
                   <ScoreInput
                     name="home_score"
                     value={homeDraft}

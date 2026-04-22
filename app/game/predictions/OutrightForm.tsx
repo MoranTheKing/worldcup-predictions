@@ -80,12 +80,7 @@ export default function OutrightForm({
   if (isLocked) {
     return (
       <div className="space-y-3">
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-sm font-bold text-wc-fg1">ניחושי הטורניר</p>
-          <span className="rounded-full bg-white/6 px-3 py-1 text-xs font-semibold text-wc-fg3">
-            נעול
-          </span>
-        </div>
+        <p className="text-sm font-bold text-wc-fg1">ניחושי הטורניר</p>
 
         <div className="grid gap-4 lg:grid-cols-2">
           <OutrightChoiceBadge
@@ -94,12 +89,14 @@ export default function OutrightForm({
             value={selectedTeam ? selectedTeam.name_he ?? selectedTeam.name : null}
             logoUrl={selectedTeam?.logo_url ?? null}
             locked
+            size="hero"
           />
           <OutrightChoiceBadge
             kind="topScorer"
             label="מלך השערים"
             value={selectedPlayer?.name ?? (topScorerName || null)}
             locked
+            size="hero"
           />
         </div>
       </div>
