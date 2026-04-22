@@ -145,8 +145,19 @@ Responsive bracket implementation:
   Round of 32 `81-88` -> Round of 16 `93-96` -> quarter-finals `99-100` -> semi-final `102`
 - The center block holds the climax matches:
   final `104` and 3rd-place match `103`
+- The visual render order is intentionally non-sequential so the branches stay untangled:
+  top row `[74, 77, 73, 75, 83, 84, 81, 82]`
+  then `[89, 90, 93, 94]`
+  then `[97, 98]`
+  then `[101]`
+  then center `[104, 103]`
+  then `[102]`
+  then `[99, 100]`
+  then `[91, 92, 95, 96]`
+  then `[76, 78, 79, 80, 86, 88, 85, 87]`
 - The bracket no longer uses helper copy like `To Match X` to explain progression
 - Pair cells and merge bands now draw the connector branches visually, with the upper half pointing down and the lower half pointing up toward the center
+- The UI no longer shows labels such as `המסלול העליון` or `המסלול התחתון`
 - Early-round cards are intentionally compact (`max-w-[220px]`) so the bracket stays readable on mobile without horizontal scrolling
 - The Final card keeps the gold treatment and explicit label `הגמר`
 - The 3rd Place card uses a bronze accent and the explicit label `מקום 3`

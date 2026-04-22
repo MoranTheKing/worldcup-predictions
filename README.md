@@ -201,6 +201,7 @@ As of April 21, 2026, the live tournament implementation also includes:
 - A placeholder-driven knockout tree in `lib/tournament/knockout-tree.ts`, used by the Tournament page and the Matches board
 - A split vertical bracket layout that keeps knockout cards readable on mobile by letting the top half flow down, the bottom half flow up, and both meet at a centered finals block
 - Visual connector branches between paired matches and their next-round card, so progression is readable without helper text
+- An intentionally non-sequential render order for knockout rows, matching the official FIFA crossing graph so the branches stay untangled
 - Compact knockout cards (`max-w-[220px]`) and centered grids for the early rounds
 - A center finals block that highlights `הגמר` in gold and `מקום 3` in bronze
 - Global elimination persistence in `teams.is_eliminated`, covering eliminated 4th-place teams, locked bottom-4 third-place teams, and knockout losers with the semi-final / 3rd-place exception

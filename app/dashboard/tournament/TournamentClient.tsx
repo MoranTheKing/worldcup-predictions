@@ -76,8 +76,6 @@ const TEXT = {
   bracketNote:
     "הנוקאאוט מוצג כעת כבראקט מפוצל שנפגש במרכז: המסלול העליון זורם למטה אל חצי הגמר הראשון, המסלול התחתון זורם למעלה אל חצי הגמר השני, ושניהם נפגשים בגמר שבמרכז.",
   emptyBracket: "ברגע שיוזנו משחקי הנוקאאוט, העץ המלא יוצג כאן.",
-  topPath: "המסלול העליון",
-  bottomPath: "המסלול התחתון",
   thirdPlaceShort: "מקום 3",
   thirdPlaceLong: "משחק על המקום השלישי",
 };
@@ -105,23 +103,31 @@ const ELIMINATED_PILL_CLASS = "bg-[rgba(255,92,130,0.14)] text-wc-danger";
 const LOCKED_POSITION_PILL_CLASS = "bg-white/8 text-wc-fg2";
 const CONNECTOR_CLASS = "bg-[rgba(255,255,255,0.18)]";
 const CARD_WIDTH_CLASS = "mx-auto w-full max-w-[220px]";
+const TOP_ROUND_OF_32_ORDER = [74, 77, 73, 75, 83, 84, 81, 82] as const;
 const TOP_ROUND_OF_32_PAIRS = [
-  [73, 74],
-  [75, 76],
-  [77, 78],
-  [79, 80],
-] as const;
-const BOTTOM_ROUND_OF_32_PAIRS = [
-  [81, 82],
+  [74, 77],
+  [73, 75],
   [83, 84],
-  [85, 86],
-  [87, 88],
+  [81, 82],
 ] as const;
-const TOP_ROUND_OF_16 = [89, 90, 91, 92] as const;
-const BOTTOM_ROUND_OF_16 = [93, 94, 95, 96] as const;
+const TOP_ROUND_OF_16_PAIRS = [
+  [89, 90],
+  [93, 94],
+] as const;
 const TOP_QUARTERS = [97, 98] as const;
-const BOTTOM_QUARTERS = [99, 100] as const;
 const TOP_SEMI = 101;
+const BOTTOM_ROUND_OF_32_ORDER = [76, 78, 79, 80, 86, 88, 85, 87] as const;
+const BOTTOM_ROUND_OF_32_PAIRS = [
+  [76, 78],
+  [79, 80],
+  [86, 88],
+  [85, 87],
+] as const;
+const BOTTOM_ROUND_OF_16_PAIRS = [
+  [91, 92],
+  [95, 96],
+] as const;
+const BOTTOM_QUARTERS = [99, 100] as const;
 const BOTTOM_SEMI = 102;
 
 function getLockedPositionLabel(rank: number) {
@@ -420,11 +426,11 @@ function KnockoutBracket({
   return (
     <div className="mt-6 space-y-6 pb-6">
       <SplitBracketSection
-        title={TEXT.topPath}
         direction="down"
         matchesByNumber={matchesByNumber}
+        roundOf32Order={TOP_ROUND_OF_32_ORDER}
         roundOf32Pairs={TOP_ROUND_OF_32_PAIRS}
-        roundOf16={TOP_ROUND_OF_16}
+        roundOf16Pairs={TOP_ROUND_OF_16_PAIRS}
         quarterFinals={TOP_QUARTERS}
         semiFinal={TOP_SEMI}
       />
@@ -432,11 +438,11 @@ function KnockoutBracket({
       <CenterClimaxBlock finalMatch={finalMatch} thirdPlaceMatch={thirdPlaceMatch} />
 
       <SplitBracketSection
-        title={TEXT.bottomPath}
         direction="up"
         matchesByNumber={matchesByNumber}
+        roundOf32Order={BOTTOM_ROUND_OF_32_ORDER}
         roundOf32Pairs={BOTTOM_ROUND_OF_32_PAIRS}
-        roundOf16={BOTTOM_ROUND_OF_16}
+        roundOf16Pairs={BOTTOM_ROUND_OF_16_PAIRS}
         quarterFinals={BOTTOM_QUARTERS}
         semiFinal={BOTTOM_SEMI}
       />
@@ -445,22 +451,25 @@ function KnockoutBracket({
 }
 
 function SplitBracketSection({
-  title,
   direction,
   matchesByNumber,
+  roundOf32Order,
   roundOf32Pairs,
-  roundOf16,
+  roundOf16Pairs,
   quarterFinals,
   semiFinal,
 }: {
-  title: string;
   direction: "down" | "up";
   matchesByNumber: Map<number, ResolvedBracketMatch>;
+  roundOf32Order: readonly number[];
   roundOf32Pairs: readonly (readonly [number, number])[];
-  roundOf16: readonly number[];
+  roundOf16Pairs: readonly (readonly [number, number])[];
   quarterFinals: readonly number[];
   semiFinal: number;
 }) {
+  const roundOf32Matches = roundOf32Order
+    .map((matchNumber) => matchesByNumber.get(matchNumber))
+    .filter((match): match is ResolvedBracketMatch => Boolean(match));
   const pairMatches = roundOf32Pairs
     .map(([left, right]) => {
       const leftMatch = matchesByNumber.get(left);
@@ -470,9 +479,14 @@ function SplitBracketSection({
     })
     .filter((pair): pair is readonly [ResolvedBracketMatch, ResolvedBracketMatch] => Boolean(pair));
 
-  const roundOf16Matches = roundOf16
-    .map((matchNumber) => matchesByNumber.get(matchNumber))
-    .filter((match): match is ResolvedBracketMatch => Boolean(match));
+  const roundOf16PairMatches = roundOf16Pairs
+    .map(([left, right]) => {
+      const leftMatch = matchesByNumber.get(left);
+      const rightMatch = matchesByNumber.get(right);
+      if (!leftMatch || !rightMatch) return null;
+      return [leftMatch, rightMatch] as const;
+    })
+    .filter((pair): pair is readonly [ResolvedBracketMatch, ResolvedBracketMatch] => Boolean(pair));
   const quarterFinalMatches = quarterFinals
     .map((matchNumber) => matchesByNumber.get(matchNumber))
     .filter((match): match is ResolvedBracketMatch => Boolean(match));
@@ -482,11 +496,11 @@ function SplitBracketSection({
     direction === "down"
       ? [
           <StageRow key="round32" label={TEXT.round32}>
-            <PairMatchesGrid pairs={pairMatches} direction="down" />
+            <OrderedMatchGrid matches={roundOf32Matches} columnsClassName="grid-cols-2 xl:grid-cols-4" />
           </StageRow>,
           <ParallelConnectorBand key="parallel" count={pairMatches.length} direction="down" />,
           <StageRow key="round16" label={TEXT.round16}>
-            <CompactMatchGrid matches={roundOf16Matches} columnsClassName="grid-cols-1 sm:grid-cols-2 xl:grid-cols-4" />
+            <PairMatchesGrid pairs={roundOf16PairMatches} direction="down" />
           </StageRow>,
           <MergeConnectorBand key="merge-quarters" count={quarterFinalMatches.length} direction="down" />,
           <StageRow key="quarters" label={TEXT.quarterFinal}>
@@ -507,22 +521,16 @@ function SplitBracketSection({
           </StageRow>,
           <MergeConnectorBand key="merge-round16" count={quarterFinalMatches.length} direction="up" />,
           <StageRow key="round16" label={TEXT.round16}>
-            <CompactMatchGrid matches={roundOf16Matches} columnsClassName="grid-cols-1 sm:grid-cols-2 xl:grid-cols-4" />
+            <PairMatchesGrid pairs={roundOf16PairMatches} direction="up" />
           </StageRow>,
           <ParallelConnectorBand key="parallel" count={pairMatches.length} direction="up" />,
           <StageRow key="round32" label={TEXT.round32}>
-            <PairMatchesGrid pairs={pairMatches} direction="up" />
+            <OrderedMatchGrid matches={roundOf32Matches} columnsClassName="grid-cols-2 xl:grid-cols-4" />
           </StageRow>,
         ];
 
   return (
     <section className="rounded-[1.75rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.015))] p-4 sm:p-5">
-      <div className="mb-6 flex justify-center">
-        <div className="rounded-full border border-white/10 bg-[rgba(7,11,18,0.9)] px-4 py-2 shadow-[0_12px_32px_rgba(0,0,0,0.26)] backdrop-blur">
-          <p className="wc-display text-lg text-wc-fg1 sm:text-xl">{title}</p>
-        </div>
-      </div>
-
       <div className="space-y-4">{orderedRows}</div>
     </section>
   );
@@ -564,6 +572,24 @@ function PairMatchesGrid({
           matches={[leftMatch, rightMatch]}
           direction={direction}
         />
+      ))}
+    </div>
+  );
+}
+
+function OrderedMatchGrid({
+  matches,
+  columnsClassName,
+}: {
+  matches: ReadonlyArray<ResolvedBracketMatch>;
+  columnsClassName: string;
+}) {
+  if (matches.length === 0) return null;
+
+  return (
+    <div className={`grid gap-4 ${columnsClassName}`}>
+      {matches.map((match) => (
+        <KnockoutMatchCard key={match.matchNumber} match={match} variant="default" compact />
       ))}
     </div>
   );
