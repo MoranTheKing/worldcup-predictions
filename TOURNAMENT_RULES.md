@@ -138,10 +138,13 @@ Bracket UI:
 Responsive bracket implementation:
 
 - The winner tree is precomputed in `lib/tournament/knockout-tree.ts`
-- `TournamentClient.tsx` renders that tree into one absolute-positioned canvas
-- A `ResizeObserver` measures the live container width
-- The bracket applies `transform: scale(...)` from the top-left origin so the full tree fits the available viewport width without horizontal scrolling on standard screens
-- Match ordering remains driven by the official placeholder graph even when the UI is scaled down
+- `TournamentClient.tsx` now renders a mobile-first vertical tree instead of a scaled horizontal canvas
+- The flow is top-to-bottom: Round of 32 at the top, then Round of 16, quarter-finals, semi-finals, and the final block at the bottom
+- Each round is grouped by the actual parent match it feeds into, so the visual grouping still follows the official placeholder graph
+- The Final and 3rd Place matches sit together in the bottom decision block
+- The Final card keeps the gold treatment and explicit label `הגמר`
+- The 3rd Place card uses a bronze accent and the explicit label `משחק על המקום השלישי`
+- The bracket now relies on vertical scrolling and comfortable card spacing instead of shrinking the whole tree to fit the viewport
 
 ## Global Elimination Sync
 
@@ -175,6 +178,8 @@ Operational behavior:
 - Dev Tools bulk save calls `syncTournamentState()`
 - Dev Tools clear calls `syncTournamentState()`
 - Dev Tools randomize calls `syncTournamentState()`
+- Dev Tools `Finish All Matches` now auto-saves through the bulk endpoint immediately
+- Dev Tools per-match `RESET` now auto-saves immediately, and explicitly resets the score to `0:0`
 - The Tournament page counter `teamsRemaining` now reads from the persisted `teams.is_eliminated` flags instead of inferring elimination only from local group-table status
 
 ## Group Table 3rd-Place UI

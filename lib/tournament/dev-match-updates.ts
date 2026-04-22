@@ -101,10 +101,14 @@ export function buildDevMatchUpdate(existing: EditableMatchState, patch: DevMatc
   const knockout = isKnockoutStage(next.stage);
 
   if (next.status === "scheduled") {
+    next.home_score = 0;
+    next.away_score = 0;
     next.minute = null;
     next.is_extra_time = false;
     next.home_penalty_score = null;
     next.away_penalty_score = null;
+    update.home_score = 0;
+    update.away_score = 0;
     update.minute = null;
     update.is_extra_time = false;
     update.home_penalty_score = null;

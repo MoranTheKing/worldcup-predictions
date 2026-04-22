@@ -42,6 +42,8 @@ function normalizeDraft(match: DevMatchRow): DevMatchRow {
   if (match.status === "scheduled") {
     return {
       ...match,
+      home_score: 0,
+      away_score: 0,
       minute: null,
       is_extra_time: false,
       home_penalty_score: null,
@@ -99,6 +101,19 @@ function toPayload(match: DevMatchRow) {
   };
 }
 
+function buildScheduledReset(match: DevMatchRow) {
+  return normalizeDraft({
+    ...match,
+    status: "scheduled",
+    home_score: 0,
+    away_score: 0,
+    minute: null,
+    is_extra_time: false,
+    home_penalty_score: null,
+    away_penalty_score: null,
+  });
+}
+
 export default function DevToolsClient({ matches, error }: Props) {
   const resetKey = useMemo(
     () =>
@@ -151,6 +166,32 @@ function DevToolsClientInner({ matches, error }: Props) {
     startTransition(() => router.refresh());
   }
 
+  async function persistDrafts(nextDrafts: DevMatchRow[], successMessage: string) {
+    setBulkSaving(true);
+    setMessage(null);
+    setDrafts(nextDrafts);
+
+    try {
+      const res = await fetch("/api/dev/matches/bulk", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          matches: nextDrafts.map((match) => toPayload(ensureFinishedWinner(match))),
+        }),
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setMessage(`Error: ${body.error ?? res.statusText}`);
+        return;
+      }
+
+      refreshWithMessage(successMessage);
+    } finally {
+      setBulkSaving(false);
+    }
+  }
+
   async function saveMatch(matchNumber: number) {
     const draft = drafts.find((match) => match.match_number === matchNumber);
     if (!draft) return;
@@ -180,30 +221,10 @@ function DevToolsClientInner({ matches, error }: Props) {
   }
 
   async function saveAll() {
-    setBulkSaving(true);
-    setMessage(null);
-
-    try {
-      const res = await fetch("/api/dev/matches/bulk", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          matches: drafts.map((match) => toPayload(ensureFinishedWinner(match))),
-        }),
-      });
-
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        setMessage(`Error: ${body.error ?? res.statusText}`);
-        return;
-      }
-
-      refreshWithMessage(
-        "כל השינויים נשמרו ל-Supabase, וה-bracket נבנה מחדש מהמצב המעודכן של הטורניר.",
-      );
-    } finally {
-      setBulkSaving(false);
-    }
+    await persistDrafts(
+      drafts,
+      "כל השינויים נשמרו ל-Supabase, וה-bracket נבנה מחדש מהמצב המעודכן של הטורניר.",
+    );
   }
 
   async function clearAll() {
@@ -252,18 +273,50 @@ function DevToolsClientInner({ matches, error }: Props) {
     }
   }
 
-  function finishAll() {
-    setDrafts((current) =>
-      current.map((match) =>
-        ensureFinishedWinner({
-          ...match,
-          status: "finished",
-          minute: null,
-        }),
-      ),
+  async function finishAll() {
+    const nextDrafts = drafts.map((match) =>
+      ensureFinishedWinner({
+        ...match,
+        status: "finished",
+        minute: null,
+      }),
     );
 
-    setMessage("כל המשחקים סומנו מקומית כ-finished. לחץ על Save All Matches כדי לשמור ולסנכרן.");
+    await persistDrafts(
+      nextDrafts,
+      "כל המשחקים סומנו כ-finished ונשמרו מיד לדייטבייס, עם סנכרון מלא של הטבלאות וה-bracket.",
+    );
+  }
+
+  async function resetMatch(matchNumber: number) {
+    const current = drafts.find((match) => match.match_number === matchNumber);
+    if (!current) return;
+
+    const nextDraft = buildScheduledReset(current);
+
+    setBusyId(matchNumber);
+    setMessage(null);
+    setDrafts((existing) =>
+      existing.map((match) => (match.match_number === matchNumber ? nextDraft : match)),
+    );
+
+    try {
+      const res = await fetch(`/api/dev/matches/${matchNumber}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(toPayload(nextDraft)),
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setMessage(`Error: ${body.error ?? res.statusText}`);
+        return;
+      }
+
+      refreshWithMessage(`משחק ${matchNumber} אופס ל-scheduled ו-0:0, והטורניר סונכרן מיד.`);
+    } finally {
+      setBusyId(null);
+    }
   }
 
   return (
@@ -274,8 +327,8 @@ function DevToolsClientInner({ matches, error }: Props) {
             <p className="wc-kicker">Developer Tools</p>
             <h1 className="wc-display mt-2 text-4xl text-wc-fg1">כלי בדיקות פיתוח</h1>
             <p className="mt-2 max-w-2xl text-sm text-wc-fg3">
-              עריכת תוצאות, סטטוסים, הארכות ופנדלים לכל משחק. כל שמירה או איפוס מפעילים
-              סנכרון מלא של טבלאות הבתים, 8 המקומות השלישיים וה-bracket.
+              עריכת תוצאות, סטטוסים, הארכות ופנדלים לכל משחק. כל שמירה, איפוס או פעולה
+              גלובלית מפעילים סנכרון מלא של טבלאות הבתים, 8 המקומות השלישיים וה-bracket.
             </p>
 
             <div className="mt-4 flex flex-wrap gap-2">
@@ -382,6 +435,7 @@ function DevToolsClientInner({ matches, error }: Props) {
                   busy={busyId === match.match_number || pending}
                   onChange={updateDraft}
                   onSave={saveMatch}
+                  onReset={resetMatch}
                 />
               ))}
               {filtered.length === 0 && (
@@ -404,11 +458,13 @@ function DevMatchRowEditor({
   busy,
   onChange,
   onSave,
+  onReset,
 }: {
   match: DevMatchRow;
   busy: boolean;
   onChange: (matchNumber: number, recipe: (match: DevMatchRow) => DevMatchRow) => void;
   onSave: (matchNumber: number) => Promise<void>;
+  onReset: (matchNumber: number) => Promise<void>;
 }) {
   const homeName = getTeamDisplayName(match.homeTeam, match.home_placeholder);
   const awayName = getTeamDisplayName(match.awayTeam, match.away_placeholder);
@@ -429,14 +485,7 @@ function DevMatchRowEditor({
   function updateStatus(status: MatchStatus) {
     update((current) => {
       if (status === "scheduled") {
-        return {
-          ...current,
-          status,
-          minute: null,
-          is_extra_time: false,
-          home_penalty_score: null,
-          away_penalty_score: null,
-        };
+        return buildScheduledReset(current);
       }
 
       if (status === "finished" && knockout && isRegularDraw(current)) {
@@ -529,7 +578,7 @@ function DevMatchRowEditor({
             ET
           </label>
         ) : (
-          <span className="text-xs text-wc-fg3">—</span>
+          <span className="text-xs text-wc-fg3">-</span>
         )}
       </td>
       <td className="px-3 py-3">
@@ -570,7 +619,7 @@ function DevMatchRowEditor({
             />
           </div>
         ) : (
-          <span className="text-xs text-wc-fg3">—</span>
+          <span className="text-xs text-wc-fg3">-</span>
         )}
       </td>
       <td className="px-3 py-3 text-center">
@@ -596,7 +645,7 @@ function DevMatchRowEditor({
               FINISH
             </button>
             <button
-              onClick={() => updateStatus("scheduled")}
+              onClick={() => onReset(match.match_number)}
               disabled={busy || match.status === "scheduled"}
               className="rounded-lg bg-white/4 px-2 py-1 text-[10px] font-bold text-wc-fg3 hover:bg-white/10 disabled:opacity-40"
             >
