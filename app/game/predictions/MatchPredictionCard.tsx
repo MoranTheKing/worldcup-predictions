@@ -102,6 +102,14 @@ export default function MatchPredictionCard({
     directionHit,
     jokerJackpot,
   });
+  const livePredictionTone =
+    isLive && hasPrediction
+      ? match.home_score === optimisticHome && match.away_score === optimisticAway
+        ? "success"
+        : compareOutcome(match.home_score, match.away_score, optimisticHome, optimisticAway)
+          ? "direction"
+          : "miss"
+      : tone;
   const hiddenPredictionForPrivacy =
     isReadOnly && hideScheduledPrediction && match.status === "scheduled";
 
@@ -202,7 +210,13 @@ export default function MatchPredictionCard({
               </div>
 
               {hasPrediction && predictionScore ? (
-                <div className="rounded-[1rem] border border-white/10 bg-[rgba(255,255,255,0.05)] px-3 py-2.5 text-xs font-semibold text-wc-fg1 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-sm">
+                <div
+                  className={`rounded-[1rem] border px-3 py-2.5 text-xs font-semibold text-wc-fg1 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-sm ${
+                    isLive
+                      ? getLivePredictionBoxClass(livePredictionTone)
+                      : "border-white/10 bg-[rgba(255,255,255,0.05)]"
+                  }`}
+                >
                   <div className="flex items-center gap-2">
                     <span className="rounded-full bg-white/8 px-2 py-0.5 text-[10px] font-bold text-wc-fg2">
                       {predictionOwnerLabel}
@@ -296,7 +310,7 @@ export default function MatchPredictionCard({
                         ? `${predictionScore}${optimisticIsJoker ? " 👑" : ""}`
                         : "לא נשלח"
                   }
-                  tone={hiddenPredictionForPrivacy ? "scheduled" : tone}
+                  tone={hiddenPredictionForPrivacy ? "scheduled" : livePredictionTone}
                   isScore={!hiddenPredictionForPrivacy && Boolean(hasPrediction && predictionScore)}
                 />
                 <ResultPanel
@@ -433,6 +447,7 @@ function ScoreInput({
 }) {
   return (
     <input
+      dir="ltr"
       type="number"
       name={name}
       min="0"
@@ -594,4 +609,16 @@ function getResultPanelClass(tone: PredictionTone) {
   }
 
   return "border-white/10 bg-white/5 text-wc-fg1";
+}
+
+function getLivePredictionBoxClass(tone: PredictionTone) {
+  if (tone === "success") {
+    return "border-[rgba(34,197,94,0.38)] bg-[rgba(34,197,94,0.08)]";
+  }
+
+  if (tone === "direction") {
+    return "border-[rgba(255,222,89,0.34)] bg-[rgba(255,222,89,0.07)]";
+  }
+
+  return "border-[rgba(255,92,130,0.26)] bg-[rgba(255,92,130,0.06)]";
 }

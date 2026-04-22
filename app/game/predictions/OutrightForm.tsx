@@ -79,12 +79,12 @@ export default function OutrightForm({
 
   if (isLocked) {
     return (
-      <div className="rounded-2xl border border-white/8 bg-[rgba(6,13,26,0.3)] p-5">
-        <div className="mb-4">
+      <div className="space-y-3">
+        <div className="flex items-center justify-between gap-3">
           <p className="text-sm font-bold text-wc-fg1">ניחושי הטורניר</p>
-          <p className="mt-1 text-xs text-wc-fg2">
-            הבחירות שלך ננעלו עם פתיחת הטורניר ואינן ניתנות לעריכה.
-          </p>
+          <span className="rounded-full bg-white/6 px-3 py-1 text-xs font-semibold text-wc-fg3">
+            נעול
+          </span>
         </div>
 
         <div className="grid gap-4 lg:grid-cols-2">
@@ -107,28 +107,33 @@ export default function OutrightForm({
   }
 
   return (
-    <form
-      action={formAction}
-      className="rounded-2xl border border-white/8 bg-[rgba(6,13,26,0.3)] p-5"
-    >
-      <div className="mb-4">
+    <form action={formAction} className="space-y-3">
+      <div className="flex items-center justify-between gap-3">
         <p className="text-sm font-bold text-wc-fg1">ניחושי הטורניר</p>
-        <p className="mt-1 text-xs text-wc-fg2">
-          זוכת הטורניר ומלך השערים נשמרים בנפרד, כך שכל בחירה מתעדכנת בלי למחוק את השנייה.
-        </p>
+        <button
+          type="submit"
+          disabled={isPending}
+          className="wc-button-primary h-fit px-4 py-2 text-xs font-bold disabled:opacity-50"
+        >
+          {isPending ? "שומר..." : "שמור"}
+        </button>
       </div>
 
       <input type="hidden" name="winner_team_id" value={winnerId} />
       <input type="hidden" name="top_scorer" value={topScorerName} />
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_1fr_auto] lg:items-end">
-        <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold text-wc-fg2">זוכת הטורניר</label>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="space-y-1.5">
+          <label className="text-[11px] font-semibold uppercase tracking-[0.18em] text-wc-fg3">
+            זוכת הטורניר
+          </label>
           <TeamPicker teams={sortedTeams} value={winnerId} onChange={setWinnerId} />
         </div>
 
-        <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold text-wc-fg2">מלך השערים</label>
+        <div className="space-y-1.5">
+          <label className="text-[11px] font-semibold uppercase tracking-[0.18em] text-wc-fg3">
+            מלך השערים
+          </label>
           <PlayerPicker
             players={sortedPlayers}
             winnerId={winnerId}
@@ -137,22 +142,14 @@ export default function OutrightForm({
             onChange={(player) => setTopScorerName(player?.name ?? "")}
           />
         </div>
-
-        <button
-          type="submit"
-          disabled={isPending}
-          className="wc-button-primary h-fit px-5 py-3 text-sm font-bold disabled:opacity-50"
-        >
-          {isPending ? "שומר..." : "שמור"}
-        </button>
       </div>
 
       {state?.error ? (
-        <p role="alert" className="mt-3 text-sm font-semibold text-wc-danger">
+        <p role="alert" className="text-sm font-semibold text-wc-danger">
           {state.error}
         </p>
       ) : state?.success ? (
-        <p className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-wc-neon">
+        <p className="inline-flex items-center gap-2 text-sm font-semibold text-wc-neon">
           <span className="rounded-full bg-[rgba(95,255,123,0.14)] px-2 py-0.5 text-xs">✓</span>
           ניחושי הטורניר נשמרו.
         </p>

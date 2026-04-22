@@ -918,7 +918,7 @@ function SeedRow({
       </div>
 
       {score !== null && (
-        <div className={`flex shrink-0 items-center gap-0.5 text-[10px] ${textClass}`}>
+        <div dir="ltr" className={`flex shrink-0 items-center gap-0.5 text-[10px] ${textClass}`}>
           {penaltyScore !== null && (
             <span className={isLoser ? "" : "text-wc-fg3"}>({penaltyScore})</span>
           )}
@@ -1033,7 +1033,6 @@ function GroupTable({
               <th className="px-2 py-2 text-center font-semibold text-wc-fg3">{TEXT.won}</th>
               <th className="px-2 py-2 text-center font-semibold text-wc-fg3">{TEXT.drawn}</th>
               <th className="px-2 py-2 text-center font-semibold text-wc-fg3">{TEXT.lost}</th>
-              <th className="px-2 py-2 text-center font-semibold text-wc-fg3">{TEXT.goalsFor}</th>
               <th className="px-2 py-2 text-center font-semibold text-wc-fg3">{TEXT.goalDifference}</th>
               <th className="py-2 pe-4 ps-2 text-center font-semibold text-wc-fg3">{TEXT.points}</th>
             </tr>
@@ -1073,8 +1072,10 @@ function GroupTable({
                         <div className="h-3 w-[18px] rounded-sm bg-white/10" />
                       )}
                       <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="truncate font-semibold text-wc-fg1">{entry.team.name_he ?? entry.team.name}</p>
+                        <div className="flex items-center gap-2 overflow-hidden">
+                          <p className="truncate whitespace-nowrap font-semibold text-wc-fg1">
+                            {entry.team.name_he ?? entry.team.name}
+                          </p>
                           {liveScore ? <InlineLiveScoreBadge liveScore={liveScore} /> : null}
                         </div>
                         <StatusPill display={statusDisplay} />
@@ -1085,7 +1086,6 @@ function GroupTable({
                   <td className="px-2 py-3 text-center text-wc-fg2">{entry.won}</td>
                   <td className="px-2 py-3 text-center text-wc-fg2">{entry.drawn}</td>
                   <td className="px-2 py-3 text-center text-wc-fg2">{entry.lost}</td>
-                  <td className="px-2 py-3 text-center text-wc-fg2">{entry.gf}</td>
                   <td className="px-2 py-3 text-center text-wc-fg2">{entry.gd}</td>
                   <td className="py-3 pe-4 ps-2 text-center font-bold text-wc-fg1">{entry.pts}</td>
                 </tr>
@@ -1117,7 +1117,7 @@ function InlineLiveScoreBadge({
   return (
     <span
       dir="ltr"
-      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${stateClassName}`}
+      className={`inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] font-bold ${stateClassName}`}
     >
       <span className="relative flex h-2 w-2">
         <span

@@ -37,7 +37,10 @@ export default function TeamPicker({
 
     return teams.filter((team) => {
       const display = team.name_he ?? team.name;
-      return display.toLowerCase().includes(search.toLowerCase()) || team.name.toLowerCase().includes(search.toLowerCase());
+      return (
+        display.toLowerCase().includes(search.toLowerCase()) ||
+        team.name.toLowerCase().includes(search.toLowerCase())
+      );
     });
   }, [search, teams]);
 
@@ -58,26 +61,26 @@ export default function TeamPicker({
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}
-        className="flex w-full items-center justify-between rounded-xl border border-white/10 bg-[rgba(8,16,28,0.92)] px-3 py-2.5 text-sm text-wc-fg1 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition hover:border-wc-neon/30"
+        className="flex w-full items-center justify-between rounded-[1.2rem] border border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.06),rgba(255,255,255,0.03))] px-4 py-3 text-sm font-bold text-wc-fg1 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition hover:border-wc-neon/30"
       >
         <span className="flex min-w-0 items-center gap-2">
           {selectedTeam?.logo_url ? (
             <Image
               src={selectedTeam.logo_url}
               alt=""
-              width={20}
-              height={14}
-              className="h-[14px] w-5 flex-shrink-0 rounded-[3px] object-cover"
+              width={22}
+              height={16}
+              className="h-4 w-[22px] flex-shrink-0 rounded-[4px] object-cover"
               unoptimized
             />
           ) : (
-            <span className="h-[14px] w-5 rounded-[3px] bg-white/8" />
+            <span className="h-4 w-[22px] rounded-[4px] bg-white/8" />
           )}
           <span className={`truncate ${selectedTeam ? "text-wc-fg1" : "text-wc-fg3"}`}>
             {selectedTeam ? selectedTeam.name_he ?? selectedTeam.name : placeholder}
           </span>
         </span>
-        <span className="text-xs text-wc-fg3">{open ? "▴" : "▾"}</span>
+        <span className="text-[11px] text-wc-fg3">{open ? "⌃" : "⌄"}</span>
       </button>
 
       {open ? (

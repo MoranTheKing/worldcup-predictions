@@ -63,7 +63,7 @@ export default function PlayerPicker({
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}
-        className="flex w-full items-center justify-between rounded-xl border border-white/10 bg-[rgba(8,16,28,0.92)] px-3 py-2.5 text-sm text-wc-fg1 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition hover:border-wc-neon/30"
+        className="flex w-full items-center justify-between rounded-[1.2rem] border border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.06),rgba(255,255,255,0.03))] px-4 py-3 text-sm font-bold text-wc-fg1 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition hover:border-wc-neon/30"
       >
         <span className="flex min-w-0 items-center gap-2">
           <PlayerAvatarIcon />
@@ -71,7 +71,7 @@ export default function PlayerPicker({
             {value ? value.name : fallbackLabel || "-- בחר שחקן --"}
           </span>
         </span>
-        <span className="text-xs text-wc-fg3">{open ? "▴" : "▾"}</span>
+        <span className="text-[11px] text-wc-fg3">{open ? "⌃" : "⌄"}</span>
       </button>
 
       {open ? (
@@ -125,7 +125,7 @@ export default function PlayerPicker({
 
 function PlayerAvatarIcon() {
   return (
-    <span className="inline-flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-white/8 text-wc-fg2">
+    <span className="inline-flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-white/8 text-wc-fg2">
       <svg viewBox="0 0 20 20" className="h-3.5 w-3.5 fill-current" aria-hidden="true">
         <path d="M10 10a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm0 1.5c-3.05 0-5.75 1.54-6.77 3.86-.19.44.13.94.61.94h12.32c.48 0 .8-.5.61-.94C15.75 13.04 13.05 11.5 10 11.5Z" />
       </svg>

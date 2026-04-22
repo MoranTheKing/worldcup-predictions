@@ -253,6 +253,30 @@ Validation:
 - `npm run build`
   passed
 
+## April 22, 2026 - Phase 2.7 Live UX + RTL Data Entry Hardening
+
+What changed in this pass:
+
+- dev-tools score editors now enforce an explicit `Home` / `Away` mapping inside an LTR score cluster
+- this prevents RTL flex layout from visually or semantically flipping `home_score` and `away_score`
+- knockout and prediction score displays continue to use explicit LTR wrappers for numeric score output
+- the group standings table dropped the `GF / ז+` column to free horizontal space
+- long team names in the standings table now stay on one line with truncation instead of wrapping under the live badge
+- editable outright picks were restyled into a lighter, badge-like dropdown treatment with flags / player icons and a subtle chevron
+- the heavy helper copy around editable outrights was removed
+- live prediction cards now keep the cyan broadcast-style `LIVE` pill at the top
+- the user's prediction box inside a live match now updates visually in real time:
+  soft green when the exact score currently matches
+  soft yellow when the direction currently matches
+  soft red when it is currently missing
+
+Validation:
+
+- `npm run lint`
+  passed
+- `npm run build`
+  passed
+
 ## Phase 2.5 UI / Outrights Polish
 
 As of April 22, 2026, the Predictions Hub received another polish pass focused on match-card clarity and outright locking.
