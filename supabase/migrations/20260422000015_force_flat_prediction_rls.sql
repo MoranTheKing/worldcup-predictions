@@ -39,7 +39,7 @@ begin
       on public.league_members
       for select
       to authenticated
-      using (true);
+      using (auth.uid() = user_id);
 
     create policy league_members_insert
       on public.league_members
@@ -77,7 +77,7 @@ begin
       on public.predictions
       for select
       to authenticated
-      using (true);
+      using (auth.uid() = user_id);
 
     create policy predictions_insert
       on public.predictions
@@ -115,7 +115,7 @@ begin
       on public.tournament_predictions
       for select
       to authenticated
-      using (true);
+      using (auth.uid() = user_id);
 
     create policy tournament_predictions_insert
       on public.tournament_predictions
