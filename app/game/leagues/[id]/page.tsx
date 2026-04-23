@@ -117,11 +117,14 @@ export default async function LeaguePage({
     { winner: string | null; winnerLogoUrl: string | null; topScorer: string | null }
   >();
 
-  if (memberIds.length > 0) {
+  const canLoadAllOutrights = tournamentStarted;
+  const outrightUserIds = canLoadAllOutrights ? memberIds : memberIds.filter((memberId) => memberId === user.id);
+
+  if (outrightUserIds.length > 0) {
     const { data: rawOutrights, error: outrightError } = await admin
       .from("tournament_predictions")
       .select("user_id, predicted_winner_team_id, predicted_top_scorer_name")
-      .in("user_id", memberIds);
+      .in("user_id", outrightUserIds);
 
     if (outrightError) {
       console.error("[LeaguePage] tournament predictions error:", outrightError);

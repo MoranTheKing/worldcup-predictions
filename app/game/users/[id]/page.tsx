@@ -178,6 +178,11 @@ export default async function OpponentPredictionsPage({
     typeof tournamentResult.data?.predicted_winner_team_id === "string"
       ? teamsById.get(tournamentResult.data.predicted_winner_team_id) ?? null
       : null;
+  const visibleWinnerName = tournamentStarted ? winnerTeam?.name ?? null : null;
+  const visibleWinnerLogoUrl = tournamentStarted ? winnerTeam?.logoUrl ?? null : null;
+  const visibleTopScorer = tournamentStarted
+    ? tournamentResult.data?.predicted_top_scorer_name ?? null
+    : null;
 
   return (
     <div className="flex flex-col gap-6">
@@ -239,8 +244,8 @@ export default async function OpponentPredictionsPage({
             <OutrightChoiceBadge
               kind="winner"
               label="זוכת הטורניר"
-              value={winnerTeam?.name ?? null}
-              logoUrl={winnerTeam?.logoUrl ?? null}
+              value={visibleWinnerName}
+              logoUrl={visibleWinnerLogoUrl}
               hidden={!tournamentStarted}
               locked
               size="hero"
@@ -248,7 +253,7 @@ export default async function OpponentPredictionsPage({
             <OutrightChoiceBadge
               kind="topScorer"
               label="מלך השערים"
-              value={tournamentResult.data?.predicted_top_scorer_name ?? null}
+              value={visibleTopScorer}
               hidden={!tournamentStarted}
               locked
               size="hero"
