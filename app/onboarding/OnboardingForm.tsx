@@ -107,6 +107,7 @@ export default function OnboardingForm({
   const lastValidatedNickname = useRef<string | null>(initialNickname || null);
   const avatarFileInputRef = useRef<HTMLInputElement | null>(null);
   const avatarObjectUrlRef = useRef<string | null>(null);
+  const nicknameInputRef = useRef<HTMLInputElement | null>(null);
 
   const [step, setStep] = useState(0);
   const [nickname, setNickname] = useState(existingDisplayName);
@@ -146,6 +147,22 @@ export default function OnboardingForm({
       }
     };
   }, []);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+
+    if (step !== 0) {
+      return;
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      nicknameInputRef.current?.focus({ preventScroll: true });
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
+  }, [step]);
 
   useEffect(() => {
     if (!state?.success) {
@@ -352,7 +369,7 @@ export default function OnboardingForm({
           : "text-wc-fg3";
 
   return (
-    <main className="wc-page flex min-h-screen items-center justify-center px-4 py-10">
+    <main className="wc-page flex min-h-screen items-start justify-center px-4 py-10">
       <form
         action={step === finalStep ? formAction : undefined}
         onSubmit={handleIntermediateSubmit}
@@ -409,27 +426,7 @@ export default function OnboardingForm({
         <div className="wc-glass rounded-[2rem] p-6 sm:p-8">
           {step === 0 ? (
             <section className="space-y-6">
-              <div className="grid gap-6 lg:grid-cols-[280px,1fr]">
-                <ProfileAvatarField
-                  avatarTransform={avatarTransform}
-                  avatarOptions={avatarOptions}
-                  avatarPreviewUrl={avatarPreviewUrl}
-                  avatarStatusLabel={avatarStatusLabel}
-                  canAdjustAvatar={canAdjustAvatar}
-                  helperText={getAvatarUploadHelperText()}
-                  nicknamePreview={nicknamePreview}
-                  onAvatarTransformChange={(nextTransform) => {
-                    setAvatarTransform(normalizeAvatarTransform(nextTransform));
-                  }}
-                  onClearAvatar={clearAvatarSelection}
-                  onOpenFilePicker={() => avatarFileInputRef.current?.click()}
-                  onResetAvatarTransform={() => setAvatarTransform(DEFAULT_AVATAR_TRANSFORM)}
-                  onSelectAvatar={selectAvatarOption}
-                  selectedAvatarUrl={selectedAvatarUrl}
-                  uploadError={avatarUploadError}
-                  uploadedFileName={uploadedAvatarName}
-                />
-
+              <div className="grid gap-6 lg:grid-cols-[1fr,280px] lg:items-start">
                 <div className="space-y-5">
                   <div>
                     <p className="text-[11px] font-semibold tracking-[0.18em] text-wc-fg3">
@@ -447,6 +444,7 @@ export default function OnboardingForm({
                       כינוי ייחודי
                     </label>
                     <input
+                      ref={nicknameInputRef}
                       id="nickname"
                       type="text"
                       value={nickname}
@@ -455,7 +453,6 @@ export default function OnboardingForm({
                         void handleNicknameBlur();
                       }}
                       maxLength={20}
-                      autoFocus
                       className={`mt-2 w-full rounded-[1.2rem] border bg-[rgba(255,255,255,0.05)] px-4 py-3 text-sm text-wc-fg1 outline-none placeholder:text-wc-fg3 ${
                         nicknameStatus === "taken"
                           ? "border-wc-danger/60"
@@ -479,6 +476,26 @@ export default function OnboardingForm({
                     </div>
                   )}
                 </div>
+
+                <ProfileAvatarField
+                  avatarTransform={avatarTransform}
+                  avatarOptions={avatarOptions}
+                  avatarPreviewUrl={avatarPreviewUrl}
+                  avatarStatusLabel={avatarStatusLabel}
+                  canAdjustAvatar={canAdjustAvatar}
+                  helperText={getAvatarUploadHelperText()}
+                  nicknamePreview={nicknamePreview}
+                  onAvatarTransformChange={(nextTransform) => {
+                    setAvatarTransform(normalizeAvatarTransform(nextTransform));
+                  }}
+                  onClearAvatar={clearAvatarSelection}
+                  onOpenFilePicker={() => avatarFileInputRef.current?.click()}
+                  onResetAvatarTransform={() => setAvatarTransform(DEFAULT_AVATAR_TRANSFORM)}
+                  onSelectAvatar={selectAvatarOption}
+                  selectedAvatarUrl={selectedAvatarUrl}
+                  uploadError={avatarUploadError}
+                  uploadedFileName={uploadedAvatarName}
+                />
               </div>
             </section>
           ) : null}
