@@ -122,7 +122,15 @@ begin
       on public.league_members
       for select
       to authenticated
-      using (true);
+      using (
+        user_id = auth.uid()
+        or exists (
+          select 1
+          from public.league_members lm
+          where lm.league_id = league_members.league_id
+            and lm.user_id = auth.uid()
+        )
+      );
   end if;
 end
 $$;
@@ -141,7 +149,17 @@ begin
       on public.predictions
       for select
       to authenticated
-      using (true);
+      using (
+        user_id = auth.uid()
+        or exists (
+          select 1
+          from public.league_members mine
+          join public.league_members theirs
+            on theirs.league_id = mine.league_id
+          where mine.user_id = auth.uid()
+            and theirs.user_id = predictions.user_id
+        )
+      );
   end if;
 end
 $$;
@@ -160,7 +178,17 @@ begin
       on public.tournament_predictions
       for select
       to authenticated
-      using (true);
+      using (
+        user_id = auth.uid()
+        or exists (
+          select 1
+          from public.league_members mine
+          join public.league_members theirs
+            on theirs.league_id = mine.league_id
+          where mine.user_id = auth.uid()
+            and theirs.user_id = tournament_predictions.user_id
+        )
+      );
   end if;
 end
 $$;
