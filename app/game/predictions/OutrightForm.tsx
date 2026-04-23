@@ -80,8 +80,6 @@ export default function OutrightForm({
   if (isLocked) {
     return (
       <div className="space-y-3">
-        <p className="text-sm font-bold text-wc-fg1">ניחושי הטורניר</p>
-
         <div className="grid gap-4 lg:grid-cols-2">
           <OutrightChoiceBadge
             kind="winner"
@@ -104,40 +102,74 @@ export default function OutrightForm({
   }
 
   return (
-    <form action={formAction} className="space-y-3">
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-sm font-bold text-wc-fg1">ניחושי הטורניר</p>
-        <button
-          type="submit"
-          disabled={isPending}
-          className="wc-button-primary h-fit px-4 py-2 text-xs font-bold disabled:opacity-50"
-        >
-          {isPending ? "שומר..." : "שמור"}
-        </button>
-      </div>
-
+    <form action={formAction} className="space-y-4">
       <input type="hidden" name="winner_team_id" value={winnerId} />
       <input type="hidden" name="top_scorer" value={topScorerName} />
 
+      <div className="grid gap-4 xl:grid-cols-[1fr,auto] xl:items-end">
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-semibold uppercase tracking-[0.18em] text-wc-fg3">
+              זוכת הטורניר
+            </label>
+            <TeamPicker teams={sortedTeams} value={winnerId} onChange={setWinnerId} />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-semibold uppercase tracking-[0.18em] text-wc-fg3">
+              מלך השערים
+            </label>
+            <PlayerPicker
+              players={sortedPlayers}
+              winnerId={winnerId}
+              value={selectedPlayer}
+              fallbackLabel={selectedPlayer ? undefined : topScorerName || undefined}
+              onChange={(player) => setTopScorerName(player?.name ?? "")}
+            />
+          </div>
+        </div>
+
+        <div className="flex justify-start xl:justify-end">
+          <button
+            type="submit"
+            disabled={isPending}
+            className="wc-button-primary h-fit min-w-28 px-5 py-3 text-sm font-bold disabled:opacity-50"
+          >
+            {isPending ? "שומר..." : "שמור"}
+          </button>
+        </div>
+      </div>
+
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="space-y-1.5">
-          <label className="text-[11px] font-semibold uppercase tracking-[0.18em] text-wc-fg3">
-            זוכת הטורניר
-          </label>
-          <TeamPicker teams={sortedTeams} value={winnerId} onChange={setWinnerId} />
+          {selectedTeam ? (
+            <OutrightChoiceBadge
+              kind="winner"
+              label="זוכת הטורניר"
+              value={selectedTeam.name_he ?? selectedTeam.name}
+              logoUrl={selectedTeam.logo_url}
+              size="hero"
+            />
+          ) : (
+            <div className="rounded-[1.4rem] border border-dashed border-white/10 bg-white/5 p-4 text-sm text-wc-fg3">
+              עדיין לא נבחרה זוכת טורניר.
+            </div>
+          )}
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-[11px] font-semibold uppercase tracking-[0.18em] text-wc-fg3">
-            מלך השערים
-          </label>
-          <PlayerPicker
-            players={sortedPlayers}
-            winnerId={winnerId}
-            value={selectedPlayer}
-            fallbackLabel={selectedPlayer ? undefined : topScorerName || undefined}
-            onChange={(player) => setTopScorerName(player?.name ?? "")}
-          />
+          {selectedPlayer || topScorerName ? (
+            <OutrightChoiceBadge
+              kind="topScorer"
+              label="מלך השערים"
+              value={selectedPlayer?.name ?? topScorerName}
+              size="hero"
+            />
+          ) : (
+            <div className="rounded-[1.4rem] border border-dashed border-white/10 bg-white/5 p-4 text-sm text-wc-fg3">
+              עדיין לא נבחר מלך שערים.
+            </div>
+          )}
         </div>
       </div>
 

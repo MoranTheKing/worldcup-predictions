@@ -27,6 +27,7 @@ Fixed or hardened areas:
 - pre-kickoff exposure of hidden outright predictions
 - brute-forceable direct invite-code join page
 - remotely reachable dev-only mutation routes in non-production environments
+- localhost-only dev guards no longer trust spoofable `X-Forwarded-Host` headers
 - committed local log files that exposed workstation paths and internal network details
 - missing DB-level privacy and kickoff locks for prediction data
 - server-side match prediction lock drift when kickoff time had passed but match status was still `scheduled`
@@ -94,6 +95,7 @@ Default local URL:
 - Tournament and match prediction locks are enforced in both application logic and the database.
 - Dev tools are intended for localhost development only.
 - Profile avatars fall back to initials if the selected image is missing or unsupported.
+- The predictions hub now uses a tighter outright-picks layout with less explanatory copy and a more compact save flow.
 
 ## Next phase
 

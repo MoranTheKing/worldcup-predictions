@@ -22,6 +22,7 @@ Reviewed pull requests:
 - `#11` Validate login `next` parameter to prevent open redirect
 - `#12` Remove committed dev logs that leak local environment details
 - `#13` Sanitize `next` in auth callback to prevent open redirects
+- `#14` Prevent localhost-only dev guard bypass via spoofed forwarded host headers
 
 ## Findings and remediations
 
@@ -129,15 +130,17 @@ How it could be exploited:
 What changed:
 
 - added `lib/security/local-request.ts`
-- `app/api/dev/_guard.ts` now blocks non-localhost requests, preferring `Host` and `X-Forwarded-Host` over framework-normalized URLs
+- `app/api/dev/_guard.ts` now blocks non-localhost requests by trusting only `Host`, `Origin`, and the request URL instead of attacker-controlled forwarded host headers
 - all dev route handlers now pass the request into that guard
 - `proxy.ts` returns `404` for `/dev-tools` and `/api/dev/*` when they are requested via a non-local host, preventing login redirects from masking the real access control
 - the dev tools page and floating button are also hidden unless the request originates from localhost
+- `X-Forwarded-Host` is no longer used when deciding whether a request is local, which closes a spoofing path where a remote caller could forge `localhost`
 
 PR covered:
 
 - `#5` identified one endpoint
 - this audit expanded the same protection to the full dev tooling surface
+- `#14` later narrowed the hostname resolution logic so localhost gating no longer trusts spoofable forwarded-host input
 
 ### 5. Social prediction tables had permissive SELECT RLS
 

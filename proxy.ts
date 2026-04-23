@@ -41,7 +41,6 @@ function resolveHostname(candidates: Array<string | null>) {
 
 function isLocalProxyRequest(request: NextRequest) {
   const hostname = resolveHostname([
-    request.headers.get("x-forwarded-host"),
     request.headers.get("host"),
     request.headers.get("origin"),
     request.nextUrl.host,

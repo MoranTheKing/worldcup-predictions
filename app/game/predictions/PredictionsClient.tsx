@@ -116,29 +116,30 @@ export default function PredictionsClient({
 
   return (
     <div className="flex flex-col gap-8">
-      <section className="rounded-2xl border border-white/8 bg-[rgba(13,27,46,0.82)] p-5">
-        <div className="mb-4">
-          <p className="text-xs font-bold uppercase tracking-[0.24em] text-wc-neon">הניחושים שלי</p>
-          <p className="mt-2 text-sm text-wc-fg2">
-            כל משחק בטורניר מופיע כאן. משחקים שעדיין לא התחילו נשארים פתוחים לעריכה, ומשחקים
-            חיים או גמורים נשמרים כתיעוד מלא עם ניקוד.
-          </p>
+      <section className="rounded-[2rem] border border-white/8 bg-[linear-gradient(180deg,rgba(13,27,46,0.88),rgba(10,20,35,0.92))] p-5 shadow-[0_18px_44px_rgba(0,0,0,0.22)] sm:p-6">
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.24em] text-wc-neon">בחירות הפתיחה שלי</p>
+          </div>
+          <div className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold text-wc-fg3">
+            {tournamentStarted ? "בחירות הטורניר נעולות" : "אפשר לערוך עד שריקת הפתיחה"}
+          </div>
         </div>
 
-        <OutrightForm
-          teams={teams}
-          players={players}
-          existing={tournamentPrediction}
-          isLocked={tournamentStarted}
-        />
+        <div className="rounded-[1.7rem] border border-white/8 bg-[rgba(255,255,255,0.03)] p-4 sm:p-5">
+          <OutrightForm
+            teams={teams}
+            players={players}
+            existing={tournamentPrediction}
+            isLocked={tournamentStarted}
+          />
+        </div>
       </section>
 
       <section>
         <div className="mb-3">
-          <p className="text-xs font-bold uppercase tracking-[0.24em] text-wc-neon">
-            היסטוריית משחקים וניחושים
-          </p>
-          <p className="mt-1 text-xs text-wc-fg3">מסך אחד לכל הלוז: עבר, הווה ועתיד.</p>
+          <p className="text-xs font-bold uppercase tracking-[0.24em] text-wc-neon">לוח המשחקים</p>
+          <p className="mt-1 text-xs text-wc-fg3">כל המשחקים, כל הניקוד, וכל הבחירות שלך במקום אחד.</p>
         </div>
 
         {matches.length === 0 ? (
