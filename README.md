@@ -10,6 +10,13 @@ As of 2026-04-23, the project has three major slices in active use:
 - social predictions hub under `/game`
 - private leagues, opponent view, and invite-code flows
 
+New player onboarding now runs before entry into the protected game flow:
+
+- all newly authenticated users are routed through `/onboarding`
+- onboarding requires a unique public nickname before league play
+- if the tournament is still open, onboarding also collects winner and top-scorer picks
+- avatar setup is optional and supports built-in defaults plus the current Google profile photo when available
+
 ## Security status
 
 A full security audit was completed on 2026-04-23.
@@ -40,8 +47,10 @@ These migrations must be applied on the active Supabase project:
 - `20260422000016_enable_social_prediction_selects.sql`
 - `20260423000018_restore_social_prediction_privacy.sql`
 - `20260423000019_enforce_prediction_lock_windows.sql`
+- `20260423000020_enforce_unique_profile_handles.sql`
 
 The two `20260423000018/19` migrations are the important security remediations from the latest audit.
+The `20260423000020` migration adds DB-level protection so no two users can claim the same nickname with case-only variations.
 
 ## Local development
 
@@ -68,17 +77,23 @@ Default local URL:
 - `app/actions/league.ts`
 - `app/actions/predictions.ts`
 - `app/auth/callback/route.ts`
+- `app/onboarding/page.tsx`
+- `app/onboarding/OnboardingForm.tsx`
+- `app/actions/onboarding.ts`
 - `app/login/page.tsx`
 - `app/signup/page.tsx`
 - `app/api/dev/_guard.ts`
 - `proxy.ts`
 - `lib/game/tournament-start.ts`
+- `lib/supabase/onboarding.ts`
+- `lib/profile/avatar-options.ts`
 
 ## Project notes
 
 - Social opponent viewing is intentionally anti-cheat: scheduled matches stay hidden and outright picks stay hidden until tournament kickoff.
 - Tournament and match prediction locks are enforced in both application logic and the database.
 - Dev tools are intended for localhost development only.
+- Profile avatars fall back to initials if the selected image is missing or unsupported.
 
 ## Next phase
 

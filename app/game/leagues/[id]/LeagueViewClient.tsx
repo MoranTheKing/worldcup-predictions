@@ -1,10 +1,10 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useActionState, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import OutrightChoiceBadge from "@/components/game/OutrightChoiceBadge";
+import UserAvatar from "@/components/UserAvatar";
 import {
   deleteLeague,
   leaveLeague,
@@ -274,20 +274,12 @@ function LeagueMemberRowView({
       <td className="px-5 py-3 text-sm font-bold text-wc-fg3">{getRankLabel(rank)}</td>
       <td className="px-4 py-3">
         <div className="flex items-center gap-3">
-          {member.avatar_url ? (
-            <Image
-              src={member.avatar_url}
-              alt={member.display_name}
-              width={36}
-              height={36}
-              unoptimized
-              className="aspect-square h-9 w-9 rounded-full object-cover"
-            />
-          ) : (
-            <div className="flex aspect-square h-9 w-9 items-center justify-center rounded-full bg-[linear-gradient(135deg,var(--wc-violet),var(--wc-magenta))] text-xs font-black text-white">
-              {member.display_name.charAt(0).toUpperCase()}
-            </div>
-          )}
+          <UserAvatar
+            name={member.display_name}
+            src={member.avatar_url}
+            size={36}
+            className="aspect-square h-9 w-9"
+          />
           <div>
             <p className={`text-sm font-semibold ${isSelf ? "text-wc-neon" : "text-wc-fg1"}`}>
               {member.display_name}

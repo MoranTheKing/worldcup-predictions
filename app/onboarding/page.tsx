@@ -1,46 +1,68 @@
-import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import OnboardingForm from "./OnboardingForm";
+import { getSafeRedirectPath } from "@/lib/security/safe-redirect";
+import { fetchOnboardingStatus } from "@/lib/supabase/onboarding";
+import { createClient } from "@/lib/supabase/server";
 
-export default async function OnboardingPage() {
+export const dynamic = "force-dynamic";
+
+export default async function OnboardingPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string }>;
+}) {
+  const { next } = await searchParams;
+  const nextPath = getSafeRedirectPath(next, "/game");
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) redirect("/login");
+  if (!user) {
+    redirect(`/login?next=${encodeURIComponent("/onboarding")}`);
+  }
 
-  // If already onboarded, skip straight to dashboard
-  const [{ data: profile }, { data: outright }] = await Promise.all([
-    supabase.from("users").select("username").eq("id", user.id).single(),
-    supabase
-      .from("outright_bets")
-      .select("id")
-      .eq("user_id", user.id)
-      .maybeSingle(),
-  ]);
+  const onboardingStatus = await fetchOnboardingStatus(supabase, user.id);
 
-  if (profile?.username && outright) redirect("/dashboard");
+  if (onboardingStatus.isComplete) {
+    redirect(nextPath);
+  }
 
-  // Load teams (with logo_url from DB) and players in parallel
   const [{ data: teams }, { data: players }] = await Promise.all([
     supabase
       .from("teams")
-      .select("id, name, name_he, flag, logo_url, group_letter")
+      .select("id, name, name_he, logo_url")
       .order("name_he", { ascending: true }),
-    supabase
-      .from("players")
-      .select("id, name, team_id, position")
-      .order("name", { ascending: true }),
+    supabase.from("players").select("id, name, team_id, position").order("name", { ascending: true }),
   ]);
+
+  const oauthAvatarUrl =
+    typeof user.user_metadata?.avatar_url === "string" ? user.user_metadata.avatar_url : null;
 
   return (
     <OnboardingForm
-      userId={user.id}
-      teams={teams ?? []}
-      players={players ?? []}
-      existingUsername={profile?.username ?? ""}
-      hasOutright={!!outright}
+      existingAvatarUrl={onboardingStatus.avatarUrl}
+      existingDisplayName={onboardingStatus.displayName ?? onboardingStatus.username ?? ""}
+      nextPath={nextPath}
+      oauthAvatarUrl={oauthAvatarUrl}
+      players={
+        ((players ?? []) as Array<{
+          id: number;
+          name: string;
+          position: string | null;
+          team_id: string | null;
+        }>)
+      }
+      teams={
+        ((teams ?? []) as Array<{
+          id: string;
+          logo_url: string | null;
+          name: string;
+          name_he: string | null;
+        }>)
+      }
+      tournamentPrediction={onboardingStatus.tournamentPrediction}
+      tournamentStarted={onboardingStatus.tournamentStarted}
     />
   );
 }

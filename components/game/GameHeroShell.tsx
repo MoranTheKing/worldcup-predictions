@@ -1,7 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import { usePathname } from "next/navigation";
+import UserAvatar from "@/components/UserAvatar";
 
 type GameHeroShellProps = {
   displayName: string;
@@ -28,8 +28,6 @@ export default function GameHeroShell({
     return null;
   }
 
-  const initial = displayName.charAt(0).toUpperCase();
-
   return (
     <div
       className="mb-6 overflow-hidden rounded-[2rem] border border-white/10 p-5 shadow-[0_0_32px_rgba(95,255,123,0.08)]"
@@ -40,20 +38,14 @@ export default function GameHeroShell({
     >
       <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-center gap-4">
-          {avatarUrl ? (
-            <Image
-              src={avatarUrl}
-              alt={displayName}
-              width={68}
-              height={68}
-              unoptimized
-              className="h-[68px] w-[68px] rounded-[1.4rem] object-cover"
-            />
-          ) : (
-            <div className="flex h-[68px] w-[68px] items-center justify-center rounded-[1.4rem] bg-[linear-gradient(135deg,var(--wc-neon),var(--wc-violet))] text-2xl font-black text-[color:var(--wc-text-inverse)]">
-              {initial}
-            </div>
-          )}
+          <UserAvatar
+            name={displayName}
+            src={avatarUrl}
+            size={68}
+            roundedClassName="rounded-[1.4rem]"
+            className="h-[68px] w-[68px]"
+            priority
+          />
 
           <div className="min-w-0">
             <p className="text-xs font-bold uppercase tracking-[0.28em] text-wc-neon">

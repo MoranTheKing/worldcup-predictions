@@ -11,6 +11,8 @@ export default function LoginPage() {
   const searchParams = useSearchParams();
   const supabase = createClient();
   const nextPath = getSafeRedirectPath(searchParams.get("next"));
+  const signupHref =
+    nextPath === "/dashboard" ? "/signup" : `/signup?next=${encodeURIComponent(nextPath)}`;
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -126,7 +128,7 @@ export default function LoginPage() {
 
         <p className="mt-5 text-center text-sm text-wc-fg3">
           אין לך חשבון?{" "}
-          <Link href="/signup" className="font-semibold text-wc-neon underline underline-offset-4">
+          <Link href={signupHref} className="font-semibold text-wc-neon underline underline-offset-4">
             הרשמה
           </Link>
         </p>

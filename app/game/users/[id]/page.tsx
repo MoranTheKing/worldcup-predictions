@@ -1,7 +1,7 @@
-import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import MatchPredictionCard from "@/app/game/predictions/MatchPredictionCard";
+import UserAvatar from "@/components/UserAvatar";
 import PredictionsClient from "@/app/game/predictions/PredictionsClient";
 import OutrightChoiceBadge from "@/components/game/OutrightChoiceBadge";
 import { loadPredictionsHubData } from "@/lib/game/predictions-hub";
@@ -203,20 +203,12 @@ export default async function OpponentPredictionsPage({
       <section className="rounded-[1.75rem] border border-white/10 bg-[rgba(13,27,46,0.82)] p-5">
         <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex items-center gap-4">
-            {avatarUrl ? (
-              <Image
-                src={avatarUrl}
-                alt={displayName}
-                width={68}
-                height={68}
-                unoptimized
-                className="aspect-square h-[68px] w-[68px] rounded-full object-cover"
-              />
-            ) : (
-              <div className="flex aspect-square h-[68px] w-[68px] items-center justify-center rounded-full bg-[linear-gradient(135deg,var(--wc-violet),var(--wc-magenta))] text-2xl font-black text-white">
-                {displayName.charAt(0).toUpperCase()}
-              </div>
-            )}
+            <UserAvatar
+              name={displayName}
+              src={avatarUrl}
+              size={68}
+              className="aspect-square h-[68px] w-[68px]"
+            />
 
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.24em] text-wc-neon">

@@ -1,713 +1,432 @@
 "use client";
-
-import { createClient } from "@/lib/supabase/client";
-import Image from "next/image";
+import { useActionState, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
-
-// ── Types ──────────────────────────────────────────────────────────────────────
+import { completeOnboarding, type OnboardingActionState } from "@/app/actions/onboarding";
+import UserAvatar from "@/components/UserAvatar";
+import PlayerPicker from "@/components/pickers/PlayerPicker";
+import TeamPicker from "@/components/pickers/TeamPicker";
+import { getAvatarOptions, normalizeAvatarUrl } from "@/lib/profile/avatar-options";
 
 type Team = {
-  id:           string;
-  name:         string;
-  name_he:      string;
-  flag:         string;
-  logo_url:     string | null;  // flagcdn.com URL stored in DB
-  group_letter: string;
+  id: string;
+  logo_url: string | null;
+  name: string;
+  name_he: string | null;
 };
 
 type Player = {
-  id:       number;
-  name:     string;
-  team_id:  string | null;
+  id: number;
+  name: string;
   position: string | null;
+  team_id: string | null;
 };
 
-interface Props {
-  userId:           string;
-  teams:            Team[];
-  players:          Player[];
-  existingUsername: string;
-  hasOutright:      boolean;
-}
-
-const STEPS = ["כינוי", "זוכה הטורניר", "מלך השערים"];
-
-// ── Flag image — uses logo_url from DB (flagcdn.com), no local map needed ──────
-function FlagImg({ team, size = 24 }: { team: Team; size?: number }) {
-  if (!team.logo_url) return null;
-  return (
-    <Image
-      src={team.logo_url}
-      alt={team.name}
-      width={size}
-      height={Math.round(size * 0.67)}
-      className="rounded-sm object-cover flex-shrink-0"
-      unoptimized
-    />
-  );
-}
-
-// ── Input focus/blur helpers ───────────────────────────────────────────────────
-function onInputFocus(e: React.FocusEvent<HTMLInputElement>) {
-  e.target.style.borderColor = "var(--wc-neon)";
-  e.target.style.boxShadow   = "0 0 0 3px var(--wc-neon-glow)";
-}
-function onInputBlur(e: React.FocusEvent<HTMLInputElement>) {
-  e.target.style.borderColor = "var(--wc-border)";
-  e.target.style.boxShadow   = "none";
-}
-
-// ── Main component ─────────────────────────────────────────────────────────────
+type OnboardingFormProps = {
+  existingAvatarUrl: string | null;
+  existingDisplayName: string;
+  nextPath: string;
+  oauthAvatarUrl: string | null;
+  players: Player[];
+  teams: Team[];
+  tournamentPrediction: {
+    predictedTopScorerName: string | null;
+    predictedWinnerTeamId: string | null;
+  } | null;
+  tournamentStarted: boolean;
+};
 
 export default function OnboardingForm({
-  userId, teams, players, existingUsername, hasOutright,
-}: Props) {
-  const router   = useRouter();
-  const supabase = createClient();
+  existingAvatarUrl,
+  existingDisplayName,
+  nextPath,
+  oauthAvatarUrl,
+  players,
+  teams,
+  tournamentPrediction,
+  tournamentStarted,
+}: OnboardingFormProps) {
+  const router = useRouter();
+  const [state, formAction, isPending] = useActionState<OnboardingActionState, FormData>(
+    completeOnboarding,
+    null,
+  );
+  const normalizedExistingAvatarUrl = useMemo(
+    () => normalizeAvatarUrl(existingAvatarUrl),
+    [existingAvatarUrl],
+  );
+  const normalizedOauthAvatarUrl = useMemo(() => normalizeAvatarUrl(oauthAvatarUrl), [oauthAvatarUrl]);
+  const initialAvatarUrl = normalizedExistingAvatarUrl ?? normalizedOauthAvatarUrl;
 
-  const [step,           setStep]           = useState(existingUsername ? (hasOutright ? 2 : 1) : 0);
-  const [username,       setUsername]       = useState(existingUsername);
-  const [winnerId,       setWinnerId]       = useState<string>("");
-  const [winnerLabel,    setWinnerLabel]    = useState<string>("");
-  const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
-  const [topScorerText,  setTopScorerText]  = useState("");
-  const [error,          setError]          = useState<string | null>(null);
-  const [loading,        setLoading]        = useState(false);
-
-  const hasPlayerData = players.length > 0;
-
-  const sortedTeams = [...teams].sort((a, b) =>
-    (a.name_he ?? a.name).localeCompare(b.name_he ?? b.name, "he")
+  const avatarOptions = useMemo(
+    () => getAvatarOptions(initialAvatarUrl),
+    [initialAvatarUrl],
+  );
+  const sortedTeams = useMemo(
+    () =>
+      [...teams].sort((left, right) =>
+        (left.name_he ?? left.name).localeCompare(right.name_he ?? right.name, "he"),
+      ),
+    [teams],
   );
 
-  // Players sorted: winner team first, then alphabetically
-  const sortedPlayers = [...players].sort((a, b) => {
-    const aWin = String(a.team_id) === winnerId;
-    const bWin = String(b.team_id) === winnerId;
-    if (aWin && !bWin) return -1;
-    if (!aWin && bWin) return 1;
-    return a.name.localeCompare(b.name);
+  const initialSelectedPlayer =
+    players.find((player) => player.name === tournamentPrediction?.predictedTopScorerName) ?? null;
+
+  const [step, setStep] = useState(() => {
+    if (!existingDisplayName) {
+      return 0;
+    }
+
+    if (tournamentStarted || tournamentPrediction?.predictedWinnerTeamId) {
+      return tournamentStarted ? 0 : 2;
+    }
+
+    return 1;
   });
+  const [nickname, setNickname] = useState(existingDisplayName);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(initialAvatarUrl);
+  const [winnerId, setWinnerId] = useState(tournamentPrediction?.predictedWinnerTeamId ?? "");
+  const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(initialSelectedPlayer);
+  const [topScorerName, setTopScorerName] = useState(
+    tournamentPrediction?.predictedTopScorerName ?? "",
+  );
+  const [clientError, setClientError] = useState<string | null>(null);
 
-  // ── Handlers ──────────────────────────────────────────────────────────────
+  const hasPlayers = players.length > 0;
+  const steps = tournamentStarted
+    ? ["Profile"]
+    : ["Profile", "Winner", "Top Scorer"];
+  const selectedAvatarLabel = avatarOptions.find((option) => option.src === avatarUrl)?.label ?? null;
 
-  async function handleUsername() {
-    if (!username.trim() || username.trim().length < 2) {
-      setError("כינוי חייב להכיל לפחות 2 תווים");
-      return;
-    }
-    setLoading(true);
-    setError(null);
-
-    // upsert ensures the row exists even if the auth trigger didn't fire
-    const { error: upsErr } = await supabase
-      .from("users")
-      .upsert({ id: userId, username: username.trim() }, { onConflict: "id" });
-
-    if (upsErr?.code === "23505") setError("הכינוי הזה תפוס, בחר אחר");
-    else if (upsErr) {
-      console.error("users upsert:", upsErr.message, upsErr.code);
-      setError("שגיאה בשמירת הכינוי");
-    } else {
-      setStep(1);
-    }
-    setLoading(false);
-  }
-
-  async function handleOutright() {
-    if (!winnerId) { setError("בחר קבוצה זוכה"); return; }
-    if (hasPlayerData && !selectedPlayer) { setError("בחר שחקן מהרשימה"); return; }
-    if (!hasPlayerData && !topScorerText.trim()) { setError("הזן שם שחקן"); return; }
-
-    setLoading(true);
-    setError(null);
-
-    // Guarantee public.users row exists before FK insert
-    const { error: ensureErr } = await supabase
-      .from("users")
-      .upsert({ id: userId }, { onConflict: "id" });
-
-    if (ensureErr) {
-      console.error("ensure users row:", ensureErr.message, ensureErr.code);
-      setError(`שגיאה בהגדרת פרופיל (${ensureErr.code ?? ensureErr.message})`);
-      setLoading(false);
+  useEffect(() => {
+    if (!state?.success) {
       return;
     }
 
-    const payload: Record<string, unknown> = {
-      user_id:                  userId,
-      predicted_winner_team_id: winnerId,
-    };
+    router.push(nextPath);
+    router.refresh();
+  }, [nextPath, router, state?.success]);
 
-    if (selectedPlayer) {
-      payload.predicted_top_scorer_player_id = selectedPlayer.id;
-      payload.predicted_top_scorer_name      = selectedPlayer.name;
-    } else {
-      payload.predicted_top_scorer_name = topScorerText.trim();
+  function validateIdentityStep() {
+    const normalizedNickname = normalizeNickname(nickname);
+    if (!normalizedNickname) {
+      setClientError("יש לבחור כינוי באורך 2-20 תווים.");
+      return false;
     }
 
-    const { error: upsErr } = await supabase
-      .from("outright_bets")
-      .upsert(payload, { onConflict: "user_id" });
-
-    if (upsErr) {
-      console.error("outright_bets upsert:", upsErr.message, "| code:", upsErr.code, "| details:", upsErr.details);
-      setError(`שגיאה בשמירת הניחושים (${upsErr.code ?? upsErr.message})`);
-    } else {
-      router.push("/dashboard");
-      router.refresh();
-    }
-    setLoading(false);
+    setNickname(normalizedNickname);
+    setClientError(null);
+    return true;
   }
 
-  // ── Render ────────────────────────────────────────────────────────────────
+  function goToWinnerStep() {
+    if (!validateIdentityStep()) {
+      return;
+    }
+
+    setStep(1);
+  }
+
+  function goToTopScorerStep() {
+    if (!winnerId) {
+      setClientError("צריך לבחור נבחרת זוכה.");
+      return;
+    }
+
+    setClientError(null);
+    setStep(2);
+  }
+
+  function selectPlayer(player: Player | null) {
+    setSelectedPlayer(player);
+    setTopScorerName(player?.name ?? "");
+  }
 
   return (
-    <div
-      className="flex min-h-screen flex-col items-center justify-center px-4 py-12"
-      style={{ background: "var(--wc-bg)" }}
-    >
+    <main className="wc-page flex min-h-screen items-center justify-center px-4 py-10">
+      <form action={formAction} className="w-full max-w-3xl">
+        <input type="hidden" name="nickname" value={nickname} />
+        <input type="hidden" name="avatar_url" value={avatarUrl ?? ""} />
+        <input type="hidden" name="winner_team_id" value={winnerId} />
+        <input type="hidden" name="top_scorer" value={topScorerName} />
+        <input type="hidden" name="top_scorer_player_id" value={selectedPlayer?.id ?? ""} />
 
-      {/* Progress bar */}
-      <div className="flex items-center gap-2 mb-8">
-        {STEPS.map((label, i) => (
-          <div key={i} className="flex items-center gap-2">
-            <div
-              className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors"
-              style={
-                i < step
-                  ? { background: "var(--wc-neon)", color: "var(--wc-fg-inverse)" }
-                  : i === step
-                  ? { background: "var(--wc-fg1)", color: "var(--wc-bg)" }
-                  : { background: "var(--wc-border)", color: "var(--wc-fg3)" }
-              }
-            >
-              {i < step ? "✓" : i + 1}
-            </div>
-            <span
-              className="text-xs hidden sm:block"
-              style={
-                i === step
-                  ? { color: "var(--wc-fg1)", fontWeight: 500 }
-                  : { color: "var(--wc-fg3)" }
-              }
-            >
-              {label}
-            </span>
-            {i < STEPS.length - 1 && (
+        <div className="mb-8 text-center">
+          <div className="wc-badge mx-auto w-fit text-sm text-wc-fg2">
+            <span className="text-wc-neon">Profile Setup</span>
+          </div>
+          <h1 className="wc-display mt-5 text-5xl text-wc-fg1">Finish Your Setup</h1>
+          <p className="mx-auto mt-3 max-w-2xl text-sm leading-7 text-wc-fg2">
+            Choose a unique nickname, add an optional avatar, and set your tournament picks before
+            you start playing.
+          </p>
+        </div>
+
+        <div className="mb-6 flex items-center justify-center gap-2">
+          {steps.map((label, index) => (
+            <div key={label} className="flex items-center gap-2">
               <div
-                className="w-6 h-px"
-                style={{ background: i < step ? "var(--wc-neon)" : "var(--wc-border)" }}
-              />
-            )}
-          </div>
-        ))}
-      </div>
-
-      <div
-        className="w-full max-w-sm rounded-2xl shadow-sm p-6"
-        style={{
-          background: "var(--wc-surface)",
-          border: "1px solid var(--wc-border)",
-        }}
-      >
-
-        {/* ── Step 0 — Nickname ─────────────────────────────────────────── */}
-        {step === 0 && (
-          <div className="flex flex-col gap-4">
-            <div>
-              <h2
-                className="text-xl font-bold"
-                style={{ fontFamily: "var(--font-display)", color: "var(--wc-fg1)" }}
+                className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ${
+                  index <= step ? "bg-wc-neon text-[color:var(--wc-text-inverse)]" : "bg-white/8 text-wc-fg3"
+                }`}
               >
-                👋 ברוך הבא!
-              </h2>
-              <p className="text-sm mt-1" style={{ color: "var(--wc-fg2)" }}>
-                בחר כינוי שיופיע בטבלאות הניקוד
-              </p>
+                {index + 1}
+              </div>
+              <span className={`hidden text-xs sm:block ${index === step ? "text-wc-fg1" : "text-wc-fg3"}`}>
+                {label}
+              </span>
+              {index < steps.length - 1 ? (
+                <div className={`h-px w-7 ${index < step ? "bg-wc-neon" : "bg-white/10"}`} />
+              ) : null}
             </div>
-            <input
-              type="text"
-              placeholder="כינוי (לדוגמה: GoalKing)"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleUsername()}
-              onFocus={onInputFocus}
-              onBlur={onInputBlur}
-              maxLength={20}
-              className="w-full text-sm"
-              style={{
-                background: "var(--wc-raised)",
-                border: "1.5px solid var(--wc-border)",
-                borderRadius: 12,
-                color: "var(--wc-fg1)",
-                padding: "10px 14px",
-                outline: "none",
-              }}
-            />
-            {error && (
-              <p
-                className="text-sm text-center"
-                style={{
-                  background: "var(--wc-danger-bg)",
-                  color: "var(--wc-danger)",
-                  borderRadius: 8,
-                  padding: "8px 12px",
-                }}
-              >
-                {error}
-              </p>
-            )}
-            <button
-              onClick={handleUsername}
-              disabled={loading}
-              className="w-full py-3 rounded-xl font-medium text-sm disabled:opacity-50 transition-colors"
-              style={{
-                background: "var(--wc-neon)",
-                color: "var(--wc-fg-inverse)",
-                boxShadow: "0 0 16px var(--wc-neon-glow)",
-              }}
-            >
-              {loading ? "שומר..." : "המשך ←"}
-            </button>
-          </div>
-        )}
-
-        {/* ── Step 1 — Tournament winner ────────────────────────────────── */}
-        {step === 1 && (
-          <div className="flex flex-col gap-4">
-            <div>
-              <h2
-                className="text-xl font-bold"
-                style={{ fontFamily: "var(--font-display)", color: "var(--wc-fg1)" }}
-              >
-                🏆 זוכה הטורניר
-              </h2>
-              <p className="text-sm mt-1" style={{ color: "var(--wc-fg2)" }}>
-                איזו קבוצה תזכה במונדיאל 2026?
-              </p>
-            </div>
-
-            {teams.length === 0 ? (
-              <p className="text-sm text-amber-500 text-center">
-                טבלת הקבוצות ריקה — הרץ <code>npm run seed:teams</code>
-              </p>
-            ) : (
-              <TeamPicker
-                teams={sortedTeams}
-                value={winnerId}
-                label={winnerLabel}
-                onChange={(id, label) => { setWinnerId(id); setWinnerLabel(label); }}
-              />
-            )}
-
-            {error && (
-              <p
-                className="text-sm text-center"
-                style={{
-                  background: "var(--wc-danger-bg)",
-                  color: "var(--wc-danger)",
-                  borderRadius: 8,
-                  padding: "8px 12px",
-                }}
-              >
-                {error}
-              </p>
-            )}
-            <button
-              onClick={() => {
-                if (!winnerId) { setError("בחר קבוצה זוכה"); return; }
-                setError(null);
-                setSelectedPlayer(null);
-                setStep(2);
-              }}
-              disabled={loading || teams.length === 0}
-              className="w-full py-3 rounded-xl font-medium text-sm disabled:opacity-50 transition-colors"
-              style={{
-                background: "var(--wc-neon)",
-                color: "var(--wc-fg-inverse)",
-                boxShadow: "0 0 16px var(--wc-neon-glow)",
-              }}
-            >
-              המשך ←
-            </button>
-          </div>
-        )}
-
-        {/* ── Step 2 — Top scorer ───────────────────────────────────────── */}
-        {step === 2 && (
-          <div className="flex flex-col gap-4">
-            <div>
-              <h2
-                className="text-xl font-bold"
-                style={{ fontFamily: "var(--font-display)", color: "var(--wc-fg1)" }}
-              >
-                ⚽ מלך השערים
-              </h2>
-              <p className="text-sm mt-1" style={{ color: "var(--wc-fg2)" }}>
-                {hasPlayerData
-                  ? "שחקני הנבחרת הזוכה שבחרת מוצגים ראשונים"
-                  : "מי יהיה מלך השערים של המונדיאל?"}
-              </p>
-            </div>
-
-            {hasPlayerData ? (
-              <PlayerPicker
-                players={sortedPlayers}
-                winnerId={winnerId}
-                value={selectedPlayer}
-                onChange={setSelectedPlayer}
-              />
-            ) : (
-              <input
-                type="text"
-                placeholder="לדוגמה: Kylian Mbappé"
-                value={topScorerText}
-                onChange={(e) => setTopScorerText(e.target.value)}
-                onFocus={onInputFocus}
-                onBlur={onInputBlur}
-                className="w-full text-sm"
-                style={{
-                  background: "var(--wc-raised)",
-                  border: "1.5px solid var(--wc-border)",
-                  borderRadius: 12,
-                  color: "var(--wc-fg1)",
-                  padding: "10px 14px",
-                  outline: "none",
-                }}
-              />
-            )}
-
-            <p className="text-xs text-center" style={{ color: "var(--wc-fg3)" }}>
-              🔥 בשוויון נקודות — מי שמלך השערים שלו הבקיע יותר, הוא מנצח!
-            </p>
-
-            {error && (
-              <p
-                className="text-sm text-center"
-                style={{
-                  background: "var(--wc-danger-bg)",
-                  color: "var(--wc-danger)",
-                  borderRadius: 8,
-                  padding: "8px 12px",
-                }}
-              >
-                {error}
-              </p>
-            )}
-
-            <button
-              onClick={handleOutright}
-              disabled={loading}
-              className="w-full py-3 rounded-xl font-medium text-sm disabled:opacity-50 transition-colors"
-              style={{
-                background: "var(--wc-neon)",
-                color: "var(--wc-fg-inverse)",
-                boxShadow: "0 0 16px var(--wc-neon-glow)",
-              }}
-            >
-              {loading ? "שומר..." : "✓ סיום ויציאה לדאשבורד"}
-            </button>
-            <button
-              onClick={() => { setError(null); setStep(1); }}
-              className="text-sm underline text-center"
-              style={{ color: "var(--wc-fg3)" }}
-            >
-              חזרה
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ── TeamPicker ─────────────────────────────────────────────────────────────────
-
-function TeamPicker({
-  teams, value, label, onChange,
-}: {
-  teams:    Team[];
-  value:    string;
-  label:    string;
-  onChange: (id: string, label: string) => void;
-}) {
-  const [open,   setOpen]   = useState(false);
-  const [search, setSearch] = useState("");
-  const ref = useRef<HTMLDivElement>(null);
-
-  const filtered = search.trim()
-    ? teams.filter((t) =>
-        (t.name_he ?? t.name).includes(search) ||
-        t.name.toLowerCase().includes(search.toLowerCase())
-      )
-    : teams;
-
-  useEffect(() => {
-    function handler(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
-
-  const selectedTeam = teams.find((t) => String(t.id) === value);
-
-  return (
-    <div ref={ref} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm outline-none"
-        style={{
-          background: "var(--wc-raised)",
-          border: "1.5px solid var(--wc-border)",
-          borderRadius: 12,
-          color: "var(--wc-fg1)",
-        }}
-      >
-        <span className="flex items-center gap-2">
-          {selectedTeam && <FlagImg team={selectedTeam} />}
-          <span style={{ color: value ? "var(--wc-fg1)" : "var(--wc-fg3)" }}>
-            {value ? label : "-- בחר קבוצה --"}
-          </span>
-        </span>
-        <span className="text-xs" style={{ color: "var(--wc-fg3)" }}>{open ? "▲" : "▼"}</span>
-      </button>
-
-      {open && (
-        <div
-          className="absolute z-50 mt-1 w-full overflow-hidden"
-          style={{
-            background: "var(--wc-surface)",
-            border: "1px solid var(--wc-border)",
-            boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
-            borderRadius: 12,
-          }}
-        >
-          <div
-            className="p-2"
-            style={{ borderBottom: "1px solid var(--wc-border)" }}
-          >
-            <input
-              autoFocus
-              type="text"
-              placeholder="חיפוש..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg text-sm outline-none"
-              style={{
-                background: "var(--wc-raised)",
-                border: "1px solid var(--wc-border)",
-                color: "var(--wc-fg1)",
-              }}
-            />
-          </div>
-          <ul className="max-h-52 overflow-y-auto">
-            {filtered.length === 0 && (
-              <li className="px-4 py-3 text-sm text-center" style={{ color: "var(--wc-fg3)" }}>
-                לא נמצאה קבוצה
-              </li>
-            )}
-            {filtered.map((t) => {
-              const displayLabel = t.name_he ?? t.name;
-              const isSelected   = String(t.id) === value;
-              return (
-                <li key={t.id}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onChange(String(t.id), displayLabel);
-                      setOpen(false);
-                      setSearch("");
-                    }}
-                    className="w-full text-right px-4 py-2.5 text-sm flex items-center gap-2 transition-colors"
-                    style={
-                      isSelected
-                        ? { background: "var(--wc-neon-bg)", color: "var(--wc-neon)", fontWeight: 500 }
-                        : { color: "var(--wc-fg1)" }
-                    }
-                    onMouseEnter={(e) => {
-                      if (!isSelected) (e.currentTarget as HTMLButtonElement).style.background = "var(--wc-raised)";
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!isSelected) (e.currentTarget as HTMLButtonElement).style.background = "transparent";
-                    }}
-                  >
-                    <FlagImg team={t} size={20} />
-                    <span>{displayLabel}</span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
+          ))}
         </div>
-      )}
-    </div>
-  );
-}
 
-// ── PlayerPicker ───────────────────────────────────────────────────────────────
+        <div className="wc-glass rounded-[2rem] p-6 sm:p-8">
+          {step === 0 ? (
+            <section className="space-y-6">
+              <div className="flex flex-col gap-5 lg:flex-row lg:items-start">
+                <div className="flex flex-col items-center gap-3 text-center lg:w-56">
+                  <UserAvatar
+                    name={nickname || "Player"}
+                    src={avatarUrl}
+                    size={112}
+                    roundedClassName="rounded-[2rem]"
+                    priority
+                  />
+                  <div className="text-xs text-wc-fg3">
+                    {selectedAvatarLabel ? `Avatar: ${selectedAvatarLabel}` : "No avatar selected"}
+                  </div>
+                </div>
 
-function PlayerPicker({
-  players, winnerId, value, onChange,
-}: {
-  players:  Player[];
-  winnerId: string;
-  value:    Player | null;
-  onChange: (p: Player | null) => void;
-}) {
-  const [open,    setOpen]    = useState(false);
-  const [search,  setSearch]  = useState("");
-  const [showAll, setShowAll] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+                <div className="flex-1 space-y-5">
+                  <div>
+                    <label
+                      htmlFor="nickname"
+                      className="text-[11px] font-semibold uppercase tracking-[0.18em] text-wc-fg3"
+                    >
+                      Unique Nickname
+                    </label>
+                    <input
+                      id="nickname"
+                      type="text"
+                      value={nickname}
+                      onChange={(event) => setNickname(event.target.value)}
+                      maxLength={20}
+                      autoFocus
+                      className="mt-2 w-full rounded-[1.2rem] border border-white/10 bg-[rgba(255,255,255,0.05)] px-4 py-3 text-sm text-wc-fg1 outline-none placeholder:text-wc-fg3 focus:border-wc-neon/40"
+                      placeholder="For example: GoalKing"
+                    />
+                    <p className="mt-2 text-xs text-wc-fg3">
+                      This nickname appears in leagues and standings, so it must be unique.
+                    </p>
+                  </div>
 
-  const winnerPlayers = players.filter((p) => String(p.team_id) === winnerId);
-  const pool          = (showAll || winnerPlayers.length === 0) ? players : winnerPlayers;
-
-  const filtered = search.trim()
-    ? pool.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()))
-    : pool;
-
-  useEffect(() => {
-    function handler(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
-
-  return (
-    <div ref={ref} className="relative flex flex-col gap-2">
-      {/* Trigger */}
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm outline-none"
-        style={{
-          background: "var(--wc-raised)",
-          border: "1.5px solid var(--wc-border)",
-          borderRadius: 12,
-          color: "var(--wc-fg1)",
-        }}
-      >
-        <span className="flex items-center gap-2">
-          <Image src="/avatar-player.svg" alt="" width={20} height={20} className="opacity-50" />
-          <span style={{ color: value ? "var(--wc-fg1)" : "var(--wc-fg3)" }}>
-            {value ? value.name : "-- בחר שחקן --"}
-          </span>
-        </span>
-        <span className="text-xs" style={{ color: "var(--wc-fg3)" }}>{open ? "▲" : "▼"}</span>
-      </button>
-
-      {/* Toggle: winner team ↔ all players */}
-      {winnerPlayers.length > 0 && (
-        <button
-          type="button"
-          onClick={() => { setShowAll((s) => !s); setSearch(""); }}
-          className="text-xs underline text-center"
-          style={{ color: "var(--wc-fg3)" }}
-        >
-          {showAll
-            ? `הצג שחקני הנבחרת הזוכה בלבד (${winnerPlayers.length})`
-            : `הצג את כל השחקנים (${players.length})`}
-        </button>
-      )}
-
-      {/* Dropdown */}
-      {open && (
-        <div
-          className="absolute z-50 top-12 w-full overflow-hidden"
-          style={{
-            background: "var(--wc-surface)",
-            border: "1px solid var(--wc-border)",
-            boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
-            borderRadius: 12,
-          }}
-        >
-          <div
-            className="p-2"
-            style={{ borderBottom: "1px solid var(--wc-border)" }}
-          >
-            <input
-              autoFocus
-              type="text"
-              placeholder="חיפוש שם שחקן..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg text-sm outline-none"
-              style={{
-                background: "var(--wc-raised)",
-                border: "1px solid var(--wc-border)",
-                color: "var(--wc-fg1)",
-              }}
-            />
-          </div>
-
-          <div
-            className="px-4 py-1.5 text-xs"
-            style={{
-              color: "var(--wc-fg3)",
-              background: "var(--wc-raised)",
-              borderBottom: "1px solid var(--wc-border)",
-            }}
-          >
-            {showAll || winnerPlayers.length === 0
-              ? `כל השחקנים (${filtered.length})`
-              : `שחקני הנבחרת הזוכה (${filtered.length})`}
-          </div>
-
-          <ul className="max-h-56 overflow-y-auto">
-            {filtered.length === 0 && (
-              <li className="px-4 py-3 text-sm text-center" style={{ color: "var(--wc-fg3)" }}>
-                לא נמצא שחקן
-              </li>
-            )}
-            {filtered.map((p) => {
-              const isSelected = value?.id === p.id;
-              return (
-                <li key={p.id}>
-                  <button
-                    type="button"
-                    onClick={() => { onChange(p); setOpen(false); setSearch(""); }}
-                    className="w-full text-right px-4 py-2.5 text-sm flex items-center justify-between transition-colors"
-                    style={
-                      isSelected
-                        ? { background: "var(--wc-neon-bg)", color: "var(--wc-neon)", fontWeight: 500 }
-                        : { color: "var(--wc-fg1)" }
-                    }
-                    onMouseEnter={(e) => {
-                      if (!isSelected) (e.currentTarget as HTMLButtonElement).style.background = "var(--wc-raised)";
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!isSelected) (e.currentTarget as HTMLButtonElement).style.background = "transparent";
-                    }}
-                  >
-                    <div className="flex items-center gap-2">
-                      <Image src="/avatar-player.svg" alt="" width={18} height={18} className="opacity-40" />
-                      <span>{p.name}</span>
+                  <div>
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-wc-fg3">
+                        Optional Avatar
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setAvatarUrl(null)}
+                        className="text-xs font-semibold text-wc-fg3 transition hover:text-wc-fg1"
+                      >
+                        Remove Avatar
+                      </button>
                     </div>
-                    {p.position && (
-                      <span className="text-xs mr-1" style={{ color: "var(--wc-fg3)" }}>
-                        {translatePosition(p.position)}
-                      </span>
-                    )}
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
+
+                    <div className="mt-3 grid gap-3 sm:grid-cols-5">
+                      <button
+                        type="button"
+                        onClick={() => setAvatarUrl(null)}
+                        className={`rounded-[1.2rem] border p-3 text-center transition ${
+                          avatarUrl === null
+                            ? "border-wc-neon bg-[rgba(95,255,123,0.08)]"
+                            : "border-white/10 bg-white/5 hover:border-white/20"
+                        }`}
+                      >
+                        <div className="flex justify-center">
+                          <UserAvatar
+                            name={nickname || "Player"}
+                            src={null}
+                            size={56}
+                            roundedClassName="rounded-[1.1rem]"
+                          />
+                        </div>
+                        <div className="mt-2 text-[11px] font-semibold text-wc-fg2">No image</div>
+                      </button>
+
+                      {avatarOptions.map((option) => (
+                        <button
+                          key={option.id}
+                          type="button"
+                          onClick={() => setAvatarUrl(option.src)}
+                          className={`rounded-[1.2rem] border p-3 text-center transition ${
+                            avatarUrl === option.src
+                              ? "border-wc-neon bg-[rgba(95,255,123,0.08)]"
+                              : "border-white/10 bg-white/5 hover:border-white/20"
+                          }`}
+                        >
+                          <div className="flex justify-center">
+                            <UserAvatar
+                              name={option.label}
+                              src={option.src}
+                              size={56}
+                              roundedClassName="rounded-[1.1rem]"
+                            />
+                          </div>
+                          <div className="mt-2 text-[11px] font-semibold text-wc-fg2">{option.label}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {tournamentStarted ? (
+                <div className="rounded-[1.2rem] border border-white/10 bg-white/5 p-4 text-sm text-wc-fg2">
+                  Tournament picks are already locked, so this setup will save only your profile.
+                </div>
+              ) : null}
+            </section>
+          ) : null}
+
+          {!tournamentStarted && step === 1 ? (
+            <section className="space-y-5">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-wc-fg3">
+                  Tournament Winner
+                </p>
+                <h2 className="mt-2 text-3xl font-black text-wc-fg1">Who wins the World Cup?</h2>
+                <p className="mt-2 text-sm text-wc-fg2">
+                  This pick is locked at tournament kickoff.
+                </p>
+              </div>
+
+              <TeamPicker teams={sortedTeams} value={winnerId} onChange={setWinnerId} />
+            </section>
+          ) : null}
+
+          {!tournamentStarted && step === 2 ? (
+            <section className="space-y-5">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-wc-fg3">
+                  Top Scorer
+                </p>
+                <h2 className="mt-2 text-3xl font-black text-wc-fg1">Who finishes as top scorer?</h2>
+                <p className="mt-2 text-sm text-wc-fg2">
+                  If players are available, the winner nation is prioritised in the picker.
+                </p>
+              </div>
+
+              {hasPlayers ? (
+                <PlayerPicker
+                  players={players}
+                  winnerId={winnerId}
+                  value={selectedPlayer}
+                  fallbackLabel={topScorerName || undefined}
+                  onChange={selectPlayer}
+                />
+              ) : (
+                <input
+                  type="text"
+                  value={topScorerName}
+                  onChange={(event) => {
+                    setSelectedPlayer(null);
+                    setTopScorerName(event.target.value);
+                  }}
+                  className="w-full rounded-[1.2rem] border border-white/10 bg-[rgba(255,255,255,0.05)] px-4 py-3 text-sm text-wc-fg1 outline-none placeholder:text-wc-fg3 focus:border-wc-neon/40"
+                  placeholder="Type a player name"
+                />
+              )}
+            </section>
+          ) : null}
+
+          {clientError || state?.error ? (
+            <p
+              role="alert"
+              className="mt-6 rounded-2xl bg-[color:var(--wc-danger-bg)] px-4 py-3 text-sm font-semibold text-wc-danger"
+            >
+              {clientError ?? state?.error}
+            </p>
+          ) : null}
+
+          <div className="mt-8 flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
+            <button
+              type="button"
+              onClick={() => {
+                setClientError(null);
+                setStep((currentStep) => Math.max(0, currentStep - 1));
+              }}
+              className={`wc-button-secondary px-5 py-3 text-sm ${step === 0 ? "invisible" : ""}`}
+            >
+              Back
+            </button>
+
+            {tournamentStarted ? (
+              <button
+                type="submit"
+                disabled={isPending}
+                onClick={(event) => {
+                  if (!validateIdentityStep()) {
+                    event.preventDefault();
+                  }
+                }}
+                className="wc-button-primary px-6 py-3 text-sm font-bold disabled:opacity-50"
+              >
+                {isPending ? "Saving..." : "Finish Setup"}
+              </button>
+            ) : step === 0 ? (
+              <button
+                type="button"
+                onClick={goToWinnerStep}
+                className="wc-button-primary px-6 py-3 text-sm font-bold"
+              >
+                Continue
+              </button>
+            ) : step === 1 ? (
+              <button
+                type="button"
+                onClick={goToTopScorerStep}
+                className="wc-button-primary px-6 py-3 text-sm font-bold"
+              >
+                Continue
+              </button>
+            ) : (
+              <button
+                type="submit"
+                disabled={isPending}
+                onClick={(event) => {
+                  if (!validateIdentityStep()) {
+                    event.preventDefault();
+                    return;
+                  }
+
+                  if (!winnerId) {
+                    setClientError("צריך לבחור נבחרת זוכה.");
+                    event.preventDefault();
+                    return;
+                  }
+
+                  if (!topScorerName.trim()) {
+                    setClientError("צריך לבחור מלך שערים.");
+                    event.preventDefault();
+                  }
+                }}
+                className="wc-button-primary px-6 py-3 text-sm font-bold disabled:opacity-50"
+              >
+                {isPending ? "Saving..." : "Start Playing"}
+              </button>
+            )}
+          </div>
         </div>
-      )}
-    </div>
+      </form>
+    </main>
   );
 }
 
-function translatePosition(pos: string): string {
-  if (pos.includes("Attacker"))   return "חלוץ";
-  if (pos.includes("Midfielder")) return "קשר";
-  if (pos.includes("Defender"))   return "בלם";
-  if (pos.includes("Goalkeeper")) return "שוער";
-  return pos;
+function normalizeNickname(value: string) {
+  const normalized = value.trim().replace(/\s+/g, " ");
+  return normalized.length >= 2 && normalized.length <= 20 ? normalized : null;
 }

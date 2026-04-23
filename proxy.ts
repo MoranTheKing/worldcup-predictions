@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { fetchOnboardingStatus } from "@/lib/supabase/onboarding";
 
 const PUBLIC_DASHBOARD_PREFIXES = ["/dashboard/tournament"];
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
@@ -82,6 +83,23 @@ function isAuthPage(pathname: string) {
   return pathname === "/login" || pathname === "/signup";
 }
 
+function isSafeNextPath(value: string | null) {
+  return Boolean(value && value.startsWith("/") && !value.startsWith("//") && !value.includes("\\"));
+}
+
+function isOnboardingPath(pathname: string) {
+  return pathname === "/onboarding";
+}
+
+function isOnboardingProtectedPath(pathname: string) {
+  return (
+    pathname === "/game" ||
+    pathname.startsWith("/game/") ||
+    pathname === "/dashboard" ||
+    pathname.startsWith("/dashboard/")
+  );
+}
+
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
 
@@ -113,6 +131,11 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const { pathname, search } = request.nextUrl;
+  const shouldCheckOnboarding = Boolean(
+    user && (isOnboardingProtectedPath(pathname) || isOnboardingPath(pathname) || isAuthPage(pathname)),
+  );
+  const onboardingStatus =
+    user && shouldCheckOnboarding ? await fetchOnboardingStatus(supabase, user.id) : null;
 
   if (isDevOnlyPath(pathname) && !isLocalProxyRequest(request)) {
     return new NextResponse(null, { status: 404 });
@@ -125,10 +148,33 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
+  if (onboardingStatus) {
+    if (!onboardingStatus.isComplete && isOnboardingProtectedPath(pathname)) {
+      const redirectUrl = request.nextUrl.clone();
+      redirectUrl.pathname = "/onboarding";
+      redirectUrl.search = "";
+      redirectUrl.searchParams.set("next", `${pathname}${search}`);
+      return NextResponse.redirect(redirectUrl);
+    }
+
+    if (onboardingStatus.isComplete && isOnboardingPath(pathname)) {
+      const redirectUrl = request.nextUrl.clone();
+      const nextPath = request.nextUrl.searchParams.get("next");
+      redirectUrl.pathname = isSafeNextPath(nextPath) ? nextPath ?? "/game" : "/game";
+      redirectUrl.search = "";
+      return NextResponse.redirect(redirectUrl);
+    }
+  }
+
   if (user && isAuthPage(pathname)) {
     const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname = "/dashboard";
+    const requestedNext = request.nextUrl.searchParams.get("next");
+    const safeRequestedNext = isSafeNextPath(requestedNext) ? requestedNext : null;
+    redirectUrl.pathname = onboardingStatus?.isComplete ? "/dashboard" : "/onboarding";
     redirectUrl.search = "";
+    if (!onboardingStatus?.isComplete && safeRequestedNext) {
+      redirectUrl.searchParams.set("next", safeRequestedNext);
+    }
     return NextResponse.redirect(redirectUrl);
   }
 

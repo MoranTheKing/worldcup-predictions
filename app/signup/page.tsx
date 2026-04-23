@@ -10,6 +10,8 @@ export default function SignupPage() {
   const searchParams = useSearchParams();
   const supabase = createClient();
   const nextPath = getSafeRedirectPath(searchParams.get("next"));
+  const loginHref =
+    nextPath === "/dashboard" ? "/login" : `/login?next=${encodeURIComponent(nextPath)}`;
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -22,7 +24,7 @@ export default function SignupPage() {
     setLoading(true);
     setError(null);
 
-    const { error: authError } = await supabase.auth.signUp({
+    const { data, error: authError } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -32,6 +34,8 @@ export default function SignupPage() {
 
     if (authError) {
       setError(authError.message === "User already registered" ? "האימייל הזה כבר רשום" : "שגיאה בהרשמה, נסה שוב");
+    } else if (data.session) {
+      window.location.assign(`/onboarding?next=${encodeURIComponent(nextPath)}`);
     } else {
       setSuccess(true);
     }
@@ -65,7 +69,7 @@ export default function SignupPage() {
           <p className="mt-4 text-sm leading-7 text-wc-fg2">
             שלחנו לך קישור אימות ל-{email}. אחרי האישור תוכל להיכנס ולהמשיך למסך שביקשת.
           </p>
-          <Link href="/login" className="mt-6 inline-block text-sm font-semibold text-wc-neon underline underline-offset-4">
+          <Link href={loginHref} className="mt-6 inline-block text-sm font-semibold text-wc-neon underline underline-offset-4">
             חזרה לדף ההתחברות
           </Link>
         </div>
@@ -141,7 +145,7 @@ export default function SignupPage() {
 
         <p className="mt-5 text-center text-sm text-wc-fg3">
           יש לך חשבון?{" "}
-          <Link href="/login" className="font-semibold text-wc-neon underline underline-offset-4">
+          <Link href={loginHref} className="font-semibold text-wc-neon underline underline-offset-4">
             התחברות
           </Link>
         </p>

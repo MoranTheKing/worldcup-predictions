@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
 
-const HIDE_ON_PREFIXES = ["/dashboard", "/dev-tools", "/game"];
+const HIDE_ON_PREFIXES = ["/dashboard", "/dev-tools", "/game", "/onboarding"];
 
 export default function AppNavbar() {
   const pathname = usePathname();
