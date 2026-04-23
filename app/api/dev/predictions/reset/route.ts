@@ -2,9 +2,20 @@ import { NextResponse } from "next/server";
 import { devOnly } from "@/app/api/dev/_guard";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-export async function POST() {
+const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
+
+function isLocalRequest(request: Request) {
+  const hostname = new URL(request.url).hostname;
+  return LOCAL_HOSTS.has(hostname);
+}
+
+export async function POST(request: Request) {
   const blocked = devOnly();
   if (blocked) return blocked;
+
+  if (!isLocalRequest(request)) {
+    return NextResponse.json({ error: "dev reset is only available from localhost" }, { status: 403 });
+  }
 
   const supabase = createAdminClient();
 
