@@ -5,6 +5,7 @@ export type AvatarOption = {
 };
 
 const GOOGLE_AVATAR_PATTERN = /^https:\/\/lh\d+\.googleusercontent\.com\/\S+$/i;
+const LOCAL_AVATAR_PATTERN = /^\/avatars\/[A-Za-z0-9_-]+\.(?:svg|png|jpg|jpeg|webp|gif)$/i;
 
 export const DEFAULT_AVATAR_OPTIONS: AvatarOption[] = [
   { id: "aurora", label: "הילה", src: "/avatars/aurora.svg" },
@@ -62,7 +63,7 @@ export function isSupportedAvatarUrl(value: string | null | undefined) {
     return true;
   }
 
-  if (normalizedValue.startsWith("/") && !normalizedValue.startsWith("//") && !normalizedValue.includes("\\")) {
+  if (LOCAL_AVATAR_PATTERN.test(normalizedValue) && !normalizedValue.includes("\\")) {
     return true;
   }
 
