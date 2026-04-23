@@ -1,3 +1,5 @@
+import { isPrivateAvatarUrl } from "@/lib/profile/avatar-policy";
+
 export type AvatarOption = {
   id: string;
   label: string;
@@ -62,7 +64,7 @@ export function isSupportedAvatarUrl(value: string | null | undefined) {
     return true;
   }
 
-  if (normalizedValue.startsWith("/") && !normalizedValue.startsWith("//") && !normalizedValue.includes("\\")) {
+  if (isPrivateAvatarUrl(normalizedValue)) {
     return true;
   }
 

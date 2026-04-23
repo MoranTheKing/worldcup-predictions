@@ -1,14 +1,16 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
+import ProfileEditorModal from "@/components/profile/ProfileEditorModal";
 import UserAvatar from "@/components/UserAvatar";
 
 const NAV_ITEMS = [
   { href: "/dashboard/matches", icon: "🎯", label: "משחקים" },
   { href: "/dashboard/tournament", icon: "🏆", label: "טורניר" },
-  { href: "/game", icon: "👥", label: "ניחושים" },
+  { href: "/game", icon: "📝", label: "ניחושים" },
 ];
 
 interface Props {
@@ -18,6 +20,7 @@ interface Props {
 export default function DashboardShell({ children }: Props) {
   const pathname = usePathname();
   const { displayName, isAuthenticated, isSigningOut, profile, signOut } = useAuth();
+  const [isProfileEditorOpen, setIsProfileEditorOpen] = useState(false);
 
   function isActive(href: string) {
     if (href === "/dashboard/matches") {
@@ -47,7 +50,9 @@ export default function DashboardShell({ children }: Props) {
           <div className="border-b border-white/10 px-5 pb-5 pt-6">
             <div className="flex items-start justify-between gap-3">
               <div className="text-start">
-                <p className="text-xs font-semibold uppercase tracking-[0.32em] text-wc-neon">FIFA 2026</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.32em] text-wc-neon">
+                  FIFA 2026
+                </p>
                 <div className="wc-display mt-3 text-4xl text-wc-fg1">מונדיאל</div>
                 <p className="mt-2 text-sm text-wc-fg3">
                   תחזיות, ליגות וטורניר בעיצוב גיימיפייד עם התחברות גלובלית.
@@ -67,13 +72,17 @@ export default function DashboardShell({ children }: Props) {
                 <Link
                   key={href}
                   href={href}
-                  className={`group flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-start transition-all duration-200 ${
+                  className={`group flex items-center gap-3 rounded-2xl px-4 py-3 text-start text-sm font-semibold transition-all duration-200 ${
                     active
                       ? "bg-[linear-gradient(135deg,rgba(95,255,123,0.14),rgba(255,47,166,0.1))] text-wc-fg1 shadow-[0_0_26px_rgba(95,255,123,0.14)]"
                       : "text-wc-fg2 hover:bg-white/6 hover:text-wc-fg1"
                   }`}
                 >
-                  <span className={`text-lg leading-none ${active ? "text-wc-neon" : "text-wc-fg3 group-hover:text-wc-magenta"}`}>
+                  <span
+                    className={`text-lg leading-none ${
+                      active ? "text-wc-neon" : "text-wc-fg3 group-hover:text-wc-magenta"
+                    }`}
+                  >
                     {icon}
                   </span>
                   <span>{label}</span>
@@ -111,13 +120,23 @@ export default function DashboardShell({ children }: Props) {
                     {streak > 0 ? `+${streak} רצף חם` : streak < 0 ? `${streak} רצף` : "ללא רצף"}
                   </div>
 
-                  <button
-                    onClick={signOut}
-                    disabled={isSigningOut}
-                    className="wc-button-secondary mt-4 w-full px-4 py-3 text-sm disabled:opacity-50"
-                  >
-                    {isSigningOut ? "מתנתק..." : "התנתקות"}
-                  </button>
+                  <div className="mt-4 flex flex-col gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsProfileEditorOpen(true)}
+                      className="rounded-[1.1rem] border border-wc-neon/25 bg-[rgba(95,255,123,0.07)] px-4 py-3 text-sm font-bold text-wc-neon transition hover:border-wc-neon/45 hover:bg-[rgba(95,255,123,0.12)]"
+                    >
+                      עריכת פרופיל
+                    </button>
+
+                    <button
+                      onClick={signOut}
+                      disabled={isSigningOut}
+                      className="wc-button-secondary w-full px-4 py-3 text-sm disabled:opacity-50"
+                    >
+                      {isSigningOut ? "מתנתק..." : "התנתקות"}
+                    </button>
+                  </div>
                 </>
               ) : (
                 <div className="space-y-4 text-start">
@@ -128,7 +147,10 @@ export default function DashboardShell({ children }: Props) {
                     </p>
                   </div>
 
-                  <Link href="/login" className="wc-button-primary block w-full px-4 py-3 text-center text-sm">
+                  <Link
+                    href="/login"
+                    className="wc-button-primary block w-full px-4 py-3 text-center text-sm"
+                  >
                     התחברות
                   </Link>
                 </div>
@@ -148,6 +170,13 @@ export default function DashboardShell({ children }: Props) {
           <div className="flex items-center gap-2">
             {isAuthenticated ? (
               <>
+                <button
+                  type="button"
+                  onClick={() => setIsProfileEditorOpen(true)}
+                  className="rounded-full border border-white/10 px-3 py-1.5 text-[11px] font-semibold text-wc-fg2 transition hover:border-white/20 hover:text-wc-fg1"
+                >
+                  עריכה
+                </button>
                 <span className={`rounded-full px-3 py-1 text-[11px] font-semibold ${streakTone}`}>
                   {streak > 0 ? `+${streak}` : streak < 0 ? `${streak}` : "0"}
                 </span>
@@ -172,6 +201,15 @@ export default function DashboardShell({ children }: Props) {
         {children}
       </main>
 
+      {isAuthenticated && isProfileEditorOpen ? (
+        <ProfileEditorModal
+          avatarUrl={profile?.avatarUrl ?? null}
+          displayName={displayName}
+          isOpen={isProfileEditorOpen}
+          onClose={() => setIsProfileEditorOpen(false)}
+        />
+      ) : null}
+
       <nav className="fixed inset-x-0 bottom-0 z-20 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] md:hidden">
         <div className="wc-glass grid grid-cols-3 rounded-[1.75rem] px-2 py-2">
           {NAV_ITEMS.map(({ href, icon, label }) => {
@@ -187,7 +225,11 @@ export default function DashboardShell({ children }: Props) {
                     : "text-wc-fg3"
                 }`}
               >
-                <span className={`text-xl leading-none ${active ? "drop-shadow-[0_0_12px_rgba(95,255,123,0.75)]" : ""}`}>
+                <span
+                  className={`text-xl leading-none ${
+                    active ? "drop-shadow-[0_0_12px_rgba(95,255,123,0.75)]" : ""
+                  }`}
+                >
                   {icon}
                 </span>
                 <span className="text-[11px] font-bold">{label}</span>

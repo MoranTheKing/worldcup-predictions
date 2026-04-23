@@ -1,14 +1,16 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { normalizeAvatarUrl } from "@/lib/profile/avatar-options";
+import { isPrivateAvatarUrl, isPrivateAvatarUrlForUser } from "@/lib/profile/avatar-policy";
+import { removePrivateAvatar, uploadPrivateAvatar } from "@/lib/profile/avatar-storage";
 import {
   getNicknameFormatError,
   getNicknameTakenError,
   normalizeNicknameInput,
 } from "@/lib/profile/nickname";
 import { fetchOnboardingStatus } from "@/lib/supabase/onboarding";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 export type OnboardingActionState = {
@@ -21,6 +23,9 @@ export type NicknameAvailabilityResult = {
   message?: string;
   normalized: string | null;
 };
+
+type ServerClient = Awaited<ReturnType<typeof createClient>>;
+type AdminClient = ReturnType<typeof createAdminClient>;
 
 export async function checkNicknameAvailability(
   rawNickname: string,
@@ -94,50 +99,17 @@ export async function completeOnboarding(
     return { error: "צריך להתחבר כדי להשלים את ההרשמה." };
   }
 
-  const nickname = normalizeNicknameInput(formData.get("nickname"));
-  if (!nickname) {
-    return { error: getNicknameFormatError() };
-  }
-
-  const avatarUrl = normalizeAvatarUrl(formData.get("avatar_url")?.toString() ?? null);
   const onboardingStatus = await fetchOnboardingStatus(admin, user.id);
   const tournamentIsOpen = !onboardingStatus.tournamentStarted;
+  const identityResult = await persistProfileIdentity({
+    admin,
+    supabase,
+    userId: user.id,
+    formData,
+  });
 
-  const duplicateNickname = await findDuplicateNickname(admin, nickname, user.id);
-  if (duplicateNickname) {
-    return { error: getNicknameTakenError() };
-  }
-
-  const { error: userUpsertError } = await supabase
-    .from("users")
-    .upsert(
-      {
-        id: user.id,
-        username: nickname,
-        avatar_url: avatarUrl,
-      },
-      { onConflict: "id" },
-    );
-
-  if (userUpsertError) {
-    console.error("[completeOnboarding] users upsert error:", userUpsertError);
-    return mapNicknameError(userUpsertError.code, "לא הצלחנו לשמור את הכינוי.");
-  }
-
-  const { error: profileUpsertError } = await supabase
-    .from("profiles")
-    .upsert(
-      {
-        id: user.id,
-        display_name: nickname,
-        avatar_url: avatarUrl,
-      },
-      { onConflict: "id" },
-    );
-
-  if (profileUpsertError) {
-    console.error("[completeOnboarding] profiles upsert error:", profileUpsertError);
-    return mapNicknameError(profileUpsertError.code, "לא הצלחנו לשמור את הפרופיל.");
+  if (!identityResult.success) {
+    return { error: identityResult.error };
   }
 
   if (tournamentIsOpen) {
@@ -165,9 +137,7 @@ export async function completeOnboarding(
     };
 
     const [{ error: tournamentError }, { error: outrightError }] = await Promise.all([
-      supabase
-        .from("tournament_predictions")
-        .upsert(tournamentPayload, { onConflict: "user_id" }),
+      supabase.from("tournament_predictions").upsert(tournamentPayload, { onConflict: "user_id" }),
       supabase.from("outright_bets").upsert(outrightPayload, { onConflict: "user_id" }),
     ]);
 
@@ -177,26 +147,137 @@ export async function completeOnboarding(
     }
   }
 
-  revalidatePath("/", "layout");
-  revalidatePath("/dashboard", "layout");
-  revalidatePath("/game", "layout");
-  revalidatePath("/onboarding");
-
+  revalidateProfileViews();
   return { success: true };
 }
 
-async function findDuplicateNickname(
-  admin: ReturnType<typeof createAdminClient>,
-  nickname: string,
-  userId: string,
-) {
+export async function updateProfileSettings(
+  _prev: OnboardingActionState,
+  formData: FormData,
+): Promise<OnboardingActionState> {
+  const supabase = await createClient();
+  const admin = createAdminClient();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError) {
+    console.error("[updateProfileSettings] auth error:", authError.message);
+    return { error: "לא הצלחנו לאמת את המשתמש. נסה שוב." };
+  }
+
+  if (!user) {
+    return { error: "צריך להתחבר כדי לעדכן את הפרופיל." };
+  }
+
+  const identityResult = await persistProfileIdentity({
+    admin,
+    supabase,
+    userId: user.id,
+    formData,
+  });
+
+  if (!identityResult.success) {
+    return { error: identityResult.error };
+  }
+
+  revalidateProfileViews();
+  return { success: true };
+}
+
+async function persistProfileIdentity({
+  admin,
+  formData,
+  supabase,
+  userId,
+}: {
+  admin: AdminClient;
+  formData: FormData;
+  supabase: ServerClient;
+  userId: string;
+}) {
+  const nickname = normalizeNicknameInput(formData.get("nickname"));
+  if (!nickname) {
+    return { success: false as const, error: getNicknameFormatError() };
+  }
+
+  const duplicateNickname = await findDuplicateNickname(admin, nickname, userId);
+  if (duplicateNickname) {
+    return { success: false as const, error: getNicknameTakenError() };
+  }
+
+  const submittedAvatar = parseSubmittedAvatarSelection(formData.get("avatar_url"), userId);
+  if (submittedAvatar.invalid) {
+    return { success: false as const, error: "בחירת התמונה לא תקינה. נסה לבחור אותה מחדש." };
+  }
+
+  const avatarFile = getSubmittedAvatarFile(formData.get("avatar_file"));
+  const currentAvatarUrl = await fetchCurrentAvatarUrl(admin, userId);
+  const shouldDeletePreviousCustomAvatar =
+    isPrivateAvatarUrlForUser(currentAvatarUrl, userId) &&
+    !avatarFile &&
+    !isPrivateAvatarUrlForUser(submittedAvatar.avatarUrl, userId);
+
+  let avatarUrl = submittedAvatar.avatarUrl;
+
+  if (avatarFile) {
+    const uploadResult = await uploadPrivateAvatar(admin, userId, avatarFile);
+    if (!uploadResult.ok) {
+      return { success: false as const, error: uploadResult.message };
+    }
+
+    avatarUrl = uploadResult.avatarUrl;
+  }
+
+  const { error: userUpsertError } = await supabase
+    .from("users")
+    .upsert(
+      {
+        id: userId,
+        username: nickname,
+        avatar_url: avatarUrl,
+      },
+      { onConflict: "id" },
+    );
+
+  if (userUpsertError) {
+    console.error("[persistProfileIdentity] users upsert error:", userUpsertError);
+    return {
+      success: false as const,
+      error: mapNicknameError(userUpsertError.code, "לא הצלחנו לשמור את הכינוי."),
+    };
+  }
+
+  const { error: profileUpsertError } = await supabase
+    .from("profiles")
+    .upsert(
+      {
+        id: userId,
+        display_name: nickname,
+        avatar_url: avatarUrl,
+      },
+      { onConflict: "id" },
+    );
+
+  if (profileUpsertError) {
+    console.error("[persistProfileIdentity] profiles upsert error:", profileUpsertError);
+    return {
+      success: false as const,
+      error: mapNicknameError(profileUpsertError.code, "לא הצלחנו לשמור את הפרופיל."),
+    };
+  }
+
+  if (shouldDeletePreviousCustomAvatar) {
+    await removePrivateAvatar(admin, userId);
+  }
+
+  return { success: true as const, avatarUrl, nickname };
+}
+
+async function findDuplicateNickname(admin: AdminClient, nickname: string, userId: string) {
   const [{ data: usersMatch }, { data: profilesMatch }] = await Promise.all([
-    admin
-      .from("users")
-      .select("id")
-      .ilike("username", nickname)
-      .neq("id", userId)
-      .limit(1),
+    admin.from("users").select("id").ilike("username", nickname).neq("id", userId).limit(1),
     admin
       .from("profiles")
       .select("id")
@@ -206,6 +287,41 @@ async function findDuplicateNickname(
   ]);
 
   return Boolean((usersMatch ?? []).length || (profilesMatch ?? []).length);
+}
+
+async function fetchCurrentAvatarUrl(admin: AdminClient, userId: string) {
+  const [{ data: profileRow }, { data: legacyRow }] = await Promise.all([
+    admin.from("profiles").select("avatar_url").eq("id", userId).maybeSingle(),
+    admin.from("users").select("avatar_url").eq("id", userId).maybeSingle(),
+  ]);
+
+  return asNullableString(profileRow?.avatar_url) ?? asNullableString(legacyRow?.avatar_url);
+}
+
+function parseSubmittedAvatarSelection(value: FormDataEntryValue | null, userId: string) {
+  const rawValue = value?.toString() ?? "";
+  if (!rawValue.trim()) {
+    return { avatarUrl: null as string | null, invalid: false };
+  }
+
+  const avatarUrl = normalizeAvatarUrl(rawValue);
+  if (!avatarUrl) {
+    return { avatarUrl: null as string | null, invalid: true };
+  }
+
+  if (isPrivateAvatarUrl(avatarUrl) && !isPrivateAvatarUrlForUser(avatarUrl, userId)) {
+    return { avatarUrl: null as string | null, invalid: true };
+  }
+
+  return { avatarUrl, invalid: false };
+}
+
+function getSubmittedAvatarFile(value: FormDataEntryValue | null) {
+  if (!(value instanceof File) || value.size <= 0) {
+    return null;
+  }
+
+  return value;
 }
 
 function normalizeTopScorerName(value: FormDataEntryValue | null) {
@@ -232,10 +348,21 @@ function normalizePlayerId(value: FormDataEntryValue | null) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function mapNicknameError(code: string | undefined, fallbackMessage: string): OnboardingActionState {
+function revalidateProfileViews() {
+  revalidatePath("/", "layout");
+  revalidatePath("/dashboard", "layout");
+  revalidatePath("/game", "layout");
+  revalidatePath("/onboarding");
+}
+
+function asNullableString(value: unknown) {
+  return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
+}
+
+function mapNicknameError(code: string | undefined, fallbackMessage: string) {
   if (code === "23505") {
-    return { error: getNicknameTakenError() };
+    return getNicknameTakenError();
   }
 
-  return { error: fallbackMessage };
+  return fallbackMessage;
 }

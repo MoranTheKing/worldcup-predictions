@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useRef, useState } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import {
   checkNicknameAvailability,
@@ -8,10 +8,15 @@ import {
   type OnboardingActionState,
 } from "@/app/actions/onboarding";
 import { useAuth } from "@/components/auth/AuthProvider";
-import UserAvatar from "@/components/UserAvatar";
 import PlayerPicker from "@/components/pickers/PlayerPicker";
 import TeamPicker from "@/components/pickers/TeamPicker";
+import ProfileAvatarField from "@/components/profile/ProfileAvatarField";
 import { getAvatarOptions, normalizeAvatarUrl } from "@/lib/profile/avatar-options";
+import {
+  getAvatarUploadAccept,
+  getAvatarUploadClientError,
+  getAvatarUploadHelperText,
+} from "@/lib/profile/avatar-policy";
 import {
   getNicknameFormatError,
   getNicknameHelperText,
@@ -69,9 +74,11 @@ export default function OnboardingForm({
     () => normalizeAvatarUrl(existingAvatarUrl),
     [existingAvatarUrl],
   );
-  const normalizedOauthAvatarUrl = useMemo(() => normalizeAvatarUrl(oauthAvatarUrl), [oauthAvatarUrl]);
+  const normalizedOauthAvatarUrl = useMemo(
+    () => normalizeAvatarUrl(oauthAvatarUrl),
+    [oauthAvatarUrl],
+  );
   const initialAvatarUrl = normalizedExistingAvatarUrl ?? normalizedOauthAvatarUrl;
-
   const avatarOptions = useMemo(() => getAvatarOptions(initialAvatarUrl), [initialAvatarUrl]);
   const sortedTeams = useMemo(
     () =>
@@ -80,17 +87,21 @@ export default function OnboardingForm({
       ),
     [teams],
   );
-
   const initialSelectedPlayer =
     players.find((player) => player.name === tournamentPrediction?.predictedTopScorerName) ?? null;
   const initialNickname = normalizeNicknameInput(existingDisplayName) ?? "";
   const finalStep = tournamentStarted ? 0 : 2;
   const nicknameRequestId = useRef(0);
   const lastValidatedNickname = useRef<string | null>(initialNickname || null);
+  const avatarFileInputRef = useRef<HTMLInputElement | null>(null);
+  const avatarObjectUrlRef = useRef<string | null>(null);
 
   const [step, setStep] = useState(0);
   const [nickname, setNickname] = useState(existingDisplayName);
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(initialAvatarUrl);
+  const [selectedAvatarUrl, setSelectedAvatarUrl] = useState<string | null>(initialAvatarUrl);
+  const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(initialAvatarUrl);
+  const [uploadedAvatarName, setUploadedAvatarName] = useState<string | null>(null);
+  const [avatarUploadError, setAvatarUploadError] = useState<string | null>(null);
   const [winnerId, setWinnerId] = useState(tournamentPrediction?.predictedWinnerTeamId ?? "");
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(initialSelectedPlayer);
   const [topScorerName, setTopScorerName] = useState(
@@ -107,7 +118,18 @@ export default function OnboardingForm({
 
   const hasPlayers = players.length > 0;
   const steps = tournamentStarted ? ["פרופיל"] : ["פרופיל", "הזוכה", "מלך השערים"];
-  const selectedAvatarLabel = avatarOptions.find((option) => option.src === avatarUrl)?.label ?? null;
+  const nicknamePreview = normalizeNicknameInput(nickname) ?? "";
+  const avatarStatusLabel = uploadedAvatarName
+    ? "תמונה אישית חדשה"
+    : avatarOptions.find((option) => option.src === selectedAvatarUrl)?.label ?? null;
+
+  useEffect(() => {
+    return () => {
+      if (avatarObjectUrlRef.current) {
+        URL.revokeObjectURL(avatarObjectUrlRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!state?.success) {
@@ -212,6 +234,57 @@ export default function OnboardingForm({
     await ensureNicknameIsReady();
   }
 
+  function clearUploadedAvatarDraft() {
+    if (avatarObjectUrlRef.current) {
+      URL.revokeObjectURL(avatarObjectUrlRef.current);
+      avatarObjectUrlRef.current = null;
+    }
+
+    if (avatarFileInputRef.current) {
+      avatarFileInputRef.current.value = "";
+    }
+
+    setUploadedAvatarName(null);
+  }
+
+  function selectAvatarOption(nextAvatarUrl: string | null) {
+    clearUploadedAvatarDraft();
+    setSelectedAvatarUrl(nextAvatarUrl);
+    setAvatarPreviewUrl(nextAvatarUrl);
+    setAvatarUploadError(null);
+    setClientError(null);
+  }
+
+  function clearAvatarSelection() {
+    clearUploadedAvatarDraft();
+    setSelectedAvatarUrl(null);
+    setAvatarPreviewUrl(null);
+    setAvatarUploadError(null);
+    setClientError(null);
+  }
+
+  function handleAvatarFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    const error = getAvatarUploadClientError(file);
+    if (error) {
+      clearUploadedAvatarDraft();
+      setAvatarUploadError(error);
+      return;
+    }
+
+    clearUploadedAvatarDraft();
+    const objectUrl = URL.createObjectURL(file);
+    avatarObjectUrlRef.current = objectUrl;
+    setUploadedAvatarName(file.name);
+    setAvatarPreviewUrl(objectUrl);
+    setAvatarUploadError(null);
+    setClientError(null);
+  }
+
   async function goToWinnerStep(event: React.MouseEvent<HTMLButtonElement>) {
     event.preventDefault();
     event.stopPropagation();
@@ -267,10 +340,18 @@ export default function OnboardingForm({
         className="w-full max-w-4xl"
       >
         <input type="hidden" name="nickname" value={nickname} />
-        <input type="hidden" name="avatar_url" value={avatarUrl ?? ""} />
+        <input type="hidden" name="avatar_url" value={selectedAvatarUrl ?? ""} />
         <input type="hidden" name="winner_team_id" value={winnerId} />
         <input type="hidden" name="top_scorer" value={topScorerName} />
         <input type="hidden" name="top_scorer_player_id" value={selectedPlayer?.id ?? ""} />
+        <input
+          ref={avatarFileInputRef}
+          type="file"
+          name="avatar_file"
+          accept={getAvatarUploadAccept()}
+          className="hidden"
+          onChange={handleAvatarFileChange}
+        />
 
         <div className="mb-8 text-center">
           <div className="wc-badge mx-auto w-fit text-sm text-wc-fg2">
@@ -306,23 +387,20 @@ export default function OnboardingForm({
         <div className="wc-glass rounded-[2rem] p-6 sm:p-8">
           {step === 0 ? (
             <section className="space-y-6">
-              <div className="grid gap-6 lg:grid-cols-[260px,1fr]">
-                <div className="rounded-[1.8rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-5 text-center">
-                  <UserAvatar
-                    name={nickname || "Player"}
-                    src={avatarUrl}
-                    size={120}
-                    roundedClassName="rounded-[2rem]"
-                    className="mx-auto"
-                    priority
-                  />
-                  <div className="mt-4 text-sm font-semibold text-wc-fg1">
-                    {normalizeNicknameInput(nickname) ?? "הכינוי שלך יופיע כאן"}
-                  </div>
-                  <div className="mt-1 text-xs text-wc-fg3">
-                    {selectedAvatarLabel ? `תמונה: ${selectedAvatarLabel}` : "ללא תמונה"}
-                  </div>
-                </div>
+              <div className="grid gap-6 lg:grid-cols-[280px,1fr]">
+                <ProfileAvatarField
+                  avatarOptions={avatarOptions}
+                  avatarPreviewUrl={avatarPreviewUrl}
+                  avatarStatusLabel={avatarStatusLabel}
+                  helperText={getAvatarUploadHelperText()}
+                  nicknamePreview={nicknamePreview}
+                  onClearAvatar={clearAvatarSelection}
+                  onOpenFilePicker={() => avatarFileInputRef.current?.click()}
+                  onSelectAvatar={selectAvatarOption}
+                  selectedAvatarUrl={selectedAvatarUrl}
+                  uploadError={avatarUploadError}
+                  uploadedFileName={uploadedAvatarName}
+                />
 
                 <div className="space-y-5">
                   <div>
@@ -336,7 +414,7 @@ export default function OnboardingForm({
                     </p>
                   </div>
 
-                  <div>
+                  <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-5">
                     <label htmlFor="nickname" className="text-sm font-semibold text-wc-fg1">
                       כינוי ייחודי
                     </label>
@@ -359,81 +437,21 @@ export default function OnboardingForm({
                       }`}
                       placeholder="למשל: מלך_החיזוי"
                     />
-                    <div className={`mt-2 text-xs font-semibold ${nicknameTone}`}>
-                      {nicknameMessage}
-                    </div>
+                    <div className={`mt-2 text-xs font-semibold ${nicknameTone}`}>{nicknameMessage}</div>
                   </div>
 
-                  <div>
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-sm font-semibold text-wc-fg1">תמונה אופציונלית</p>
-                      <button
-                        type="button"
-                        onClick={() => setAvatarUrl(null)}
-                        className="text-xs font-semibold text-wc-fg3 transition hover:text-wc-fg1"
-                      >
-                        נקה בחירה
-                      </button>
+                  {tournamentStarted ? (
+                    <div className="rounded-[1.2rem] border border-white/10 bg-white/5 p-4 text-sm text-wc-fg2">
+                      הטורניר כבר התחיל, אז בשלב הזה נשמור רק את הכינוי והתמונה שלך.
                     </div>
-
-                    <div className="mt-3 grid gap-3 sm:grid-cols-5">
-                      <button
-                        type="button"
-                        onClick={() => setAvatarUrl(null)}
-                        className={`rounded-[1.2rem] border p-3 text-center transition ${
-                          avatarUrl === null
-                            ? "border-wc-neon bg-[rgba(95,255,123,0.08)]"
-                            : "border-white/10 bg-white/5 hover:border-white/20"
-                        }`}
-                      >
-                        <div className="flex justify-center">
-                          <UserAvatar
-                            name={nickname || "Player"}
-                            src={null}
-                            size={56}
-                            roundedClassName="rounded-[1.1rem]"
-                          />
-                        </div>
-                        <div className="mt-2 text-[11px] font-semibold text-wc-fg2">ללא תמונה</div>
-                      </button>
-
-                      {avatarOptions.map((option) => (
-                        <button
-                          key={option.id}
-                          type="button"
-                          onClick={() => setAvatarUrl(option.src)}
-                          className={`rounded-[1.2rem] border p-3 text-center transition ${
-                            avatarUrl === option.src
-                              ? "border-wc-neon bg-[rgba(95,255,123,0.08)]"
-                              : "border-white/10 bg-white/5 hover:border-white/20"
-                          }`}
-                        >
-                          <div className="flex justify-center">
-                            <UserAvatar
-                              name={option.label}
-                              src={option.src}
-                              size={56}
-                              roundedClassName="rounded-[1.1rem]"
-                            />
-                          </div>
-                          <div className="mt-2 text-[11px] font-semibold text-wc-fg2">{option.label}</div>
-                        </button>
-                      ))}
+                  ) : (
+                    <div className="rounded-[1.2rem] border border-wc-neon/20 bg-[rgba(95,255,123,0.05)] p-4 text-sm text-wc-fg2">
+                      אחרי הכינוי נעבור לזוכת הטורניר ולמלך השערים. שום דבר לא יישמר עד שתסיים
+                      את כל השלבים.
                     </div>
-                  </div>
+                  )}
                 </div>
               </div>
-
-              {tournamentStarted ? (
-                <div className="rounded-[1.2rem] border border-white/10 bg-white/5 p-4 text-sm text-wc-fg2">
-                  הטורניר כבר התחיל, אז בשלב הזה נשמור רק את הכינוי והתמונה שלך.
-                </div>
-              ) : (
-                <div className="rounded-[1.2rem] border border-wc-neon/20 bg-[rgba(95,255,123,0.05)] p-4 text-sm text-wc-fg2">
-                  אחרי הכינוי נעבור לזוכת הטורניר ולמלך השערים. שום דבר לא יישמר עד שתסיים את כל
-                  השלבים.
-                </div>
-              )}
             </section>
           ) : null}
 

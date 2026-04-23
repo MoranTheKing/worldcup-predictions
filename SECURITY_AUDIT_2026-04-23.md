@@ -271,3 +271,14 @@ The active Supabase project must run:
 
 - `20260423000018_restore_social_prediction_privacy.sql`
 - `20260423000019_enforce_prediction_lock_windows.sql`
+
+## Post-audit hardening landed later on 2026-04-23
+
+Not tied to a specific open PR, but implemented as a direct follow-up:
+
+- personal avatar uploads no longer need a public bucket or public URL
+- uploaded avatars are limited to JPG, PNG, and WebP
+- the server validates both the declared MIME type and the file signature before storing the image
+- uploaded avatars are stored in a private Supabase bucket and served back only through an authenticated internal route
+- SVG uploads are intentionally rejected to avoid scriptable image payloads
+- nickname uniqueness checks were reused for post-login profile editing as well, so editing later cannot bypass the onboarding guarantees

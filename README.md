@@ -17,6 +17,8 @@ New player onboarding now runs before entry into the protected game flow:
 - if the tournament is still open, onboarding also collects winner and top-scorer picks
 - avatar setup is optional and supports built-in defaults plus the current Google profile photo when available
 - onboarding now always opens on the profile step first, even when an auth provider pre-fills data, so the player can review and edit before continuing
+- onboarding also supports uploading a personal avatar from phone or desktop, with server-side validation and private storage
+- after entering the app, the player can still edit nickname and avatar from the right-side profile card without leaving the game shell
 
 ## Security status
 
@@ -53,6 +55,7 @@ These migrations must be applied on the active Supabase project:
 
 The two `20260423000018/19` migrations are the important security remediations from the latest audit.
 The `20260423000020` migration adds DB-level protection so no two users can claim the same nickname with case-only variations.
+Custom uploaded avatars do not require an extra SQL step: the private storage bucket is provisioned and restricted by the server on first upload.
 
 ## Local development
 
@@ -82,6 +85,7 @@ Default local URL:
 - `app/onboarding/page.tsx`
 - `app/onboarding/OnboardingForm.tsx`
 - `app/actions/onboarding.ts`
+- `app/api/profile/avatar/[userId]/route.ts`
 - `app/login/page.tsx`
 - `app/signup/page.tsx`
 - `app/api/dev/_guard.ts`
@@ -89,6 +93,10 @@ Default local URL:
 - `lib/game/tournament-start.ts`
 - `lib/supabase/onboarding.ts`
 - `lib/profile/avatar-options.ts`
+- `lib/profile/avatar-policy.ts`
+- `lib/profile/avatar-storage.ts`
+- `components/profile/ProfileAvatarField.tsx`
+- `components/profile/ProfileEditorModal.tsx`
 
 ## Project notes
 
@@ -96,6 +104,7 @@ Default local URL:
 - Tournament and match prediction locks are enforced in both application logic and the database.
 - Dev tools are intended for localhost development only.
 - Profile avatars fall back to initials if the selected image is missing or unsupported.
+- Personal avatar uploads are limited to JPG, PNG, and WebP, validated by the server, stored in a private bucket, and served only through an authenticated internal route.
 - The predictions hub now uses a tighter outright-picks layout with less explanatory copy and a more compact save flow.
 - The outright-picks block shows a single clean editable layout instead of repeating the same chosen values twice.
 
