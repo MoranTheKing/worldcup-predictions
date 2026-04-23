@@ -24,6 +24,7 @@ Reviewed pull requests:
 - `#13` Sanitize `next` in auth callback to prevent open redirects
 - `#14` Prevent localhost-only dev guard bypass via spoofed forwarded host headers
 - `#15` Restrict avatar URL validation so arbitrary same-origin paths cannot be stored as avatars
+- `#17` Reject external origins that mimic private avatar URLs
 
 ## Findings and remediations
 
@@ -246,18 +247,21 @@ PR covered:
 Affected area before the fix:
 
 - `lib/profile/avatar-options.ts`
+- `lib/profile/avatar-policy.ts`
 - avatar persistence in onboarding/profile flows
 
 What was vulnerable:
 
 - the app previously allowed broad same-origin local paths as avatar URLs
 - values like `/auth/callback?code=...` could be stored and later rendered as `<img src="...">`
+- after private uploads were added, the private-avatar URL parser accepted absolute URLs whose path and query looked like the internal route
 
 How it could be exploited:
 
 - an attacker could save a crafted same-origin path as their avatar
 - when another authenticated user viewed that attacker in the UI, the victim's browser would request the path with the victim's cookies
 - if the target path performed meaningful GET-side effects, this became a stored same-origin request gadget, including login-CSRF or other CSRF-style abuse
+- for PR `#17`, a crafted value such as `https://evil.example/api/profile/avatar/<uuid>?v=1` could be treated as an approved private avatar while still rendering from an attacker-controlled origin if it ever reached profile storage
 
 What changed:
 
@@ -267,15 +271,20 @@ What changed:
   - Google-hosted avatar URLs matching the existing allowlist
   - authenticated private avatar routes created by the new personal-upload flow
 - private avatar routes are also ownership-checked, so one user cannot submit another user's private avatar route as their own stored value
+- private avatar URLs must now be relative app routes beginning with `/api/profile/avatar/`
+- absolute URLs, protocol-relative URLs, spoofed external origins, synthetic `https://avatars.local/...` URLs, and URL fragments are rejected before path/query validation
 
 Why the final fix is stronger than the PR:
 
 - PR `#15` proposed narrowing local paths to `/avatars/<file>`
 - the landed remediation goes further by removing arbitrary local-path support entirely and replacing personal uploads with a private authenticated route
+- PR `#17` proposed an origin check after parsing
+- the landed remediation also rejects absolute values up front, so only routes produced by `buildPrivateAvatarUrl` are accepted
 
 PR covered:
 
 - `#15`
+- `#17`
 
 ## Files changed in the final remediation
 

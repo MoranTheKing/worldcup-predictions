@@ -23,13 +23,15 @@ export const PROFILE_AVATAR_ALLOWED_MIME_TYPES = [
 const PRIVATE_AVATAR_PATH_PATTERN =
   /^\/api\/profile\/avatar\/([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$/i;
 const PRIVATE_AVATAR_QUERY_KEYS = new Set(["v", "x", "y", "z"]);
+const PRIVATE_AVATAR_ROUTE_PREFIX = "/api/profile/avatar/";
+const PRIVATE_AVATAR_URL_BASE = "https://avatars.local";
 
 export function buildPrivateAvatarUrl(
   userId: string,
   version: number | string = Date.now(),
   transform?: Partial<AvatarTransform> | null,
 ) {
-  const url = new URL(`/api/profile/avatar/${userId}`, "https://avatars.local");
+  const url = new URL(`/api/profile/avatar/${userId}`, PRIVATE_AVATAR_URL_BASE);
   const normalizedVersion = normalizePrivateAvatarVersion(version);
 
   if (normalizedVersion) {
@@ -113,10 +115,18 @@ function parsePrivateAvatarUrl(value: string | null | undefined) {
     return null;
   }
 
+  if (!trimmedValue.startsWith(PRIVATE_AVATAR_ROUTE_PREFIX)) {
+    return null;
+  }
+
   let url: URL;
   try {
-    url = new URL(trimmedValue, "https://avatars.local");
+    url = new URL(trimmedValue, PRIVATE_AVATAR_URL_BASE);
   } catch {
+    return null;
+  }
+
+  if (url.origin !== PRIVATE_AVATAR_URL_BASE || url.hash) {
     return null;
   }
 
