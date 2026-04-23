@@ -220,19 +220,9 @@ function AvatarVisual({
   } | null>(null);
   const normalizedTransform = normalizeAvatarTransform(transform);
   const activeMetrics = imageMetrics?.src === src ? imageMetrics : null;
-  const panRange = useMemo(
-    () => calculatePanRange(activeMetrics, size, normalizedTransform.zoom),
-    [activeMetrics, normalizedTransform.zoom, size],
-  );
-  const horizontalFactor = normalizePanFactor(
-    normalizedTransform.x,
-    AVATAR_POSITION_MIN,
-    AVATAR_POSITION_MAX,
-  );
-  const verticalFactor = normalizePanFactor(
-    normalizedTransform.y,
-    AVATAR_POSITION_MIN,
-    AVATAR_POSITION_MAX,
+  const imageFrame = useMemo(
+    () => calculateImageFrame(activeMetrics, size, normalizedTransform),
+    [activeMetrics, normalizedTransform, size],
   );
 
   return (
@@ -240,52 +230,72 @@ function AvatarVisual({
       className={`relative block overflow-hidden bg-[rgba(255,255,255,0.05)] ${roundedClassName} ${className}`}
       style={{ height: size, width: size }}
     >
-      <span
-        className="absolute inset-0 block"
-        style={{
-          transform: `translate3d(${horizontalFactor * panRange.x}px, ${verticalFactor * panRange.y}px, 0)`,
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt={name}
+        onError={onError}
+        onLoad={(event) => {
+          const nextMetrics = {
+            height: event.currentTarget.naturalHeight || size,
+            src,
+            width: event.currentTarget.naturalWidth || size,
+          };
+
+          setImageMetrics((currentMetrics) => {
+            if (
+              currentMetrics?.src === nextMetrics.src &&
+              currentMetrics.width === nextMetrics.width &&
+              currentMetrics.height === nextMetrics.height
+            ) {
+              return currentMetrics;
+            }
+
+            return nextMetrics;
+          });
         }}
-      >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={src}
-          alt={name}
-          onError={onError}
-          onLoad={(event) => {
-            setImageMetrics({
-              height: event.currentTarget.naturalHeight || size,
-              src,
-              width: event.currentTarget.naturalWidth || size,
-            });
-          }}
-          loading={loading}
-          decoding="async"
-          referrerPolicy="no-referrer"
-          className="absolute inset-0 h-full w-full object-cover"
-          style={{
-            objectPosition: "center center",
-            transform: `scale(${normalizedTransform.zoom})`,
-            transformOrigin: "center center",
-          }}
-        />
-      </span>
+        loading={loading}
+        decoding="async"
+        referrerPolicy="no-referrer"
+        className="absolute max-w-none select-none"
+        style={{
+          height: imageFrame.height,
+          left: imageFrame.left,
+          top: imageFrame.top,
+          width: imageFrame.width,
+        }}
+      />
     </span>
   );
 }
 
-function calculatePanRange(
+function calculateImageFrame(
   imageMetrics: { height: number; width: number } | null,
   size: number,
-  zoom: number,
+  transform: AvatarTransform,
 ) {
   const metrics = imageMetrics ?? { height: size, width: size };
   const baseScale = Math.max(size / Math.max(metrics.width, 1), size / Math.max(metrics.height, 1));
-  const renderedWidth = metrics.width * baseScale * zoom;
-  const renderedHeight = metrics.height * baseScale * zoom;
+  const renderedWidth = metrics.width * baseScale * transform.zoom;
+  const renderedHeight = metrics.height * baseScale * transform.zoom;
+  const horizontalFactor = normalizePanFactor(
+    transform.x,
+    AVATAR_POSITION_MIN,
+    AVATAR_POSITION_MAX,
+  );
+  const verticalFactor = normalizePanFactor(
+    transform.y,
+    AVATAR_POSITION_MIN,
+    AVATAR_POSITION_MAX,
+  );
+  const maxOffsetX = Math.max(0, (renderedWidth - size) / 2);
+  const maxOffsetY = Math.max(0, (renderedHeight - size) / 2);
 
   return {
-    x: Math.max(0, (renderedWidth - size) / 2),
-    y: Math.max(0, (renderedHeight - size) / 2),
+    height: renderedHeight,
+    left: (size - renderedWidth) / 2 + horizontalFactor * maxOffsetX,
+    top: (size - renderedHeight) / 2 + verticalFactor * maxOffsetY,
+    width: renderedWidth,
   };
 }
 

@@ -120,6 +120,7 @@ export default function ProfileEditorModal({
     }
 
     let cancelled = false;
+    onClose();
 
     void (async () => {
       await refreshProfile();
@@ -127,7 +128,6 @@ export default function ProfileEditorModal({
         return;
       }
 
-      onClose();
       router.refresh();
     })();
 
@@ -362,23 +362,23 @@ export default function ProfileEditorModal({
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr),280px]">
             <div className="order-2">
               <ProfileAvatarField
-              avatarTransform={avatarTransform}
-              avatarOptions={avatarOptions}
-              avatarPreviewUrl={avatarPreviewUrl}
-              avatarStatusLabel={avatarStatusLabel}
-              canAdjustAvatar={canAdjustAvatar}
-              helperText={getAvatarUploadHelperText()}
-              nicknamePreview={nicknamePreview}
-              onAvatarTransformChange={(nextTransform) => {
-                setAvatarTransform(normalizeAvatarTransform(nextTransform));
-              }}
-              onClearAvatar={clearAvatarSelection}
-              onOpenFilePicker={() => avatarFileInputRef.current?.click()}
-              onResetAvatarTransform={() => setAvatarTransform(DEFAULT_AVATAR_TRANSFORM)}
-              onSelectAvatar={selectAvatarOption}
-              selectedAvatarUrl={selectedAvatarUrl}
-              uploadError={avatarUploadError}
-              uploadedFileName={uploadedAvatarName}
+                avatarTransform={avatarTransform}
+                avatarOptions={avatarOptions}
+                avatarPreviewUrl={avatarPreviewUrl}
+                avatarStatusLabel={avatarStatusLabel}
+                canAdjustAvatar={canAdjustAvatar}
+                helperText={getAvatarUploadHelperText()}
+                nicknamePreview={nicknamePreview}
+                onAvatarTransformChange={(nextTransform) => {
+                  setAvatarTransform(normalizeAvatarTransform(nextTransform));
+                }}
+                onClearAvatar={clearAvatarSelection}
+                onOpenFilePicker={() => avatarFileInputRef.current?.click()}
+                onResetAvatarTransform={() => setAvatarTransform(DEFAULT_AVATAR_TRANSFORM)}
+                onSelectAvatar={selectAvatarOption}
+                selectedAvatarUrl={selectedAvatarUrl}
+                uploadError={avatarUploadError}
+                uploadedFileName={uploadedAvatarName}
               />
             </div>
 
