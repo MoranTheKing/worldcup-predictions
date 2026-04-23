@@ -234,13 +234,13 @@ export default function OnboardingForm({
     await ensureNicknameIsReady();
   }
 
-  function clearUploadedAvatarDraft() {
+  function clearUploadedAvatarDraft(options?: { clearInput?: boolean }) {
     if (avatarObjectUrlRef.current) {
       URL.revokeObjectURL(avatarObjectUrlRef.current);
       avatarObjectUrlRef.current = null;
     }
 
-    if (avatarFileInputRef.current) {
+    if (options?.clearInput !== false && avatarFileInputRef.current) {
       avatarFileInputRef.current.value = "";
     }
 
@@ -276,7 +276,7 @@ export default function OnboardingForm({
       return;
     }
 
-    clearUploadedAvatarDraft();
+    clearUploadedAvatarDraft({ clearInput: false });
     const objectUrl = URL.createObjectURL(file);
     avatarObjectUrlRef.current = objectUrl;
     setUploadedAvatarName(file.name);
