@@ -2,19 +2,19 @@ import { headers } from "next/headers";
 
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
 
-function extractHostname(host: string | null) {
-  if (!host) {
+function extractHostname(value: string | null) {
+  if (!value) {
     return null;
   }
 
-  const normalizedHost = host.split(",")[0]?.trim();
-  if (!normalizedHost) {
+  const normalizedValue = value.split(",")[0]?.trim();
+  if (!normalizedValue) {
     return null;
   }
 
   try {
     return new URL(
-      normalizedHost.includes("://") ? normalizedHost : `http://${normalizedHost}`,
+      normalizedValue.includes("://") ? normalizedValue : `http://${normalizedValue}`,
     ).hostname;
   } catch {
     return null;
@@ -25,13 +25,43 @@ function isLocalHostname(hostname: string | null) {
   return Boolean(hostname && LOCAL_HOSTS.has(hostname));
 }
 
+function resolveHostname(candidates: Array<string | null>) {
+  for (const candidate of candidates) {
+    const hostname = extractHostname(candidate);
+    if (hostname) {
+      return hostname;
+    }
+  }
+
+  return null;
+}
+
 export function isLocalRequest(request: Request) {
-  return isLocalHostname(new URL(request.url).hostname);
+  const hostname = resolveHostname([
+    request.headers.get("x-forwarded-host"),
+    request.headers.get("host"),
+    request.headers.get("origin"),
+    request.url,
+  ]);
+
+  return isLocalHostname(hostname);
+}
+
+export function getRequestHostname(request: Request) {
+  return resolveHostname([
+    request.headers.get("x-forwarded-host"),
+    request.headers.get("host"),
+    request.headers.get("origin"),
+    request.url,
+  ]);
 }
 
 export async function isLocalServerRequest() {
   const requestHeaders = await headers();
-  return isLocalHostname(
-    extractHostname(requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host")),
-  );
+  const hostname = resolveHostname([
+    requestHeaders.get("x-forwarded-host"),
+    requestHeaders.get("host"),
+    requestHeaders.get("origin"),
+  ]);
+  return isLocalHostname(hostname);
 }

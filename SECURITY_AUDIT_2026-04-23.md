@@ -129,8 +129,9 @@ How it could be exploited:
 What changed:
 
 - added `lib/security/local-request.ts`
-- `app/api/dev/_guard.ts` now blocks non-localhost requests
+- `app/api/dev/_guard.ts` now blocks non-localhost requests, preferring `Host` and `X-Forwarded-Host` over framework-normalized URLs
 - all dev route handlers now pass the request into that guard
+- `proxy.ts` returns `404` for `/dev-tools` and `/api/dev/*` when they are requested via a non-local host, preventing login redirects from masking the real access control
 - the dev tools page and floating button are also hidden unless the request originates from localhost
 
 PR covered:
