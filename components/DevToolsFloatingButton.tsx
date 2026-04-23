@@ -1,7 +1,8 @@
 import Link from "next/link";
+import { isLocalServerRequest } from "@/lib/security/local-request";
 
-export default function DevToolsFloatingButton() {
-  if (process.env.NODE_ENV === "production") return null;
+export default async function DevToolsFloatingButton() {
+  if (process.env.NODE_ENV === "production" || !(await isLocalServerRequest())) return null;
 
   return (
     <Link

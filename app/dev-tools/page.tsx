@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { isLocalServerRequest } from "@/lib/security/local-request";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { attachTeamsToMatches } from "@/lib/tournament/matches";
 import DevToolsClient, { type DevMatchRow } from "./DevToolsClient";
@@ -6,7 +7,9 @@ import DevToolsClient, { type DevMatchRow } from "./DevToolsClient";
 export const dynamic = "force-dynamic";
 
 export default async function DevToolsPage() {
-  if (process.env.NODE_ENV === "production") notFound();
+  if (process.env.NODE_ENV === "production" || !(await isLocalServerRequest())) {
+    notFound();
+  }
 
   const supabase = createAdminClient();
   const [{ data: matchesData, error }, { data: teamsData }] = await Promise.all([

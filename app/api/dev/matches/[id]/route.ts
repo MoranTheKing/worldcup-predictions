@@ -9,7 +9,7 @@ import {
 import { syncTournamentState } from "@/lib/tournament/knockout-progression";
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const blocked = devOnly();
+  const blocked = devOnly(request);
   if (blocked) return blocked;
 
   const { id } = await params;

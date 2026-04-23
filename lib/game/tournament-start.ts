@@ -3,7 +3,7 @@ export type TournamentKickoffRow = {
   date_time?: string | null;
 };
 
-export function hasTournamentStarted(match: TournamentKickoffRow | null | undefined) {
+export function hasKickoffStarted(match: TournamentKickoffRow | null | undefined) {
   if (!match) return false;
 
   if (match.status && match.status !== "scheduled") {
@@ -16,4 +16,8 @@ export function hasTournamentStarted(match: TournamentKickoffRow | null | undefi
 
   const kickoff = new Date(match.date_time).getTime();
   return Number.isFinite(kickoff) ? kickoff <= Date.now() : false;
+}
+
+export function hasTournamentStarted(match: TournamentKickoffRow | null | undefined) {
+  return hasKickoffStarted(match);
 }

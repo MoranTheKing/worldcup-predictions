@@ -3,8 +3,8 @@ import { devOnly } from "@/app/api/dev/_guard";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { syncTournamentState } from "@/lib/tournament/knockout-progression";
 
-export async function POST() {
-  const blocked = devOnly();
+export async function POST(request: Request) {
+  const blocked = devOnly(request);
   if (blocked) return blocked;
 
   const supabase = createAdminClient();

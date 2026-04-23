@@ -1,157 +1,69 @@
-# חוקי הטורניר והלוגיקה הממומשת
+# Tournament Rules And Runtime Logic
 
-מסמך זה מתאר את התנהגות המערכת כפי שהיא ממומשת כעת באפליקציית מונדיאל 2026.
+This document describes the rules the app currently enforces in code.
 
-## 1. שוברי שוויון בבתים
+## Group standings
 
-כאשר שתי נבחרות או יותר שוות בנקודות, הסדר נקבע כך:
+When teams are level on points, ordering is resolved with:
 
-1. נקודות במפגשים הישירים בלבד
-2. הפרש שערים במפגשים הישירים בלבד
-3. שערי זכות במפגשים הישירים בלבד
-4. החלה מחדש של 1-3 על תת־קבוצת שוויון שנותרה
-5. הפרש שערים כללי
-6. שערי זכות כלליים
-7. Fair Play
-8. דירוג FIFA
+1. head-to-head points
+2. head-to-head goal difference
+3. head-to-head goals scored
+4. restart the comparison on the remaining tied subset
+5. overall goal difference
+6. overall goals scored
+7. fair play
+8. FIFA ranking
 
-מימוש:
+Primary implementation:
 
 - `lib/utils/standings.ts`
 
-## 2. נעילה דטרמיניסטית של מיקומים
+## Deterministic locking
 
-המיקום של קבוצה ננעל באחת משלוש דרכים:
+Group positions and best-third-place positions are locked only when they are mathematically settled, not just because the UI wants to show a stable state.
 
-1. נעילת סיום
-   כאשר הבית הסתיים והקבוצה שיחקה 3 משחקים.
-2. נעילת תרחישים
-   כאשר הקבוצה שיחקה 3 משחקים וכל התרחישים האפשריים מתכנסים לאותו דירוג.
-3. נעילת all-played
-   כאשר כל ארבע הקבוצות בבית שיחקו 3 משחקים, גם אם סטטוס משחק מסוים עדיין `live`.
+## Annex C and knockout progression
 
-## 3. טבלת המקומות השלישיים
+Knockout slots are resolved from official placeholders and the Annex C mapping, then written back into `matches`.
 
-הטבלה חיה וריאקטיבית:
+Primary implementation:
 
-- בכל רגע נלקחת הקבוצה שבמקום 3 מכל אחד מ־12 הבתים.
-- 12 הקבוצות ממוינות מחדש מיידית לפי:
-  נקודות → הפרש שערים → שערי זכות → Fair Play → דירוג FIFA
-
-אבל התגיות והצבעים נשארים דטרמיניסטיים:
-
-- `העפלה` / ירוק מופיעים רק כאשר הסטטוס נעול מתמטית.
-- `הדחה` / אדום מופיעים רק כאשר ההדחה נעולה מתמטית.
-- קו אדום קבוע בין מקום 8 ל־9 מסמן את קו העלייה.
-
-## 4. Terminal State של המקומות השלישיים
-
-המערכת עוברת למצב טרמינלי כאשר מתקיים אחד:
-
-1. כל 12 הבתים הסתיימו.
-2. כל 48 הקבוצות שיחקו 3 משחקים, גם אם חלק מהמשחקים עוד מסומנים `live`.
-
-בשלב זה:
-
-- מקומות 1-8 בטבלת המקומות השלישיים ננעלים כ־Qualified.
-- מקומות 9-12 ננעלים כ־Eliminated.
-
-## 5. Annex C והזרקת נוקאאוט
-
-לוגיקת Annex C יושבת ב:
-
-- `lib/utils/thirdPlaceAllocations.ts`
 - `lib/tournament/knockout-progression.ts`
 - `fifa_2026_matchups.json`
 
-איך זה עובד:
+## Overtime and penalties
 
-1. נאספות 8 הקבוצות שעלו מהמקום השלישי.
-2. האותיות של הבתים ממוינות ויוצרות subset key.
-3. `lookupAnnexC()` קוראת את ה־mapping המתאים מה־JSON.
-4. `calculateThirdPlaceMatchups()` ממירה את ה־mapping להזרקה צד־מודעת ל־Round of 32.
-5. `syncTournamentState()` מעדכנת את `matches.home_team_id` או `matches.away_team_id` בהתאם לצד שבו נמצא ה־winner placeholder.
+Knockout winners are resolved from normal time first, then penalty data when required.
 
-## 6. גרף הנוקאאוט
-
-הנוקאאוט לא מתקדם לפי רצף מספרי פשוט. מקור האמת הוא:
-
-- `matches.home_placeholder`
-- `matches.away_placeholder`
-
-לכן:
-
-- `Winner Match X`
-- `Loser Match X`
-
-נפתרים דינמית לאורך כל הסולם.
-
-הבראקט במסך הטורניר מוצג כיום כעץ אנכי מפוצל, אבל הלוגיקה עצמה תמיד נשענת על ה־placeholder graph הרשמי.
-
-## 7. הארכה ופנדלים
-
-עמודות DB רלוונטיות:
+Relevant fields:
 
 - `is_extra_time`
 - `home_penalty_score`
 - `away_penalty_score`
 
-חוקים:
+## Social viewing privacy rules
 
-- בשלב הבתים אין פנדלים.
-- משחק נוקאאוט גמור שמסתיים בשוויון חייב לכלול פנדלים תקינים.
-- קביעת המנצחת היא לפי תוצאה רגילה, ואם יש שוויון אז לפי פנדלים.
+Opponent view and league view follow anti-cheat rules:
 
-## 8. אלימינציה גלובלית
+- scheduled matches are hidden from opponents
+- unresolved placeholder matches are hidden from opponents
+- outright picks are hidden from other users until tournament kickoff
+- the viewing user can still see their own outright picks before kickoff
 
-השדה `teams.is_eliminated` מסתנכרן אוטומטית מתוך מצב הטורניר:
+## Prediction lock rules
 
-1. מקום 4 שהודח מתמטית
-2. 4 האחרונות בטבלת המקומות השלישיים לאחר נעילה
-3. מפסידות משחקי נוקאאוט גמורים
-4. יוצאת דופן:
-   מפסידות חצי הגמר לא מודחות עד סיום משחק המקום השלישי
+The current intended behavior is:
 
-## 9. כללי פרטיות למשחק הניחושים
+- match predictions lock at match kickoff
+- tournament winner/top-scorer predictions lock at tournament kickoff
+- these locks must exist in both app logic and database policy
 
-ב־Opponent View:
+Required DB remediations:
 
-- מוצגים רק משחקים `live` או `finished`
-- משחקים `scheduled` מוסתרים
-- placeholders שעדיין לא נפתרו מוסתרים
+- `20260423000018_restore_social_prediction_privacy.sql`
+- `20260423000019_enforce_prediction_lock_windows.sql`
 
-ב־Leaderboards:
+For the full security narrative, see:
 
-- Winner / Top Scorer של יריבים מוסתרים עד פתיחת הטורניר
-- המשתמש עצמו תמיד רואה את ה־outrights של עצמו
-
-## 10. RTL, Bidi ותצוגת סקור
-
-כדי למנוע היפוך חזותי ב־RTL:
-
-- תצוגות score אינן נבנות ממחרוזת אחת
-- הסקור מפוצל ל־spans נפרדים ב־DOM
-- ציון הבית נשאר צמוד ויזואלית לצד ימין
-- ציון החוץ נשאר צמוד לצד שמאל
-
-זה חל על:
-
-- כרטיסי משחקים
-- opponent view
-- תצוגות actual/current scores
-- Dev Tools
-
-## 11. צבעי הצלחה במשחק הניחושים
-
-- Miss או `לא נשלח` במשחק live/finished: אדום
-- Direction hit: צהוב/זהב רך
-- Exact hit: ירוק ברור
-- Exact hit עם Joker: סגול/מג'נטה זוהר
-- LIVE badge: ציאן
-
-## 12. המשימות הבאות
-
-- מנוע ניקוד מלא ועדכון `profiles.total_score`
-- Leaderboards מורחבים וסטטיסטיקות ליגה
-- השלמת QA על מובייל ו־RTL
-- בדיקת Supabase RLS בפרודקשן מול כל מסכי social viewing
+- `SECURITY_AUDIT_2026-04-23.md`

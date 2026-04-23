@@ -40,3 +40,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local agent logs
+.codex-dev.stdout.log
+.codex-dev.stderr.log
+.codex-run.stdout.log
+.codex-run.stderr.log

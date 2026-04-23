@@ -1,6 +1,7 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
+import { getSafeRedirectPath } from "@/lib/security/safe-redirect";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
@@ -8,7 +9,7 @@ import { useState } from "react";
 export default function SignupPage() {
   const searchParams = useSearchParams();
   const supabase = createClient();
-  const nextPath = searchParams.get("next") || "/dashboard";
+  const nextPath = getSafeRedirectPath(searchParams.get("next"));
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

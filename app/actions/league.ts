@@ -2,26 +2,21 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import {
+  clearJoinAttempts,
+  getJoinRateLimitError,
+  recordFailedJoinAttempt,
+} from "@/lib/game/league-join-rate-limit";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const INVITE_CODE_REGEX = /^[A-Z0-9]{4}$/;
-const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
-const RATE_LIMIT_BLOCK_MS = 10 * 60 * 1000;
-const RATE_LIMIT_MAX_ATTEMPTS = 5;
 
 export type LeagueActionState = {
   error?: string;
   field?: "name" | "invite_code";
   success?: boolean;
 } | null;
-
-type JoinAttemptRow = {
-  user_id: string;
-  attempt_count: number;
-  window_started_at: string;
-  blocked_until: string | null;
-};
 
 type LeagueOwnershipRow = {
   id: string;
@@ -319,93 +314,6 @@ async function getLeagueOwnership(admin: ReturnType<typeof createAdminClient>, l
   }
 
   return data as LeagueOwnershipRow | null;
-}
-
-async function getJoinRateLimitError(
-  admin: ReturnType<typeof createAdminClient>,
-  userId: string,
-) {
-  const { data, error } = await admin
-    .from("league_join_attempts")
-    .select("user_id, attempt_count, window_started_at, blocked_until")
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  if (error) {
-    console.error("[getJoinRateLimitError] error:", formatSupabaseError(error));
-    return null;
-  }
-
-  const row = data as JoinAttemptRow | null;
-
-  if (!row?.blocked_until) {
-    return null;
-  }
-
-  const blockedUntil = new Date(row.blocked_until).getTime();
-
-  if (Number.isNaN(blockedUntil) || blockedUntil <= Date.now()) {
-    return null;
-  }
-
-  const minutes = Math.max(1, Math.ceil((blockedUntil - Date.now()) / 60000));
-  return `נחסמת זמנית מהצטרפות לליגות. נסה שוב בעוד כ-${minutes} דקות.`;
-}
-
-async function recordFailedJoinAttempt(
-  admin: ReturnType<typeof createAdminClient>,
-  userId: string,
-) {
-  const { data, error } = await admin
-    .from("league_join_attempts")
-    .select("user_id, attempt_count, window_started_at, blocked_until")
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  if (error) {
-    console.error("[recordFailedJoinAttempt] read error:", formatSupabaseError(error));
-    return;
-  }
-
-  const now = Date.now();
-  const current = data as JoinAttemptRow | null;
-  const windowStartedAt = current?.window_started_at
-    ? new Date(current.window_started_at).getTime()
-    : now;
-  const isExpired = Number.isNaN(windowStartedAt) || now - windowStartedAt > RATE_LIMIT_WINDOW_MS;
-  const nextAttemptCount = isExpired ? 1 : (current?.attempt_count ?? 0) + 1;
-  const blockedUntil =
-    nextAttemptCount >= RATE_LIMIT_MAX_ATTEMPTS
-      ? new Date(now + RATE_LIMIT_BLOCK_MS).toISOString()
-      : null;
-
-  const { error: upsertError } = await admin.from("league_join_attempts").upsert(
-    {
-      user_id: userId,
-      attempt_count: nextAttemptCount,
-      window_started_at: isExpired
-        ? new Date(now).toISOString()
-        : current?.window_started_at ?? new Date(now).toISOString(),
-      last_attempt_at: new Date(now).toISOString(),
-      blocked_until: blockedUntil,
-    },
-    { onConflict: "user_id" },
-  );
-
-  if (upsertError) {
-    console.error("[recordFailedJoinAttempt] upsert error:", formatSupabaseError(upsertError));
-  }
-}
-
-async function clearJoinAttempts(
-  admin: ReturnType<typeof createAdminClient>,
-  userId: string,
-) {
-  const { error } = await admin.from("league_join_attempts").delete().eq("user_id", userId);
-
-  if (error) {
-    console.error("[clearJoinAttempts] delete error:", formatSupabaseError(error));
-  }
 }
 
 function revalidateLeaguePaths(leagueId: string) {

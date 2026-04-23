@@ -1,4 +1,8 @@
 import { notFound, redirect } from "next/navigation";
+import {
+  hasActiveJoinRateLimit,
+  recordFailedJoinAttempt,
+} from "@/lib/game/league-join-rate-limit";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import JoinLeagueLandingClient from "./JoinLeagueLandingClient";
@@ -27,6 +31,12 @@ export default async function JoinLeagueByCodePage({
   }
 
   const admin = createAdminClient();
+  const isRateLimited = await hasActiveJoinRateLimit(admin, user.id);
+
+  if (isRateLimited) {
+    notFound();
+  }
+
   const { data: league, error } = await admin
     .from("leagues")
     .select("id, name, invite_code")
@@ -38,6 +48,7 @@ export default async function JoinLeagueByCodePage({
   }
 
   if (!league?.id) {
+    await recordFailedJoinAttempt(admin, user.id);
     notFound();
   }
 

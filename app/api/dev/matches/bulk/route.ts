@@ -13,7 +13,7 @@ type BulkBody = {
 };
 
 export async function PATCH(request: Request) {
-  const blocked = devOnly();
+  const blocked = devOnly(request);
   if (blocked) return blocked;
 
   const body = (await request.json().catch(() => null)) as BulkBody | null;

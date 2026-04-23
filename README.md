@@ -1,57 +1,36 @@
-# תחזיות מונדיאל 2026
+# World Cup 2026 Predictions
 
-אפליקציית PWA בעברית, RTL ומובייל-פירסט לניהול תחזיות מונדיאל 2026, עם טבלאות בתים, נוקאאוט חי, משחק ניחושים חברתי וליגות פרטיות.
+Hebrew-first, RTL, mobile-first Next.js PWA for World Cup 2026 predictions, private leagues, tournament brackets, and social competition.
 
-## מצב הפרויקט נכון ל־22 באפריל 2026
+## Current state
 
-### טורניר ולוגיקת משחקים
+As of 2026-04-23, the project has three major slices in active use:
 
-- מקור האמת הוא טבלת `matches` ב־Supabase.
-- טבלאות הבתים מחושבות בזמן אמת מתוך תוצאות חיות, עם שוברי שוויון מלאים לפי FIFA.
-- נעילת מיקומים בבתים ובטבלת המקומות השלישיים היא דטרמיניסטית.
-- הזרקת Annex C לנוקאאוט עובדת מול `fifa_2026_matchups.json` ומעדכנת בפועל את `matches`.
-- הבראקט של הנוקאאוט מבוסס על גרף ה־placeholders הרשמי ולא על רצף מספרי משחקים.
+- tournament engine and knockout progression
+- social predictions hub under `/game`
+- private leagues, opponent view, and invite-code flows
 
-### UX ו־RTL
+## Security status
 
-- תצוגות הסקור עברו פיצול ל־DOM spans נפרדים כדי למנוע שיבושי Bidi ב־RTL.
-- בכרטיסי משחק, תוצאת הבית תמיד מוצמדת ויזואלית לצד ימין, ותוצאת החוץ לצד שמאל.
-- פגיעת Joker מדויקת משתמשת כעת בתמת סגול/מג'נטה שמותאמת לשפת המותג.
-- כרטיסי outrights נעולים מציגים את אותו premium badge גם אצל המשתמש עצמו וגם בצפייה ביריב.
+A full security audit was completed on 2026-04-23.
 
-### משחק הניחושים `/game`
+Fixed or hardened areas:
 
-- Auth גלובלי עוטף את כל האפליקציה.
-- `My Predictions` כולל משחקים עתידיים, חיים וגמורים.
-- `Total Hits` מציג כמה פגיעות מדויקות המשתמש השיג.
-- `LIVE` מוצג בצבע ציאן, והניחוש של המשתמש משנה מסגרת בזמן אמת:
-  - ירוק רך כאשר הניחוש כרגע מדויק
-  - צהוב רך כאשר כיוון התוצאה נכון
-  - אדום כאשר הניחוש כרגע מפספס
-- אם משחק חי או גמור לא נשלח עבורו ניחוש, התצוגה אדומה כמו miss מלא.
+- open redirects in login, signup, and auth callback flows
+- pre-kickoff exposure of hidden outright predictions
+- brute-forceable direct invite-code join page
+- remotely reachable dev-only mutation routes in non-production environments
+- committed local log files that exposed workstation paths and internal network details
+- missing DB-level privacy and kickoff locks for prediction data
+- server-side match prediction lock drift when kickoff time had passed but match status was still `scheduled`
 
-### ליגות ופרטיות
+Full details live in:
 
-- ליגות פרטיות תומכות ביצירה, הצטרפות, שיתוף קישור, עזיבה, הסרת חברים ומחיקת ליגה לבעלים.
-- צפייה ביריב (`/game/users/[id]`) מוגנת:
-  - מוצגים רק משחקים `live` או `finished`
-  - משחקים `scheduled` מוסתרים כדי למנוע העתקת ניחושים
-  - גם placeholders לא פתורים מוסתרים
-- תחזיות winner/top scorer של יריבים מוסתרות עד פתיחת הטורניר.
-- המשתמש עצמו תמיד יכול לראות את ה־outrights שלו גם בטבלת הליגה.
+- `SECURITY_AUDIT_2026-04-23.md`
 
-## קבצים מרכזיים
+## Required Supabase migrations
 
-- [app/dashboard/tournament/TournamentClient.tsx](C:/Users/MoranFestinger/Desktop/worldcup-predictions-master/app/dashboard/tournament/TournamentClient.tsx)
-- [app/game/predictions/MatchPredictionCard.tsx](C:/Users/MoranFestinger/Desktop/worldcup-predictions-master/app/game/predictions/MatchPredictionCard.tsx)
-- [app/game/predictions/OutrightForm.tsx](C:/Users/MoranFestinger/Desktop/worldcup-predictions-master/app/game/predictions/OutrightForm.tsx)
-- [app/game/leagues/[id]/LeagueViewClient.tsx](C:/Users/MoranFestinger/Desktop/worldcup-predictions-master/app/game/leagues/[id]/LeagueViewClient.tsx)
-- [app/game/users/[id]/page.tsx](C:/Users/MoranFestinger/Desktop/worldcup-predictions-master/app/game/users/[id]/page.tsx)
-- [lib/utils/standings.ts](C:/Users/MoranFestinger/Desktop/worldcup-predictions-master/lib/utils/standings.ts)
-- [lib/tournament/knockout-progression.ts](C:/Users/MoranFestinger/Desktop/worldcup-predictions-master/lib/tournament/knockout-progression.ts)
-- [lib/bracket/knockout.ts](C:/Users/MoranFestinger/Desktop/worldcup-predictions-master/lib/bracket/knockout.ts)
-
-## מסדי נתונים ומיגרציות חשובות
+These migrations must be applied on the active Supabase project:
 
 - `20260422000010_phase1_social_auth.sql`
 - `20260422000012_fix_rls_recursion.sql`
@@ -59,15 +38,51 @@
 - `20260422000014_harden_game_social_security.sql`
 - `20260422000015_force_flat_prediction_rls.sql`
 - `20260422000016_enable_social_prediction_selects.sql`
+- `20260423000018_restore_social_prediction_privacy.sql`
+- `20260423000019_enforce_prediction_lock_windows.sql`
 
-הערה: אם סביבת Supabase עדיין לא קיבלה את כל מיגרציות ה־RLS של שלב 2, יש להריץ אותן ב־SQL Editor לפני בדיקות social/viewing מלאות.
+The two `20260423000018/19` migrations are the important security remediations from the latest audit.
 
-## השלב הבא
+## Local development
 
-### Phase 3
+Install dependencies:
 
-- מנוע ניקוד מלא שמעדכן `points_earned`, `profiles.total_score` וסטטיסטיקות ליגה.
-- חישוב leaderboards היסטוריים וגרפים של מגמות.
-- נעילת ניחושים אוטומטית לפי kickoff אמיתי.
-- QA רחב למובייל צר במיוחד ולשילובי RTL/Live/Joker.
-- השלמת כל 495 קומבינציות Annex C אם עדיין חסר מפתח ב־JSON.
+```powershell
+npm.cmd install
+```
+
+Run the app locally:
+
+```powershell
+npm.cmd run dev
+```
+
+Default local URL:
+
+- `http://localhost:3000`
+
+## Key implementation files
+
+- `app/game/leagues/[id]/page.tsx`
+- `app/game/users/[id]/page.tsx`
+- `app/actions/league.ts`
+- `app/actions/predictions.ts`
+- `app/auth/callback/route.ts`
+- `app/login/page.tsx`
+- `app/signup/page.tsx`
+- `app/api/dev/_guard.ts`
+- `proxy.ts`
+- `lib/game/tournament-start.ts`
+
+## Project notes
+
+- Social opponent viewing is intentionally anti-cheat: scheduled matches stay hidden and outright picks stay hidden until tournament kickoff.
+- Tournament and match prediction locks are enforced in both application logic and the database.
+- Dev tools are intended for localhost development only.
+
+## Next phase
+
+- finish the scoring engine for `points_earned`
+- sync `profiles.total_score` from resolved predictions
+- expand league history and analytics
+- run broader QA across mobile, RTL, live states, and joker flows

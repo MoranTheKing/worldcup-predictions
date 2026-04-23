@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getJokerBucket, getUserJokerUsage } from "@/lib/game/boosters";
-import { hasTournamentStarted } from "@/lib/game/tournament-start";
+import { hasKickoffStarted, hasTournamentStarted } from "@/lib/game/tournament-start";
 
 export type PredictionActionState = {
   error?: string;
@@ -47,7 +47,7 @@ export async function upsertMatchPrediction(
 
   const { data: matchRow, error: matchError } = await admin
     .from("matches")
-    .select("status, home_team_id, away_team_id")
+    .select("status, date_time, home_team_id, away_team_id")
     .eq("match_number", matchId)
     .maybeSingle();
 
@@ -56,11 +56,10 @@ export async function upsertMatchPrediction(
     return { error: "לא הצלחנו לאמת את המשחק הזה כרגע." };
   }
 
-  const matchStatus = (matchRow as { status?: string } | null)?.status ?? null;
   const homeTeamId = (matchRow as { home_team_id?: string | null } | null)?.home_team_id ?? null;
   const awayTeamId = (matchRow as { away_team_id?: string | null } | null)?.away_team_id ?? null;
 
-  if (matchStatus !== "scheduled") {
+  if (hasKickoffStarted(matchRow as { status?: string | null; date_time?: string | null } | null)) {
     return { error: "אפשר לנחש רק משחקים שעדיין לא התחילו." };
   }
 

@@ -19,8 +19,8 @@ function randomPenaltyPair() {
   return { home, away };
 }
 
-export async function POST() {
-  const blocked = devOnly();
+export async function POST(request: Request) {
+  const blocked = devOnly(request);
   if (blocked) return blocked;
 
   const supabase = createAdminClient();
