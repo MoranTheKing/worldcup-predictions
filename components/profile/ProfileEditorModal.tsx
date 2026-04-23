@@ -300,11 +300,11 @@ export default function ProfileEditorModal({
         <form
           ref={formRef}
           action={formAction}
-          encType="multipart/form-data"
           className="space-y-6"
         >
           <input type="hidden" name="nickname" value={nickname} />
           <input type="hidden" name="avatar_url" value={selectedAvatarUrl ?? ""} />
+          <input type="hidden" name="avatar_upload_requested" value={uploadedAvatarName ? "1" : "0"} />
           <input
             ref={avatarFileInputRef}
             type="file"

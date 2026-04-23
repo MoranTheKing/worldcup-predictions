@@ -336,12 +336,12 @@ export default function OnboardingForm({
     <main className="wc-page flex min-h-screen items-center justify-center px-4 py-10">
       <form
         action={step === finalStep ? formAction : undefined}
-        encType="multipart/form-data"
         onSubmit={handleIntermediateSubmit}
         className="w-full max-w-4xl"
       >
         <input type="hidden" name="nickname" value={nickname} />
         <input type="hidden" name="avatar_url" value={selectedAvatarUrl ?? ""} />
+        <input type="hidden" name="avatar_upload_requested" value={uploadedAvatarName ? "1" : "0"} />
         <input type="hidden" name="winner_team_id" value={winnerId} />
         <input type="hidden" name="top_scorer" value={topScorerName} />
         <input type="hidden" name="top_scorer_player_id" value={selectedPlayer?.id ?? ""} />

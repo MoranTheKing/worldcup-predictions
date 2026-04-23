@@ -212,7 +212,15 @@ async function persistProfileIdentity({
     return { success: false as const, error: "בחירת התמונה לא תקינה. נסה לבחור אותה מחדש." };
   }
 
+  const avatarUploadRequested = formData.get("avatar_upload_requested")?.toString() === "1";
   const avatarFile = getSubmittedAvatarFile(formData.get("avatar_file"));
+  if (avatarUploadRequested && !avatarFile) {
+    return {
+      success: false as const,
+      error: "לא הצלחנו לקבל את קובץ התמונה. נסה לבחור אותו מחדש ולשמור שוב.",
+    };
+  }
+
   const currentAvatarUrl = await fetchCurrentAvatarUrl(admin, userId);
   const shouldDeletePreviousCustomAvatar =
     isPrivateAvatarUrlForUser(currentAvatarUrl, userId) &&
