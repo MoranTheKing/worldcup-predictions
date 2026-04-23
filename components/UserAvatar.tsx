@@ -3,8 +3,8 @@
 import { createPortal } from "react-dom";
 import { isSupportedAvatarUrl } from "@/lib/profile/avatar-options";
 import {
-  getAvatarObjectPosition,
-  getAvatarScale,
+  AVATAR_POSITION_MAX,
+  AVATAR_POSITION_MIN,
   normalizeAvatarTransform,
   type AvatarTransform,
 } from "@/lib/profile/avatar-transform";
@@ -213,26 +213,87 @@ function AvatarVisual({
   src: string;
   transform: AvatarTransform;
 }) {
+  const [imageMetrics, setImageMetrics] = useState<{
+    height: number;
+    src: string;
+    width: number;
+  } | null>(null);
+  const normalizedTransform = normalizeAvatarTransform(transform);
+  const activeMetrics = imageMetrics?.src === src ? imageMetrics : null;
+  const panRange = useMemo(
+    () => calculatePanRange(activeMetrics, size, normalizedTransform.zoom),
+    [activeMetrics, normalizedTransform.zoom, size],
+  );
+  const horizontalFactor = normalizePanFactor(
+    normalizedTransform.x,
+    AVATAR_POSITION_MIN,
+    AVATAR_POSITION_MAX,
+  );
+  const verticalFactor = normalizePanFactor(
+    normalizedTransform.y,
+    AVATAR_POSITION_MIN,
+    AVATAR_POSITION_MAX,
+  );
+
   return (
     <span
       className={`relative block overflow-hidden bg-[rgba(255,255,255,0.05)] ${roundedClassName} ${className}`}
       style={{ height: size, width: size }}
     >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={src}
-        alt={name}
-        onError={onError}
-        loading={loading}
-        decoding="async"
-        referrerPolicy="no-referrer"
-        className="absolute inset-0 h-full w-full object-cover"
+      <span
+        className="absolute inset-0 block"
         style={{
-          objectPosition: getAvatarObjectPosition(transform),
-          transform: `scale(${getAvatarScale(transform)})`,
-          transformOrigin: "center center",
+          transform: `translate3d(${horizontalFactor * panRange.x}px, ${verticalFactor * panRange.y}px, 0)`,
         }}
-      />
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={src}
+          alt={name}
+          onError={onError}
+          onLoad={(event) => {
+            setImageMetrics({
+              height: event.currentTarget.naturalHeight || size,
+              src,
+              width: event.currentTarget.naturalWidth || size,
+            });
+          }}
+          loading={loading}
+          decoding="async"
+          referrerPolicy="no-referrer"
+          className="absolute inset-0 h-full w-full object-cover"
+          style={{
+            objectPosition: "center center",
+            transform: `scale(${normalizedTransform.zoom})`,
+            transformOrigin: "center center",
+          }}
+        />
+      </span>
     </span>
   );
+}
+
+function calculatePanRange(
+  imageMetrics: { height: number; width: number } | null,
+  size: number,
+  zoom: number,
+) {
+  const metrics = imageMetrics ?? { height: size, width: size };
+  const baseScale = Math.max(size / Math.max(metrics.width, 1), size / Math.max(metrics.height, 1));
+  const renderedWidth = metrics.width * baseScale * zoom;
+  const renderedHeight = metrics.height * baseScale * zoom;
+
+  return {
+    x: Math.max(0, (renderedWidth - size) / 2),
+    y: Math.max(0, (renderedHeight - size) / 2),
+  };
+}
+
+function normalizePanFactor(value: number, min: number, max: number) {
+  const spread = Math.max(Math.abs(min), Math.abs(max), AVATAR_POSITION_MAX);
+  if (spread <= 0) {
+    return 0;
+  }
+
+  return Math.max(-1, Math.min(1, value / spread));
 }

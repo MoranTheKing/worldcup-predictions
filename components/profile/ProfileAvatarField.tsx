@@ -262,6 +262,7 @@ function SliderControl({
         min={min}
         max={max}
         step={step}
+        dir="ltr"
         value={value}
         onChange={(event) => onChange(Number.parseFloat(event.target.value))}
         className="wc-range"

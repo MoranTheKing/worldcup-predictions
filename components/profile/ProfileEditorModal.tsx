@@ -52,6 +52,7 @@ export default function ProfileEditorModal({
     null,
   );
   const formRef = useRef<HTMLFormElement | null>(null);
+  const dialogBodyRef = useRef<HTMLDivElement | null>(null);
   const nicknameRequestId = useRef(0);
   const lastValidatedNickname = useRef<string | null>(normalizeNicknameInput(displayName) ?? null);
   const avatarFileInputRef = useRef<HTMLInputElement | null>(null);
@@ -98,6 +99,7 @@ export default function ProfileEditorModal({
 
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    dialogBodyRef.current?.scrollTo({ top: 0, behavior: "auto" });
 
     function handleEscape(event: KeyboardEvent) {
       if (event.key === "Escape" && !isPending) {
@@ -302,7 +304,7 @@ export default function ProfileEditorModal({
 
   return (
     <div
-      className="fixed inset-0 z-[80] flex items-center justify-center bg-[rgba(2,6,23,0.72)] px-4 py-6 backdrop-blur-sm"
+      className="fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto bg-[rgba(2,6,23,0.72)] px-4 py-6 backdrop-blur-sm sm:items-center"
       onClick={() => {
         if (!isPending) {
           onClose();
@@ -310,6 +312,7 @@ export default function ProfileEditorModal({
       }}
     >
       <div
+        ref={dialogBodyRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="profile-editor-title"
@@ -356,8 +359,9 @@ export default function ProfileEditorModal({
             </button>
           </div>
 
-          <div className="grid gap-6 lg:grid-cols-[280px,1fr]">
-            <ProfileAvatarField
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr),280px]">
+            <div className="order-2">
+              <ProfileAvatarField
               avatarTransform={avatarTransform}
               avatarOptions={avatarOptions}
               avatarPreviewUrl={avatarPreviewUrl}
@@ -375,9 +379,10 @@ export default function ProfileEditorModal({
               selectedAvatarUrl={selectedAvatarUrl}
               uploadError={avatarUploadError}
               uploadedFileName={uploadedAvatarName}
-            />
+              />
+            </div>
 
-            <div className="space-y-5">
+            <div className="order-1 space-y-5">
               <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-5">
                 <p className="text-sm font-semibold text-wc-fg1">כינוי ייחודי</p>
                 <p className="mt-2 text-sm text-wc-fg2">
