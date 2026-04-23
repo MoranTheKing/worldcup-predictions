@@ -38,7 +38,6 @@ function resolveHostname(candidates: Array<string | null>) {
 
 export function isLocalRequest(request: Request) {
   const hostname = resolveHostname([
-    request.headers.get("x-forwarded-host"),
     request.headers.get("host"),
     request.headers.get("origin"),
     request.url,
@@ -49,7 +48,6 @@ export function isLocalRequest(request: Request) {
 
 export function getRequestHostname(request: Request) {
   return resolveHostname([
-    request.headers.get("x-forwarded-host"),
     request.headers.get("host"),
     request.headers.get("origin"),
     request.url,
@@ -59,7 +57,6 @@ export function getRequestHostname(request: Request) {
 export async function isLocalServerRequest() {
   const requestHeaders = await headers();
   const hostname = resolveHostname([
-    requestHeaders.get("x-forwarded-host"),
     requestHeaders.get("host"),
     requestHeaders.get("origin"),
   ]);
