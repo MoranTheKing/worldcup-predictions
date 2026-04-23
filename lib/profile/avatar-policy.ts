@@ -120,6 +120,10 @@ function parsePrivateAvatarUrl(value: string | null | undefined) {
     return null;
   }
 
+  if (url.origin !== "https://avatars.local") {
+    return null;
+  }
+
   const pathMatch = PRIVATE_AVATAR_PATH_PATTERN.exec(url.pathname);
   if (!pathMatch) {
     return null;
