@@ -40,6 +40,13 @@ export function AuthProvider({
   const [isSigningOut, setIsSigningOut] = useState(false);
 
   useEffect(() => {
+    startTransition(() => {
+      setUser(initialUser);
+      setProfile(initialProfile);
+    });
+  }, [initialProfile, initialUser]);
+
+  useEffect(() => {
     let isActive = true;
 
     async function syncProfile(nextUser: User | null) {

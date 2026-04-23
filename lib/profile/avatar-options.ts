@@ -7,10 +7,10 @@ export type AvatarOption = {
 const GOOGLE_AVATAR_PATTERN = /^https:\/\/lh\d+\.googleusercontent\.com\/\S+$/i;
 
 export const DEFAULT_AVATAR_OPTIONS: AvatarOption[] = [
-  { id: "aurora", label: "Aurora", src: "/avatars/aurora.svg" },
-  { id: "comet", label: "Comet", src: "/avatars/comet.svg" },
-  { id: "ember", label: "Ember", src: "/avatars/ember.svg" },
-  { id: "mint", label: "Mint", src: "/avatars/mint.svg" },
+  { id: "aurora", label: "הילה", src: "/avatars/aurora.svg" },
+  { id: "comet", label: "שביט", src: "/avatars/comet.svg" },
+  { id: "ember", label: "להבה", src: "/avatars/ember.svg" },
+  { id: "mint", label: "מנטה", src: "/avatars/mint.svg" },
 ];
 
 export function getAvatarOptions(existingAvatarUrl: string | null | undefined) {
@@ -23,7 +23,7 @@ export function getAvatarOptions(existingAvatarUrl: string | null | undefined) {
   ) {
     options.unshift({
       id: "current",
-      label: "Current",
+      label: "התמונה הנוכחית",
       src: normalizedExistingAvatarUrl,
     });
   }

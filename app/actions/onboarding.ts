@@ -3,6 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { normalizeAvatarUrl } from "@/lib/profile/avatar-options";
+import {
+  getNicknameFormatError,
+  getNicknameTakenError,
+  normalizeNicknameInput,
+} from "@/lib/profile/nickname";
 import { fetchOnboardingStatus } from "@/lib/supabase/onboarding";
 import { createClient } from "@/lib/supabase/server";
 
@@ -10,6 +15,64 @@ export type OnboardingActionState = {
   error?: string;
   success?: boolean;
 } | null;
+
+export type NicknameAvailabilityResult = {
+  available: boolean;
+  message?: string;
+  normalized: string | null;
+};
+
+export async function checkNicknameAvailability(
+  rawNickname: string,
+): Promise<NicknameAvailabilityResult> {
+  const supabase = await createClient();
+  const admin = createAdminClient();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError) {
+    console.error("[checkNicknameAvailability] auth error:", authError.message);
+    return {
+      available: false,
+      message: "לא הצלחנו לבדוק את הכינוי כרגע. נסה שוב.",
+      normalized: null,
+    };
+  }
+
+  if (!user) {
+    return {
+      available: false,
+      message: "צריך להתחבר כדי לבחור כינוי.",
+      normalized: null,
+    };
+  }
+
+  const nickname = normalizeNicknameInput(rawNickname);
+  if (!nickname) {
+    return {
+      available: false,
+      message: getNicknameFormatError(),
+      normalized: null,
+    };
+  }
+
+  const duplicateNickname = await findDuplicateNickname(admin, nickname, user.id);
+  if (duplicateNickname) {
+    return {
+      available: false,
+      message: getNicknameTakenError(),
+      normalized: nickname,
+    };
+  }
+
+  return {
+    available: true,
+    message: "הכינוי הזה פנוי.",
+    normalized: nickname,
+  };
+}
 
 export async function completeOnboarding(
   _prev: OnboardingActionState,
@@ -31,9 +94,9 @@ export async function completeOnboarding(
     return { error: "צריך להתחבר כדי להשלים את ההרשמה." };
   }
 
-  const nickname = normalizeNickname(formData.get("nickname"));
+  const nickname = normalizeNicknameInput(formData.get("nickname"));
   if (!nickname) {
-    return { error: "יש לבחור כינוי באורך 2-20 תווים." };
+    return { error: getNicknameFormatError() };
   }
 
   const avatarUrl = normalizeAvatarUrl(formData.get("avatar_url")?.toString() ?? null);
@@ -42,7 +105,7 @@ export async function completeOnboarding(
 
   const duplicateNickname = await findDuplicateNickname(admin, nickname, user.id);
   if (duplicateNickname) {
-    return { error: "הכינוי הזה כבר תפוס. בחר כינוי אחר." };
+    return { error: getNicknameTakenError() };
   }
 
   const { error: userUpsertError } = await supabase
@@ -145,11 +208,6 @@ async function findDuplicateNickname(
   return Boolean((usersMatch ?? []).length || (profilesMatch ?? []).length);
 }
 
-function normalizeNickname(value: FormDataEntryValue | null) {
-  const normalized = value?.toString().trim().replace(/\s+/g, " ") ?? "";
-  return normalized.length >= 2 && normalized.length <= 20 ? normalized : null;
-}
-
 function normalizeTopScorerName(value: FormDataEntryValue | null) {
   const normalized = value?.toString().trim().replace(/\s+/g, " ") ?? "";
   return normalized.length > 0 ? normalized : null;
@@ -176,7 +234,7 @@ function normalizePlayerId(value: FormDataEntryValue | null) {
 
 function mapNicknameError(code: string | undefined, fallbackMessage: string): OnboardingActionState {
   if (code === "23505") {
-    return { error: "הכינוי הזה כבר תפוס. בחר כינוי אחר." };
+    return { error: getNicknameTakenError() };
   }
 
   return { error: fallbackMessage };

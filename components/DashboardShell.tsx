@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
+import UserAvatar from "@/components/UserAvatar";
 
 const NAV_ITEMS = [
   { href: "/dashboard/matches", icon: "🎯", label: "משחקים" },
@@ -32,7 +33,6 @@ export default function DashboardShell({ children }: Props) {
 
   const streak = profile?.currentStreak ?? 0;
   const streakBadge = streak >= 3 ? "🔥" : streak <= -5 ? "🐢" : null;
-  const initial = displayName.charAt(0).toUpperCase();
   const streakTone =
     streak > 0
       ? "bg-[rgba(95,255,123,0.12)] text-wc-neon"
@@ -92,9 +92,13 @@ export default function DashboardShell({ children }: Props) {
               {isAuthenticated ? (
                 <>
                   <div className="flex items-center gap-3">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,var(--wc-violet),var(--wc-magenta))] text-base font-black text-white">
-                      {initial}
-                    </div>
+                    <UserAvatar
+                      name={displayName}
+                      src={profile?.avatarUrl}
+                      size={48}
+                      roundedClassName="rounded-2xl"
+                      className="h-12 w-12"
+                    />
                     <div className="min-w-0 flex-1 text-start">
                       <p className="truncate text-sm font-bold text-wc-fg1">
                         {displayName} {streakBadge}
@@ -112,7 +116,7 @@ export default function DashboardShell({ children }: Props) {
                     disabled={isSigningOut}
                     className="wc-button-secondary mt-4 w-full px-4 py-3 text-sm disabled:opacity-50"
                   >
-                    {isSigningOut ? "מתנתק..." : "Logout"}
+                    {isSigningOut ? "מתנתק..." : "התנתקות"}
                   </button>
                 </>
               ) : (
@@ -125,7 +129,7 @@ export default function DashboardShell({ children }: Props) {
                   </div>
 
                   <Link href="/login" className="wc-button-primary block w-full px-4 py-3 text-center text-sm">
-                    Login
+                    התחברות
                   </Link>
                 </div>
               )}
@@ -147,13 +151,17 @@ export default function DashboardShell({ children }: Props) {
                 <span className={`rounded-full px-3 py-1 text-[11px] font-semibold ${streakTone}`}>
                   {streak > 0 ? `+${streak}` : streak < 0 ? `${streak}` : "0"}
                 </span>
-                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,var(--wc-neon),var(--wc-violet))] font-black text-[color:var(--wc-text-inverse)]">
-                  {initial}
-                </div>
+                <UserAvatar
+                  name={displayName}
+                  src={profile?.avatarUrl}
+                  size={40}
+                  roundedClassName="rounded-2xl"
+                  className="h-10 w-10"
+                />
               </>
             ) : (
               <Link href="/login" className="wc-button-primary px-4 py-2 text-xs">
-                Login
+                התחברות
               </Link>
             )}
           </div>

@@ -47,16 +47,16 @@ export default function AppNavbar() {
               disabled={isSigningOut}
               className="wc-button-secondary px-4 py-2 text-sm disabled:opacity-50"
             >
-              {isSigningOut ? "מתנתק..." : "Logout"}
+              {isSigningOut ? "מתנתק..." : "התנתקות"}
             </button>
           </div>
         ) : (
           <div className="flex items-center gap-2">
             <Link href="/signup" className="wc-button-secondary px-4 py-2 text-sm">
-              Sign up
+              הרשמה
             </Link>
             <Link href="/login" className="wc-button-primary px-4 py-2 text-sm">
-              Login
+              התחברות
             </Link>
           </div>
         )}
