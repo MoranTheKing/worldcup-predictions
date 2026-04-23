@@ -297,7 +297,12 @@ export default function ProfileEditorModal({
         className="wc-glass max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-[2rem] p-5 sm:p-6"
         onClick={(event) => event.stopPropagation()}
       >
-        <form ref={formRef} action={formAction} className="space-y-6">
+        <form
+          ref={formRef}
+          action={formAction}
+          encType="multipart/form-data"
+          className="space-y-6"
+        >
           <input type="hidden" name="nickname" value={nickname} />
           <input type="hidden" name="avatar_url" value={selectedAvatarUrl ?? ""} />
           <input

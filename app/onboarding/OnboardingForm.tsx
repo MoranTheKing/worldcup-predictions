@@ -336,6 +336,7 @@ export default function OnboardingForm({
     <main className="wc-page flex min-h-screen items-center justify-center px-4 py-10">
       <form
         action={step === finalStep ? formAction : undefined}
+        encType="multipart/form-data"
         onSubmit={handleIntermediateSubmit}
         className="w-full max-w-4xl"
       >
