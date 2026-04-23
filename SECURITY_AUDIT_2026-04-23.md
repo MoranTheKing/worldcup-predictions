@@ -23,6 +23,7 @@ Reviewed pull requests:
 - `#12` Remove committed dev logs that leak local environment details
 - `#13` Sanitize `next` in auth callback to prevent open redirects
 - `#14` Prevent localhost-only dev guard bypass via spoofed forwarded host headers
+- `#15` Restrict avatar URL validation so arbitrary same-origin paths cannot be stored as avatars
 
 ## Findings and remediations
 
@@ -239,6 +240,42 @@ What changed:
 PR covered:
 
 - `#12`
+
+### 8. Avatar URLs could be abused for stored same-origin GET requests
+
+Affected area before the fix:
+
+- `lib/profile/avatar-options.ts`
+- avatar persistence in onboarding/profile flows
+
+What was vulnerable:
+
+- the app previously allowed broad same-origin local paths as avatar URLs
+- values like `/auth/callback?code=...` could be stored and later rendered as `<img src="...">`
+
+How it could be exploited:
+
+- an attacker could save a crafted same-origin path as their avatar
+- when another authenticated user viewed that attacker in the UI, the victim's browser would request the path with the victim's cookies
+- if the target path performed meaningful GET-side effects, this became a stored same-origin request gadget, including login-CSRF or other CSRF-style abuse
+
+What changed:
+
+- the old "any relative path" behavior was removed
+- the app now accepts only:
+  - exact built-in avatar assets under `/avatars/...`
+  - Google-hosted avatar URLs matching the existing allowlist
+  - authenticated private avatar routes created by the new personal-upload flow
+- private avatar routes are also ownership-checked, so one user cannot submit another user's private avatar route as their own stored value
+
+Why the final fix is stronger than the PR:
+
+- PR `#15` proposed narrowing local paths to `/avatars/<file>`
+- the landed remediation goes further by removing arbitrary local-path support entirely and replacing personal uploads with a private authenticated route
+
+PR covered:
+
+- `#15`
 
 ## Files changed in the final remediation
 

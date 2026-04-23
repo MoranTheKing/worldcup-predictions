@@ -1,47 +1,97 @@
-# World Cup 2026 Predictions
+# מערכת ניחושי מונדיאל 2026
 
-Hebrew-first, RTL, mobile-first Next.js PWA for World Cup 2026 predictions, private leagues, tournament brackets, and social competition.
+אפליקציית `Next.js` בעברית, ב־`RTL`, למובייל ולדסקטופ, עבור ניחושי משחקים, ניחושי טורניר, ליגות פרטיות, תצוגת יריבים וניהול משחק המונדיאל.
 
-## Current state
+## מצב הפרויקט
 
-As of 2026-04-23, the project has three major slices in active use:
+נכון ל־`2026-04-23`, יש שלושה אזורים מרכזיים שעובדים יחד:
 
-- tournament engine and knockout progression
-- social predictions hub under `/game`
-- private leagues, opponent view, and invite-code flows
+- מנוע הטורניר והנוקאאוט
+- אזור הניחושים החברתי תחת `/game`
+- ליגות פרטיות, קודי הזמנה, ודפי השוואה מול שחקנים אחרים
 
-New player onboarding now runs before entry into the protected game flow:
+## מה נסגר בשכבת המוצר
 
-- all newly authenticated users are routed through `/onboarding`
-- onboarding requires a unique public nickname before league play
-- if the tournament is still open, onboarding also collects winner and top-scorer picks
-- avatar setup is optional and supports built-in defaults plus the current Google profile photo when available
-- onboarding now always opens on the profile step first, even when an auth provider pre-fills data, so the player can review and edit before continuing
-- onboarding also supports uploading a personal avatar from phone or desktop, with server-side validation and private storage
-- after entering the app, the player can still edit nickname and avatar from the right-side profile card without leaving the game shell
+### כניסה, הרשמה ו־Onboarding
 
-## Security status
+- כל משתמש חדש שעובר התחברות נשלח קודם ל־`/onboarding`
+- אי אפשר להיכנס ל־`/game` או ל־`/dashboard` לפני שבוחרים כינוי ציבורי ייחודי
+- אם הטורניר עדיין לא התחיל, ה־onboarding גם אוסף:
+  - זוכת הטורניר
+  - מלך השערים
+- ה־onboarding תמיד מתחיל בשלב הפרופיל, גם אם Google כבר מילא פרטים מראש
+- אפשר לבחור אווטאר מובנה, להשתמש בתמונת Google הקיימת, או לא לבחור תמונה בכלל
+- נוספה גם אפשרות להעלות תמונה אישית מהמחשב או מהטלפון
 
-A full security audit was completed on 2026-04-23.
+### עריכת פרופיל אחרי הכניסה
 
-Fixed or hardened areas:
+- מתוך מעטפת המשחק יש כפתור `עריכת פרופיל` ליד אזור ההתנתקות
+- אפשר לעדכן כינוי ותמונה גם אחרי שכבר נכנסת לאפליקציה
+- אותם כללי ייחודיות של הכינוי נאכפים גם כאן
+- המשתמש הנוכחי יכול לשמור את הכינוי שכבר שייך לו, אבל אף משתמש אחר לא יכול לקחת אותו
 
-- open redirects in login, signup, and auth callback flows
-- pre-kickoff exposure of hidden outright predictions
-- brute-forceable direct invite-code join page
-- remotely reachable dev-only mutation routes in non-production environments
-- localhost-only dev guards no longer trust spoofable `X-Forwarded-Host` headers
-- committed local log files that exposed workstation paths and internal network details
-- missing DB-level privacy and kickoff locks for prediction data
-- server-side match prediction lock drift when kickoff time had passed but match status was still `scheduled`
+### ממשק הניחושים
 
-Full details live in:
+- אזור בחירות הפתיחה וה־outrights עבר ניקוי UI
+- הוסרה כפילות מיותרת של ערכים שנבחרו
+- הוסרו כותרות וטקסטים מסבירים מיותרים שלא תרמו להבנה
+- הפונקציונליות לא השתנתה: אותן בחירות, אותן נעילות, אותה שמירה
+
+## מצב האבטחה
+
+בוצע audit אבטחה מלא ב־`2026-04-23`, ולאחריו נוספו גם תיקוני המשך.
+
+### תוקן או הוקשח
+
+- open redirect ב־`/login`, `signup`, ו־`auth callback`
+- חשיפה מוקדמת של ניחושי טורניר לפני kickoff
+- brute force לקודי הצטרפות לליגות
+- גישה מרחוק ל־`/api/dev/*` ול־`/dev-tools` בסביבות non-production
+- trust שגוי ב־`X-Forwarded-Host` עבור localhost guards
+- לוגים שנשמרו בתוך הריפו וחשפו נתיבים ופרטי סביבה
+- RLS פתוח מדי על טבלאות הניחושים והחברות בליגות
+- נעילות kickoff שלא נאכפו חזק מספיק ב־DB
+- שמירת `avatar_url` כנתיב מקומי שרירותי מאותו origin
+
+### תיקון אבטחה חשוב סביב אווטארים
+
+המערכת כבר לא מקבלת `avatar_url` שרירותי כמו:
+
+- `/auth/callback?code=...`
+- כל נתיב מקומי אחר מאותו origin
+
+הסיבה שזה היה מסוכן:
+
+- הדפדפן של משתמשים אחרים היה יכול לטעון את ה־URL הזה אוטומטית כתמונה
+- הבקשה הייתה נשלחת עם cookies של המשתמש המחובר
+- זה היה מאפשר stored same-origin GET abuse, ובחלק מהמקרים גם stored CSRF או login-CSRF
+
+המצב עכשיו:
+
+- מותרות רק תמונות ברירת המחדל המדויקות מתוך `/avatars/...`
+- מותרת תמונת Google חוקית
+- מותר route פרטי פנימי של תמונה שהועלתה אישית, ורק בפורמט המאושר של המשתמש המתאים
+- אין יותר allowlist כללי של “כל path שמתחיל ב־`/`”
+
+### העלאת תמונה אישית בצורה מאובטחת
+
+- מותר להעלות רק `JPG`, `PNG`, או `WebP`
+- גודל מקסימלי: `2MB`
+- יש בדיקה בצד לקוח
+- יש בדיקה מחייבת גם בשרת
+- השרת בודק גם את `MIME type` וגם את החתימה הבינארית של הקובץ
+- `SVG` חסום במכוון
+- התמונות נשמרות ב־bucket פרטי ב־Supabase
+- התמונות לא מוגשות כ־public URL, אלא דרך route פנימי מאומת:
+  - `app/api/profile/avatar/[userId]/route.ts`
+
+פירוט מלא נמצא ב:
 
 - `SECURITY_AUDIT_2026-04-23.md`
 
-## Required Supabase migrations
+## מיגרציות Supabase שחייבות להיות פעילות
 
-These migrations must be applied on the active Supabase project:
+יש לוודא שבפרויקט הפעיל של Supabase הורצו המיגרציות הבאות:
 
 - `20260422000010_phase1_social_auth.sql`
 - `20260422000012_fix_rls_recursion.sql`
@@ -53,29 +103,32 @@ These migrations must be applied on the active Supabase project:
 - `20260423000019_enforce_prediction_lock_windows.sql`
 - `20260423000020_enforce_unique_profile_handles.sql`
 
-The two `20260423000018/19` migrations are the important security remediations from the latest audit.
-The `20260423000020` migration adds DB-level protection so no two users can claim the same nickname with case-only variations.
-Custom uploaded avatars do not require an extra SQL step: the private storage bucket is provisioned and restricted by the server on first upload.
+הערות:
 
-## Local development
+- `20260423000018` ו־`20260423000019` הן מיגרציות האבטחה הקריטיות מה־audit
+- `20260423000020` אוכפת ייחודיות כינויים ברמת ה־DB
+- אין צורך במיגרציית SQL נוספת עבור העלאת תמונות אישיות
+- ה־bucket הפרטי של האווטארים נוצר ומוקשח אוטומטית בשרת בהעלאה הראשונה
 
-Install dependencies:
+## פיתוח מקומי
+
+התקנת תלויות:
 
 ```powershell
 npm.cmd install
 ```
 
-Run the app locally:
+הרצת האפליקציה:
 
 ```powershell
 npm.cmd run dev
 ```
 
-Default local URL:
+כתובת ברירת המחדל:
 
 - `http://localhost:3000`
 
-## Key implementation files
+## קבצים מרכזיים
 
 - `app/game/leagues/[id]/page.tsx`
 - `app/game/users/[id]/page.tsx`
@@ -98,19 +151,17 @@ Default local URL:
 - `components/profile/ProfileAvatarField.tsx`
 - `components/profile/ProfileEditorModal.tsx`
 
-## Project notes
+## הערות חשובות
 
-- Social opponent viewing is intentionally anti-cheat: scheduled matches stay hidden and outright picks stay hidden until tournament kickoff.
-- Tournament and match prediction locks are enforced in both application logic and the database.
-- Dev tools are intended for localhost development only.
-- Profile avatars fall back to initials if the selected image is missing or unsupported.
-- Personal avatar uploads are limited to JPG, PNG, and WebP, validated by the server, stored in a private bucket, and served only through an authenticated internal route.
-- The predictions hub now uses a tighter outright-picks layout with less explanatory copy and a more compact save flow.
-- The outright-picks block shows a single clean editable layout instead of repeating the same chosen values twice.
+- תצוגת יריב וליגה נשארת anti-cheat: משחקים עתידיים וניחושי טורניר מוסתרים עד הרגע המתאים
+- נעילות המשחקים והטורניר נאכפות גם בלוגיקת האפליקציה וגם ברמת ה־DB
+- כלי dev נועדו ל־localhost בלבד
+- אם תמונת פרופיל לא נטענת או לא נתמכת, המערכת חוזרת אוטומטית ל־fallback של אות ראשונה
+- ממשק ה־outrights עבר הידוק ויזואלי בלי לשנות את התנהגות הניחושים
 
-## Next phase
+## המשך עבודה אפשרי
 
-- finish the scoring engine for `points_earned`
-- sync `profiles.total_score` from resolved predictions
-- expand league history and analytics
-- run broader QA across mobile, RTL, live states, and joker flows
+- השלמת מנוע ניקוד מלא עבור `points_earned`
+- סנכרון `profiles.total_score` מול הניחושים שהוכרעו
+- הרחבת היסטוריית הליגות והאנליטיקות
+- QA רחב יותר על mobile, RTL, live states, jokers, והרשאות
