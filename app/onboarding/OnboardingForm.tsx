@@ -337,6 +337,7 @@ export default function OnboardingForm({
       <form
         action={step === finalStep ? formAction : undefined}
         onSubmit={handleIntermediateSubmit}
+        encType="multipart/form-data"
         className="w-full max-w-4xl"
       >
         <input type="hidden" name="nickname" value={nickname} />

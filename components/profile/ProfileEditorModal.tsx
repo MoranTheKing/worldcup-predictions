@@ -300,6 +300,7 @@ export default function ProfileEditorModal({
         <form
           ref={formRef}
           action={formAction}
+          encType="multipart/form-data"
           className="space-y-6"
         >
           <input type="hidden" name="nickname" value={nickname} />
