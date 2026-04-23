@@ -16,6 +16,7 @@ New player onboarding now runs before entry into the protected game flow:
 - onboarding requires a unique public nickname before league play
 - if the tournament is still open, onboarding also collects winner and top-scorer picks
 - avatar setup is optional and supports built-in defaults plus the current Google profile photo when available
+- onboarding now always opens on the profile step first, even when an auth provider pre-fills data, so the player can review and edit before continuing
 
 ## Security status
 
@@ -96,6 +97,7 @@ Default local URL:
 - Dev tools are intended for localhost development only.
 - Profile avatars fall back to initials if the selected image is missing or unsupported.
 - The predictions hub now uses a tighter outright-picks layout with less explanatory copy and a more compact save flow.
+- The outright-picks block shows a single clean editable layout instead of repeating the same chosen values twice.
 
 ## Next phase
 

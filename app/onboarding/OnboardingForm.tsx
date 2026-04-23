@@ -88,17 +88,7 @@ export default function OnboardingForm({
   const nicknameRequestId = useRef(0);
   const lastValidatedNickname = useRef<string | null>(initialNickname || null);
 
-  const [step, setStep] = useState(() => {
-    if (!existingDisplayName) {
-      return 0;
-    }
-
-    if (tournamentStarted || tournamentPrediction?.predictedWinnerTeamId) {
-      return tournamentStarted ? 0 : 2;
-    }
-
-    return 1;
-  });
+  const [step, setStep] = useState(0);
   const [nickname, setNickname] = useState(existingDisplayName);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(initialAvatarUrl);
   const [winnerId, setWinnerId] = useState(tournamentPrediction?.predictedWinnerTeamId ?? "");
