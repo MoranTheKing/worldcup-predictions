@@ -58,6 +58,7 @@ export async function fetchOnboardingStatus(
 
   const displayName =
     asNullableString(profileRow?.display_name) ?? asNullableString(legacyRow?.username);
+  const username = asNullableString(legacyRow?.username);
   const avatarUrl =
     asNullableString(profileRow?.avatar_url) ?? asNullableString(legacyRow?.avatar_url);
   const tournamentPrediction = tournamentPredictionRow
@@ -72,15 +73,19 @@ export async function fetchOnboardingStatus(
   const hasTournamentPrediction = Boolean(
     tournamentPrediction?.predictedWinnerTeamId && tournamentPrediction.predictedTopScorerName,
   );
+  const hasConfirmedProfileIdentity = Boolean(username);
+  const hasDisplayName = Boolean(displayName);
 
   return {
     avatarUrl,
     displayName,
     hasTournamentPrediction,
-    isComplete: Boolean(displayName) && (tournamentStarted || hasTournamentPrediction),
+    isComplete: tournamentStarted
+      ? hasDisplayName && (hasConfirmedProfileIdentity || hasTournamentPrediction)
+      : hasDisplayName && hasTournamentPrediction,
     tournamentPrediction,
     tournamentStarted,
-    username: asNullableString(legacyRow?.username),
+    username,
   };
 }
 
