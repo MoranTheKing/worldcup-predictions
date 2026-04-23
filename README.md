@@ -147,9 +147,18 @@ npm.cmd run dev
 - `lib/supabase/onboarding.ts`
 - `lib/profile/avatar-options.ts`
 - `lib/profile/avatar-policy.ts`
+- `lib/profile/avatar-transform.ts`
 - `lib/profile/avatar-storage.ts`
+- `components/UserAvatar.tsx`
 - `components/profile/ProfileAvatarField.tsx`
 - `components/profile/ProfileEditorModal.tsx`
+
+## תצוגת אווטארים
+
+- תמונת פרופיל אישית מקבלת תצוגה מקדימה חיה כבר ברגע הבחירה, לפני שמירה
+- במסכי ההרשמה ועריכת הפרופיל אפשר להזיז את המסגור ימינה, שמאלה, למעלה, למטה, וגם לבצע זום
+- לחיצה על תמונת פרופיל אמיתית ברחבי האפליקציה פותחת תצוגה מוגדלת עד שלוחצים מחוץ לתמונה
+- ‏`blob:` preview נשאר מוגבל למסכי העריכה בלבד, ולא נחשב כתובת `avatar_url` חוקית לשמירה במסד
 
 ## הערות חשובות
 

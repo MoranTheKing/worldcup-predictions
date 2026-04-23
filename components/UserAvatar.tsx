@@ -1,16 +1,27 @@
 "use client";
 
+import { createPortal } from "react-dom";
 import { isSupportedAvatarUrl } from "@/lib/profile/avatar-options";
-import { useMemo, useState } from "react";
+import {
+  getAvatarObjectPosition,
+  getAvatarScale,
+  normalizeAvatarTransform,
+  type AvatarTransform,
+} from "@/lib/profile/avatar-transform";
+import { getAvatarTransformFromUrl } from "@/lib/profile/avatar-policy";
+import { useEffect, useMemo, useState } from "react";
 
 type UserAvatarProps = {
+  allowPreviewObjectUrl?: boolean;
   className?: string;
+  expandable?: boolean;
   name: string;
   priority?: boolean;
   roundedClassName?: string;
   size: number;
   src?: string | null;
   textClassName?: string;
+  transform?: AvatarTransform | null;
 };
 
 const FALLBACK_GRADIENTS = [
@@ -21,23 +32,69 @@ const FALLBACK_GRADIENTS = [
 ];
 
 export default function UserAvatar({
+  allowPreviewObjectUrl = false,
   className = "",
+  expandable = true,
   name,
   priority = false,
   roundedClassName = "rounded-full",
   size,
   src,
   textClassName = "text-white",
+  transform,
 }: UserAvatarProps) {
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  const [isExpanded, setIsExpanded] = useState(false);
   const normalizedName = name.trim() || "Player";
   const gradientClassName = useMemo(
-    () => FALLBACK_GRADIENTS[normalizedName.charCodeAt(0) % FALLBACK_GRADIENTS.length] ?? FALLBACK_GRADIENTS[0],
+    () =>
+      FALLBACK_GRADIENTS[normalizedName.charCodeAt(0) % FALLBACK_GRADIENTS.length] ??
+      FALLBACK_GRADIENTS[0],
     [normalizedName],
   );
-  const resolvedSrc =
-    typeof src === "string" && src.trim() && isSupportedAvatarUrl(src) ? src.trim() : null;
+  const resolvedSrc = useMemo(() => {
+    if (typeof src !== "string") {
+      return null;
+    }
+
+    const trimmedSrc = src.trim();
+    if (!trimmedSrc) {
+      return null;
+    }
+
+    if (allowPreviewObjectUrl && trimmedSrc.startsWith("blob:")) {
+      return trimmedSrc;
+    }
+
+    return isSupportedAvatarUrl(trimmedSrc) ? trimmedSrc : null;
+  }, [allowPreviewObjectUrl, src]);
+  const resolvedTransform = useMemo(
+    () => normalizeAvatarTransform(transform ?? getAvatarTransformFromUrl(resolvedSrc)),
+    [resolvedSrc, transform],
+  );
   const shouldRenderImage = Boolean(resolvedSrc && failedSrc !== resolvedSrc);
+  const canExpand = shouldRenderImage && expandable;
+
+  useEffect(() => {
+    if (!isExpanded) {
+      return;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsExpanded(false);
+      }
+    }
+
+    window.addEventListener("keydown", handleEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, [isExpanded]);
 
   if (!shouldRenderImage || !resolvedSrc) {
     return (
@@ -46,24 +103,136 @@ export default function UserAvatar({
         style={{ height: size, width: size }}
         aria-label={normalizedName}
       >
-        <span className={`font-black ${textClassName}`} style={{ fontSize: Math.max(14, Math.round(size * 0.38)) }}>
+        <span
+          className={`font-black ${textClassName}`}
+          style={{ fontSize: Math.max(14, Math.round(size * 0.38)) }}
+        >
           {normalizedName.charAt(0).toUpperCase()}
         </span>
       </div>
     );
   }
 
-  return (
-    /* eslint-disable-next-line @next/next/no-img-element */
-    <img
-      src={resolvedSrc}
-      alt={normalizedName}
-      onError={() => setFailedSrc(resolvedSrc)}
+  const avatarVisual = (
+    <AvatarVisual
+      className={className}
       loading={priority ? "eager" : "lazy"}
-      decoding="async"
-      referrerPolicy="no-referrer"
-      className={`${roundedClassName} object-cover ${className}`}
-      style={{ height: size, width: size }}
+      name={normalizedName}
+      roundedClassName={roundedClassName}
+      size={size}
+      src={resolvedSrc}
+      transform={resolvedTransform}
+      onError={() => setFailedSrc(resolvedSrc)}
     />
+  );
+
+  return (
+    <>
+      {canExpand ? (
+        <button
+          type="button"
+          aria-label={`הגדל את תמונת הפרופיל של ${normalizedName}`}
+          onClick={(event) => {
+            event.stopPropagation();
+            setIsExpanded(true);
+          }}
+          className="cursor-zoom-in rounded-[inherit] bg-transparent p-0 text-inherit"
+        >
+          {avatarVisual}
+        </button>
+      ) : (
+        avatarVisual
+      )}
+
+      {canExpand && isExpanded && typeof document !== "undefined"
+        ? createPortal(
+            <div
+              className="fixed inset-0 z-[120] flex items-center justify-center bg-[rgba(2,6,23,0.76)] px-4 py-6 backdrop-blur-md"
+              onClick={() => setIsExpanded(false)}
+            >
+              <div
+                role="dialog"
+                aria-modal="true"
+                aria-label={`תמונת הפרופיל של ${normalizedName}`}
+                className="relative w-full max-w-[22rem]"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <div className="absolute inset-0 rounded-[2.2rem] bg-[radial-gradient(circle_at_top,rgba(95,255,123,0.22),transparent_58%),radial-gradient(circle_at_bottom,rgba(255,47,166,0.18),transparent_62%)] blur-2xl" />
+                <div className="relative overflow-hidden rounded-[2.2rem] border border-white/12 bg-[rgba(8,13,26,0.94)] p-5 shadow-[0_28px_90px_rgba(0,0,0,0.5)]">
+                  <div className="mx-auto w-full max-w-[18rem]">
+                    <AvatarVisual
+                      className="mx-auto shadow-[0_20px_55px_rgba(95,255,123,0.16)]"
+                      loading="eager"
+                      name={normalizedName}
+                      roundedClassName="rounded-[2rem]"
+                      size={288}
+                      src={resolvedSrc}
+                      transform={resolvedTransform}
+                      onError={() => setFailedSrc(resolvedSrc)}
+                    />
+                  </div>
+                  <div className="mt-4 flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-bold text-wc-fg1">{normalizedName}</p>
+                      <p className="mt-1 text-xs text-wc-fg3">לחיצה מחוץ לתמונה תחזיר למסך.</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsExpanded(false)}
+                      className="rounded-full border border-white/10 px-3 py-2 text-xs font-semibold text-wc-fg2 transition hover:border-white/20 hover:text-wc-fg1"
+                    >
+                      סגור
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
+    </>
+  );
+}
+
+function AvatarVisual({
+  className,
+  loading,
+  name,
+  onError,
+  roundedClassName,
+  size,
+  src,
+  transform,
+}: {
+  className: string;
+  loading: "eager" | "lazy";
+  name: string;
+  onError: () => void;
+  roundedClassName: string;
+  size: number;
+  src: string;
+  transform: AvatarTransform;
+}) {
+  return (
+    <span
+      className={`relative block overflow-hidden bg-[rgba(255,255,255,0.05)] ${roundedClassName} ${className}`}
+      style={{ height: size, width: size }}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt={name}
+        onError={onError}
+        loading={loading}
+        decoding="async"
+        referrerPolicy="no-referrer"
+        className="absolute inset-0 h-full w-full object-cover"
+        style={{
+          objectPosition: getAvatarObjectPosition(transform),
+          transform: `scale(${getAvatarScale(transform)})`,
+          transformOrigin: "center center",
+        }}
+      />
+    </span>
   );
 }

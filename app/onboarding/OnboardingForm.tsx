@@ -13,9 +13,17 @@ import TeamPicker from "@/components/pickers/TeamPicker";
 import ProfileAvatarField from "@/components/profile/ProfileAvatarField";
 import { getAvatarOptions, normalizeAvatarUrl } from "@/lib/profile/avatar-options";
 import {
+  DEFAULT_AVATAR_TRANSFORM,
+  normalizeAvatarTransform,
+  serializeAvatarTransform,
+  type AvatarTransform,
+} from "@/lib/profile/avatar-transform";
+import {
+  getAvatarTransformFromUrl,
   getAvatarUploadAccept,
   getAvatarUploadClientError,
   getAvatarUploadHelperText,
+  isPrivateAvatarUrl,
 } from "@/lib/profile/avatar-policy";
 import {
   getNicknameFormatError,
@@ -79,6 +87,10 @@ export default function OnboardingForm({
     [oauthAvatarUrl],
   );
   const initialAvatarUrl = normalizedExistingAvatarUrl ?? normalizedOauthAvatarUrl;
+  const initialAvatarTransform = useMemo(
+    () => normalizeAvatarTransform(getAvatarTransformFromUrl(initialAvatarUrl)),
+    [initialAvatarUrl],
+  );
   const avatarOptions = useMemo(() => getAvatarOptions(initialAvatarUrl), [initialAvatarUrl]);
   const sortedTeams = useMemo(
     () =>
@@ -100,6 +112,7 @@ export default function OnboardingForm({
   const [nickname, setNickname] = useState(existingDisplayName);
   const [selectedAvatarUrl, setSelectedAvatarUrl] = useState<string | null>(initialAvatarUrl);
   const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(initialAvatarUrl);
+  const [avatarTransform, setAvatarTransform] = useState<AvatarTransform>(initialAvatarTransform);
   const [uploadedAvatarName, setUploadedAvatarName] = useState<string | null>(null);
   const [avatarUploadError, setAvatarUploadError] = useState<string | null>(null);
   const [winnerId, setWinnerId] = useState(tournamentPrediction?.predictedWinnerTeamId ?? "");
@@ -122,6 +135,9 @@ export default function OnboardingForm({
   const avatarStatusLabel = uploadedAvatarName
     ? "תמונה אישית חדשה"
     : avatarOptions.find((option) => option.src === selectedAvatarUrl)?.label ?? null;
+
+  const canAdjustAvatar =
+    Boolean(uploadedAvatarName) || Boolean(selectedAvatarUrl && isPrivateAvatarUrl(selectedAvatarUrl));
 
   useEffect(() => {
     return () => {
@@ -251,6 +267,7 @@ export default function OnboardingForm({
     clearUploadedAvatarDraft();
     setSelectedAvatarUrl(nextAvatarUrl);
     setAvatarPreviewUrl(nextAvatarUrl);
+    setAvatarTransform(normalizeAvatarTransform(getAvatarTransformFromUrl(nextAvatarUrl)));
     setAvatarUploadError(null);
     setClientError(null);
   }
@@ -259,6 +276,7 @@ export default function OnboardingForm({
     clearUploadedAvatarDraft();
     setSelectedAvatarUrl(null);
     setAvatarPreviewUrl(null);
+    setAvatarTransform(DEFAULT_AVATAR_TRANSFORM);
     setAvatarUploadError(null);
     setClientError(null);
   }
@@ -281,6 +299,7 @@ export default function OnboardingForm({
     avatarObjectUrlRef.current = objectUrl;
     setUploadedAvatarName(file.name);
     setAvatarPreviewUrl(objectUrl);
+    setAvatarTransform(DEFAULT_AVATAR_TRANSFORM);
     setAvatarUploadError(null);
     setClientError(null);
   }
@@ -341,6 +360,7 @@ export default function OnboardingForm({
       >
         <input type="hidden" name="nickname" value={nickname} />
         <input type="hidden" name="avatar_url" value={selectedAvatarUrl ?? ""} />
+        <input type="hidden" name="avatar_transform" value={serializeAvatarTransform(avatarTransform)} />
         <input type="hidden" name="avatar_upload_requested" value={uploadedAvatarName ? "1" : "0"} />
         <input type="hidden" name="winner_team_id" value={winnerId} />
         <input type="hidden" name="top_scorer" value={topScorerName} />
@@ -390,13 +410,19 @@ export default function OnboardingForm({
             <section className="space-y-6">
               <div className="grid gap-6 lg:grid-cols-[280px,1fr]">
                 <ProfileAvatarField
+                  avatarTransform={avatarTransform}
                   avatarOptions={avatarOptions}
                   avatarPreviewUrl={avatarPreviewUrl}
                   avatarStatusLabel={avatarStatusLabel}
+                  canAdjustAvatar={canAdjustAvatar}
                   helperText={getAvatarUploadHelperText()}
                   nicknamePreview={nicknamePreview}
+                  onAvatarTransformChange={(nextTransform) => {
+                    setAvatarTransform(normalizeAvatarTransform(nextTransform));
+                  }}
                   onClearAvatar={clearAvatarSelection}
                   onOpenFilePicker={() => avatarFileInputRef.current?.click()}
+                  onResetAvatarTransform={() => setAvatarTransform(DEFAULT_AVATAR_TRANSFORM)}
                   onSelectAvatar={selectAvatarOption}
                   selectedAvatarUrl={selectedAvatarUrl}
                   uploadError={avatarUploadError}

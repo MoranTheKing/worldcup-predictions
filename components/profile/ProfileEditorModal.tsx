@@ -11,9 +11,17 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import ProfileAvatarField from "@/components/profile/ProfileAvatarField";
 import { getAvatarOptions, normalizeAvatarUrl } from "@/lib/profile/avatar-options";
 import {
+  DEFAULT_AVATAR_TRANSFORM,
+  normalizeAvatarTransform,
+  serializeAvatarTransform,
+  type AvatarTransform,
+} from "@/lib/profile/avatar-transform";
+import {
+  getAvatarTransformFromUrl,
   getAvatarUploadAccept,
   getAvatarUploadClientError,
   getAvatarUploadHelperText,
+  isPrivateAvatarUrl,
 } from "@/lib/profile/avatar-policy";
 import {
   getNicknameFormatError,
@@ -50,6 +58,10 @@ export default function ProfileEditorModal({
   const avatarObjectUrlRef = useRef<string | null>(null);
 
   const normalizedCurrentAvatarUrl = useMemo(() => normalizeAvatarUrl(avatarUrl), [avatarUrl]);
+  const initialAvatarTransform = useMemo(
+    () => normalizeAvatarTransform(getAvatarTransformFromUrl(normalizedCurrentAvatarUrl)),
+    [normalizedCurrentAvatarUrl],
+  );
   const avatarOptions = useMemo(
     () => getAvatarOptions(normalizedCurrentAvatarUrl),
     [normalizedCurrentAvatarUrl],
@@ -59,6 +71,7 @@ export default function ProfileEditorModal({
   const [nickname, setNickname] = useState(displayName);
   const [selectedAvatarUrl, setSelectedAvatarUrl] = useState<string | null>(normalizedCurrentAvatarUrl);
   const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(normalizedCurrentAvatarUrl);
+  const [avatarTransform, setAvatarTransform] = useState<AvatarTransform>(initialAvatarTransform);
   const [uploadedAvatarName, setUploadedAvatarName] = useState<string | null>(null);
   const [avatarUploadError, setAvatarUploadError] = useState<string | null>(null);
   const [clientError, setClientError] = useState<string | null>(null);
@@ -219,6 +232,7 @@ export default function ProfileEditorModal({
     clearUploadedAvatarDraft();
     setSelectedAvatarUrl(nextAvatarUrl);
     setAvatarPreviewUrl(nextAvatarUrl);
+    setAvatarTransform(normalizeAvatarTransform(getAvatarTransformFromUrl(nextAvatarUrl)));
     setAvatarUploadError(null);
     setClientError(null);
   }
@@ -227,6 +241,7 @@ export default function ProfileEditorModal({
     clearUploadedAvatarDraft();
     setSelectedAvatarUrl(null);
     setAvatarPreviewUrl(null);
+    setAvatarTransform(DEFAULT_AVATAR_TRANSFORM);
     setAvatarUploadError(null);
     setClientError(null);
   }
@@ -249,6 +264,7 @@ export default function ProfileEditorModal({
     avatarObjectUrlRef.current = objectUrl;
     setUploadedAvatarName(file.name);
     setAvatarPreviewUrl(objectUrl);
+    setAvatarTransform(DEFAULT_AVATAR_TRANSFORM);
     setAvatarUploadError(null);
     setClientError(null);
   }
@@ -281,6 +297,9 @@ export default function ProfileEditorModal({
     ? "תמונה אישית חדשה"
     : avatarOptions.find((option) => option.src === selectedAvatarUrl)?.label ?? null;
 
+  const canAdjustAvatar =
+    Boolean(uploadedAvatarName) || Boolean(selectedAvatarUrl && isPrivateAvatarUrl(selectedAvatarUrl));
+
   return (
     <div
       className="fixed inset-0 z-[80] flex items-center justify-center bg-[rgba(2,6,23,0.72)] px-4 py-6 backdrop-blur-sm"
@@ -304,6 +323,7 @@ export default function ProfileEditorModal({
         >
           <input type="hidden" name="nickname" value={nickname} />
           <input type="hidden" name="avatar_url" value={selectedAvatarUrl ?? ""} />
+          <input type="hidden" name="avatar_transform" value={serializeAvatarTransform(avatarTransform)} />
           <input type="hidden" name="avatar_upload_requested" value={uploadedAvatarName ? "1" : "0"} />
           <input
             ref={avatarFileInputRef}
@@ -338,13 +358,19 @@ export default function ProfileEditorModal({
 
           <div className="grid gap-6 lg:grid-cols-[280px,1fr]">
             <ProfileAvatarField
+              avatarTransform={avatarTransform}
               avatarOptions={avatarOptions}
               avatarPreviewUrl={avatarPreviewUrl}
               avatarStatusLabel={avatarStatusLabel}
+              canAdjustAvatar={canAdjustAvatar}
               helperText={getAvatarUploadHelperText()}
               nicknamePreview={nicknamePreview}
+              onAvatarTransformChange={(nextTransform) => {
+                setAvatarTransform(normalizeAvatarTransform(nextTransform));
+              }}
               onClearAvatar={clearAvatarSelection}
               onOpenFilePicker={() => avatarFileInputRef.current?.click()}
+              onResetAvatarTransform={() => setAvatarTransform(DEFAULT_AVATAR_TRANSFORM)}
               onSelectAvatar={selectAvatarOption}
               selectedAvatarUrl={selectedAvatarUrl}
               uploadError={avatarUploadError}

@@ -2,7 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { normalizeAvatarUrl } from "@/lib/profile/avatar-options";
-import { isPrivateAvatarUrl, isPrivateAvatarUrlForUser } from "@/lib/profile/avatar-policy";
+import { parseAvatarTransformField } from "@/lib/profile/avatar-transform";
+import {
+  applyPrivateAvatarTransform,
+  isPrivateAvatarUrl,
+  isPrivateAvatarUrlForUser,
+} from "@/lib/profile/avatar-policy";
 import { removePrivateAvatar, uploadPrivateAvatar } from "@/lib/profile/avatar-storage";
 import {
   getNicknameFormatError,
@@ -212,6 +217,7 @@ async function persistProfileIdentity({
     return { success: false as const, error: "בחירת התמונה לא תקינה. נסה לבחור אותה מחדש." };
   }
 
+  const avatarTransform = parseAvatarTransformField(formData.get("avatar_transform"));
   const avatarUploadRequested = formData.get("avatar_upload_requested")?.toString() === "1";
   const avatarFile = getSubmittedAvatarFile(formData.get("avatar_file"));
   if (avatarUploadRequested && !avatarFile) {
@@ -235,7 +241,9 @@ async function persistProfileIdentity({
       return { success: false as const, error: uploadResult.message };
     }
 
-    avatarUrl = uploadResult.avatarUrl;
+    avatarUrl = applyPrivateAvatarTransform(uploadResult.avatarUrl, avatarTransform) ?? uploadResult.avatarUrl;
+  } else if (isPrivateAvatarUrlForUser(avatarUrl, userId)) {
+    avatarUrl = applyPrivateAvatarTransform(avatarUrl, avatarTransform) ?? avatarUrl;
   }
 
   const { error: userUpsertError } = await supabase
