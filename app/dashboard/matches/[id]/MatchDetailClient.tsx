@@ -31,7 +31,7 @@ function formatDateTime(iso: string) {
 }
 
 export default function MatchDetailClient({ match }: { match: MatchDetailRow }) {
-  useDevLiveRefresh();
+  useDevLiveRefresh({ pollIntervalMs: 1500 });
 
   const scoreSummary = isMatchScoreVisible(match) ? getMatchScoreSummary(match) : null;
   const homeName = getTeamDisplayName(match.homeTeam, match.home_placeholder);

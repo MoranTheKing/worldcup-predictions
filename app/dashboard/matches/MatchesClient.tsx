@@ -84,7 +84,7 @@ function getStatusMeta(status: string, minute: number | null) {
 
 export default function MatchesClient({ matches }: { matches: MatchListRow[] }) {
   const [filter, setFilter] = useState<Filter>("all");
-  useDevLiveRefresh();
+  useDevLiveRefresh({ pollIntervalMs: 1500 });
 
   const knockoutTree = useMemo(() => buildKnockoutWinnerTree(matches), [matches]);
   const knockoutNodesByMatchNumber = useMemo<Map<number, KnockoutSortNode>>(

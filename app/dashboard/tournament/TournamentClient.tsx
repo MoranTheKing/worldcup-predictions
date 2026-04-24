@@ -11,6 +11,7 @@ import Image from "next/image";
 import { useMemo, useState } from "react";
 
 type Props = {
+  initialTab: TournamentTab;
   groupStandings: Record<string, TeamStanding[]>;
   bestThirdStandings: TeamStanding[];
   teamsRemaining: number;
@@ -32,7 +33,7 @@ type Props = {
   >;
 };
 
-type Tab = "groups" | "third" | "knockout";
+export type TournamentTab = "groups" | "third" | "knockout";
 
 type StatusDisplay = {
   label: string;
@@ -117,7 +118,7 @@ const TEXT = {
   thirdPlaceLong: "משחק על המקום השלישי",
 };
 
-const TABS: { id: Tab; label: string }[] = [
+const TABS: { id: TournamentTab; label: string }[] = [
   { id: "groups", label: TEXT.tabs.groups },
   { id: "third", label: TEXT.tabs.third },
   { id: "knockout", label: TEXT.tabs.knockout },
@@ -301,6 +302,7 @@ function getBestThirdStatusDisplay(
 }
 
 export default function TournamentClient({
+  initialTab,
   groupStandings,
   bestThirdStandings,
   teamsRemaining,
@@ -309,8 +311,8 @@ export default function TournamentClient({
   hasLive,
   liveGroupScores,
 }: Props) {
-  const [tab, setTab] = useState<Tab>("groups");
-  useDevLiveRefresh();
+  const [tab, setTab] = useState<TournamentTab>(initialTab);
+  useDevLiveRefresh({ pollIntervalMs: 1500 });
 
   const groupLetters = Object.keys(groupStandings).sort();
   const podium = useMemo(
@@ -362,7 +364,10 @@ export default function TournamentClient({
         {TABS.map(({ id, label }) => (
           <button
             key={id}
-            onClick={() => setTab(id)}
+            onClick={() => {
+              setTab(id);
+              updateTournamentTabUrl(id);
+            }}
             className={`rounded-[1rem] px-5 py-2.5 text-sm font-semibold transition-all ${
               tab === id
                 ? "bg-[linear-gradient(135deg,rgba(95,255,123,0.14),rgba(255,47,166,0.12))] text-wc-fg1 shadow-[0_0_26px_rgba(95,255,123,0.16)]"
@@ -449,6 +454,18 @@ export default function TournamentClient({
       )}
     </div>
   );
+}
+
+function updateTournamentTabUrl(tab: TournamentTab) {
+  const url = new URL(window.location.href);
+
+  if (tab === "groups") {
+    url.searchParams.delete("tab");
+  } else {
+    url.searchParams.set("tab", tab);
+  }
+
+  window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
 }
 
 function buildTournamentPodium(

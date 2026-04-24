@@ -6,7 +6,7 @@ import {
 } from "@/lib/utils/standings";
 import { resolveKnockoutBracket } from "@/lib/bracket/knockout";
 import { buildKnockoutWinnerTree } from "@/lib/tournament/knockout-tree";
-import TournamentClient from "./TournamentClient";
+import TournamentClient, { type TournamentTab } from "./TournamentClient";
 
 type LiveGroupScoreMap = Record<
   string,
@@ -19,7 +19,13 @@ type LiveGroupScoreMap = Record<
 
 export const dynamic = "force-dynamic";
 
-export default async function TournamentPage() {
+export default async function TournamentPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string | string[] }>;
+}) {
+  const { tab } = await searchParams;
+  const initialTab = parseTournamentTab(tab);
   const supabase = await createClient();
 
   const { data: matchesData } = await supabase
@@ -113,6 +119,7 @@ export default async function TournamentPage() {
 
   return (
     <TournamentClient
+      initialTab={initialTab}
       groupStandings={tournament.groupStandings}
       bestThirdStandings={tournament.bestThirdStandings}
       teamsRemaining={tournament.teamsRemaining}
@@ -122,4 +129,14 @@ export default async function TournamentPage() {
       liveGroupScores={liveGroupScores}
     />
   );
+}
+
+function parseTournamentTab(value: string | string[] | undefined): TournamentTab {
+  const tab = Array.isArray(value) ? value[0] : value;
+
+  if (tab === "third" || tab === "knockout") {
+    return tab;
+  }
+
+  return "groups";
 }

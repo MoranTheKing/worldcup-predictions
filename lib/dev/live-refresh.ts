@@ -12,6 +12,10 @@ type DevLiveRefreshMessage = {
   reason?: string;
 };
 
+type UseDevLiveRefreshOptions = {
+  pollIntervalMs?: number;
+};
+
 function isDevLiveRefreshMessage(value: unknown): value is DevLiveRefreshMessage {
   if (!value || typeof value !== "object") return false;
 
@@ -41,18 +45,22 @@ export function notifyDevLiveRefresh(reason?: string) {
   }
 }
 
-export function useDevLiveRefresh() {
+export function useDevLiveRefresh({ pollIntervalMs = 0 }: UseDevLiveRefreshOptions = {}) {
   const router = useRouter();
   const lastRefreshAtRef = useRef(0);
 
   useEffect(() => {
-    function refreshFromMessage(message: DevLiveRefreshMessage) {
-      if (message.at <= lastRefreshAtRef.current) return;
-      lastRefreshAtRef.current = message.at;
+    function refreshAt(timestamp: number) {
+      if (timestamp <= lastRefreshAtRef.current) return;
+      lastRefreshAtRef.current = timestamp;
 
       startTransition(() => {
         router.refresh();
       });
+    }
+
+    function refreshFromMessage(message: DevLiveRefreshMessage) {
+      refreshAt(message.at);
     }
 
     let channel: BroadcastChannel | null = null;
@@ -81,9 +89,21 @@ export function useDevLiveRefresh() {
 
     window.addEventListener("storage", handleStorage);
 
+    const intervalId =
+      pollIntervalMs > 0
+        ? window.setInterval(() => {
+            if (document.visibilityState === "visible") {
+              refreshAt(Date.now());
+            }
+          }, pollIntervalMs)
+        : null;
+
     return () => {
       channel?.close();
       window.removeEventListener("storage", handleStorage);
+      if (intervalId !== null) {
+        window.clearInterval(intervalId);
+      }
     };
-  }, [router]);
+  }, [pollIntervalMs, router]);
 }
