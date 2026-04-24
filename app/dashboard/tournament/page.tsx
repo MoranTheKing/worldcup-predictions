@@ -119,6 +119,7 @@ export default async function TournamentPage({
 
   return (
     <TournamentClient
+      key={initialTab}
       initialTab={initialTab}
       groupStandings={tournament.groupStandings}
       bestThirdStandings={tournament.bestThirdStandings}
