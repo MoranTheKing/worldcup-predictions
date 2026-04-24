@@ -28,12 +28,15 @@ export default function SignupPage() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [passwordConfirmation, setPasswordConfirmation] = useState("");
   const [verificationCode, setVerificationCode] = useState("");
   const [pendingEmail, setPendingEmail] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const passwordPolicy = evaluatePasswordPolicy(password, email.trim().toLowerCase());
+  const hasPasswordConfirmation = passwordConfirmation.length > 0;
+  const passwordConfirmationMatches = password === passwordConfirmation;
 
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault();
@@ -43,6 +46,12 @@ export default function SignupPage() {
 
     const normalizedEmail = email.trim().toLowerCase();
     const passwordPolicyError = getPasswordPolicyError(password, normalizedEmail);
+
+    if (!passwordConfirmationMatches) {
+      setError("אימות הסיסמה לא תואם לסיסמה שבחרת. כתוב את אותה סיסמה בשני השדות.");
+      setLoading(false);
+      return;
+    }
 
     if (passwordPolicyError) {
       setError(passwordPolicyError);
@@ -58,16 +67,18 @@ export default function SignupPage() {
       },
     });
 
-    if (authError) {
+    if (authError && isExistingAccountSignupResponse(authError)) {
+      setPendingEmail(normalizedEmail);
+      setVerificationCode("");
+      setNotice("אם אפשר להמשיך עם הרשמה לכתובת הזו, שלחנו קוד אימות בן 6 ספרות לאימייל.");
+    } else if (authError) {
       setError(getSignupErrorMessage(authError));
     } else if (data.session) {
       window.location.assign(`/onboarding?next=${encodeURIComponent(nextPath)}`);
-    } else if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
-      setError("לא ניתן לפתוח הרשמה חדשה לכתובת הזו. אם כבר נרשמת, התחבר במקום; אחרת נסה כתובת אחרת.");
     } else {
       setPendingEmail(normalizedEmail);
       setVerificationCode("");
-      setNotice("שלחנו לך קוד אימות בן 6 ספרות. הוא מחכה באימייל.");
+      setNotice("אם אפשר להמשיך עם הרשמה לכתובת הזו, שלחנו קוד אימות בן 6 ספרות לאימייל.");
     }
 
     setLoading(false);
@@ -91,7 +102,7 @@ export default function SignupPage() {
     });
 
     if (authError) {
-      setError("הקוד לא תקין או שפג תוקף. בדוק את המייל ונסה שוב.");
+      setError("אם קיבלת קוד, הוא לא תקין או שפג תוקף. אפשר לבקש קוד חדש או להתחבר אם כבר יש לך חשבון.");
       setLoading(false);
       return;
     }
@@ -119,7 +130,7 @@ export default function SignupPage() {
     if (authError) {
       setError(getSignupErrorMessage(authError));
     } else {
-      setNotice("שלחנו קוד חדש אם הכתובת עדיין ממתינה לאימות. אם הוא לא מופיע, בדוק גם קידומי מכירות או ספאם; אם כבר נרשמת, צריך להתחבר במקום.");
+      setNotice("אם הכתובת עדיין ממתינה לאימות, שלחנו קוד חדש. אם כבר יש לך חשבון, אפשר להתחבר במקום.");
     }
 
     setLoading(false);
@@ -153,17 +164,30 @@ export default function SignupPage() {
               <span>אימות מהיר ובטוח</span>
             </div>
             <div className="mt-5 text-5xl">📨</div>
-            <h1 className="wc-display mt-4 text-5xl text-wc-fg1">הקוד בדרך אליך</h1>
+            <h1 className="wc-display mt-4 text-5xl text-wc-fg1">בדיקת אימייל</h1>
             <p className="mt-3 text-sm leading-7 text-wc-fg2">
-              שלחנו קוד אימות ל־<span dir="ltr" className="font-semibold text-wc-fg1">{pendingEmail}</span>.
-              הזן אותו כאן, ונמשיך ישר לבחירת הפרופיל שלך.
+              אם אפשר להמשיך בהרשמה ל־<span dir="ltr" className="font-semibold text-wc-fg1">{pendingEmail}</span>,
+              קוד בן 6 ספרות מחכה באימייל. אם כבר יש לך חשבון, אפשר להתחבר מיד בלי לחכות לקוד חדש.
             </p>
           </div>
 
           <div className="wc-glass rounded-[2rem] p-6 text-center sm:p-8">
+            <div className="mb-5 rounded-[1.5rem] border border-white/10 bg-white/[0.045] px-4 py-4 text-start">
+              <p className="text-sm font-black text-wc-fg1">יש לך כבר חשבון?</p>
+              <p className="mt-1 text-xs leading-5 text-wc-fg3">
+                מטעמי אבטחה אנחנו לא אומרים אם כתובת כבר רשומה. אם נרשמת בעבר, התחברות היא הדרך הכי מהירה להמשיך.
+              </p>
+              <Link
+                href={loginHref}
+                className="wc-button-secondary mt-4 block rounded-2xl px-4 py-3 text-center text-sm"
+              >
+                התחברות לחשבון קיים
+              </Link>
+            </div>
+
             <form onSubmit={handleVerifyCode} className="flex flex-col gap-4">
               <label htmlFor="verification-code" className="text-sm font-semibold text-wc-fg2">
-                קוד אימות בן 6 ספרות
+                יש לך קוד? הזן כאן 6 ספרות
               </label>
               <input
                 id="verification-code"
@@ -281,6 +305,30 @@ export default function SignupPage() {
               autoComplete="new-password"
               className="wc-input text-start"
             />
+            <input
+              type="password"
+              placeholder="אימות סיסמה"
+              value={passwordConfirmation}
+              onChange={(e) => setPasswordConfirmation(e.target.value)}
+              required
+              minLength={PASSWORD_MIN_LENGTH}
+              autoComplete="new-password"
+              className="wc-input text-start"
+            />
+            {hasPasswordConfirmation && (
+              <p
+                className={[
+                  "rounded-2xl px-4 py-2 text-sm font-semibold",
+                  passwordConfirmationMatches
+                    ? "border border-wc-neon/25 bg-wc-neon/10 text-wc-neon"
+                    : "bg-[color:var(--wc-danger-bg)] text-wc-danger",
+                ].join(" ")}
+              >
+                {passwordConfirmationMatches
+                  ? "הסיסמאות תואמות"
+                  : "הסיסמאות לא תואמות עדיין"}
+              </p>
+            )}
             <PasswordStrengthPanel policy={passwordPolicy} password={password} />
 
             {error && (
@@ -291,7 +339,7 @@ export default function SignupPage() {
 
             <button
               type="submit"
-              disabled={loading || !passwordPolicy.passed}
+              disabled={loading || !passwordPolicy.passed || !passwordConfirmationMatches}
               className="wc-button-primary mt-2 w-full px-4 py-3.5 text-sm disabled:opacity-50"
             >
               {loading ? "שולח קוד..." : "הרשמה וקבלת קוד"}
@@ -330,10 +378,6 @@ function getSignupErrorMessage(error: SignupError) {
     return "שלחנו קוד ממש עכשיו. מטעמי אבטחה צריך להמתין בערך דקה לפני שמבקשים קוד נוסף או נרשמים שוב.";
   }
 
-  if (message.includes("user already registered")) {
-    return "האימייל הזה כבר רשום. אפשר להתחבר במקום.";
-  }
-
   if (message.includes("invalid email")) {
     return "כתובת האימייל לא נראית תקינה.";
   }
@@ -351,6 +395,18 @@ function getSignupErrorMessage(error: SignupError) {
   }
 
   return "לא הצלחנו לפתוח חשבון כרגע. בדוק את הפרטים ונסה שוב.";
+}
+
+function isExistingAccountSignupResponse(error: SignupError) {
+  const message = (error.message ?? "").toLowerCase();
+
+  return (
+    error.code === "user_already_exists" ||
+    error.code === "user_already_registered" ||
+    message.includes("user already registered") ||
+    message.includes("already registered") ||
+    message.includes("already been registered")
+  );
 }
 
 function PasswordStrengthPanel({

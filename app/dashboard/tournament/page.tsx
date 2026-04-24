@@ -1,4 +1,4 @@
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { buildTournamentTeams, getGroupMatches, type TournamentTeamStateRow } from "@/lib/tournament/tournament-state";
 import {
   buildTournamentStandings,
@@ -20,10 +20,10 @@ type LiveGroupScoreMap = Record<
 export const dynamic = "force-dynamic";
 
 export default async function TournamentPage() {
-  const supabase = createAdminClient();
+  const supabase = await createClient();
 
   const { data: matchesData } = await supabase
-    .from("matches")
+    .from("public_tournament_matches")
     .select("match_number, stage, home_team_id, away_team_id, home_placeholder, away_placeholder, home_score, away_score, status, minute, date_time, is_extra_time, home_penalty_score, away_penalty_score")
     .order("date_time", { ascending: true });
 
@@ -31,7 +31,7 @@ export default async function TournamentPage() {
   const groupMatches = getGroupMatches(allMatches);
 
   const fullTeamsQuery = await supabase
-    .from("teams")
+    .from("public_tournament_teams")
     .select(`
       id,
       name,
@@ -51,7 +51,7 @@ export default async function TournamentPage() {
 
   const fallbackTeamsQuery = fullTeamsQuery.error
     ? await supabase
-        .from("teams")
+        .from("public_tournament_teams")
         .select("id, name, name_he, logo_url, group_letter, played_count, is_eliminated")
         .order("group_letter")
         .order("name_he", { ascending: true })
@@ -105,6 +105,7 @@ export default async function TournamentPage() {
   const serializedKnockoutTree = {
     rounds: knockoutTree.rounds,
     leafCount: knockoutTree.leafCount,
+    finalMatchNumber: knockoutTree.finalMatchNumber,
     thirdPlaceMatchNumber: knockoutTree.thirdPlaceMatchNumber,
   };
 

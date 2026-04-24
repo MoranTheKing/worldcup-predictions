@@ -25,6 +25,8 @@ Reviewed pull requests:
 - `#14` Prevent localhost-only dev guard bypass via spoofed forwarded host headers
 - `#15` Restrict avatar URL validation so arbitrary same-origin paths cannot be stored as avatars
 - `#17` Reject external origins that mimic private avatar URLs
+- `#18` Restore RLS protection on tournament page
+- `#19` Fix signup account-enumeration response
 
 ## Findings and remediations
 
@@ -308,6 +310,7 @@ What changed:
 
 - added `lib/security/password-policy.ts`
 - signup now blocks submission until the password has at least 10 characters, lowercase and uppercase English letters, a number, a symbol, and no obvious sequence or email-derived value
+- signup now also requires a matching password confirmation field before submitting to Supabase
 - the UI now shows a live Hebrew password-strength panel so users know exactly what is missing before submitting
 - login now shows a clearer message if Supabase returns a weak-password error after server-side policy hardening
 
@@ -316,9 +319,81 @@ Operational note:
 - Supabase must also be configured under `Authentication -> Settings -> Password Security`
 - recommended settings are minimum length `10`, required lowercase/uppercase/numbers/symbols, and leaked-password protection when the project is on Pro or above
 
+### 10. Public tournament page used the service-role client
+
+Affected area before the fix:
+
+- `app/dashboard/tournament/page.tsx`
+- RLS configuration for public tournament reads
+
+What was vulnerable:
+
+- `/dashboard/tournament` is intentionally public, but it loaded `matches` and `teams` with `createAdminClient()`
+- the admin client uses the Supabase service-role key and bypasses Row-Level Security
+- even though the selected columns were tournament-only, the route depended on privileged credentials for anonymous traffic
+
+How it could be exploited:
+
+- a future code change on the same public route could accidentally expand the admin query and expose private data because RLS would not protect it
+- any bug in the route would have service-role read power instead of the limited anonymous/session context
+
+What changed:
+
+- added `20260424000021_public_tournament_projection.sql`
+- created read-only public views:
+  - `public.public_tournament_matches`
+  - `public.public_tournament_teams`
+- those views expose only non-user tournament data needed by the public page: schedule, team metadata, scores, live status, minute, extra-time and penalty fields
+- `app/dashboard/tournament/page.tsx` now uses the regular server Supabase client from `@/lib/supabase/server`
+- the page no longer imports or uses the service-role admin client
+
+User-facing behavior:
+
+- anonymous users can still see the public tournament page
+- live match data remains visible when it is present in `matches`
+- no user profiles, league membership, predictions, tournament picks or private avatar data are exposed by these views
+
+PR covered:
+
+- `#18`
+
+### 11. Signup response leaked existing-account state
+
+Affected area before the fix:
+
+- `app/signup/page.tsx`
+
+What was vulnerable:
+
+- the signup flow handled Supabase's "existing verified email" shape with a distinct user-facing message
+- a caller could compare responses for different email addresses and infer whether an account already existed
+
+How it could be exploited:
+
+- an attacker could submit a list of email addresses through the signup form
+- addresses that produced the distinct "already registered / log in instead" path were likely existing accounts
+- this is account enumeration: it does not compromise an account directly, but it helps phishing, targeting and credential-stuffing attacks
+
+What changed:
+
+- signup now moves non-error/non-session responses into a neutral verification screen
+- the copy says a code was sent only if the address can continue registration
+- the same screen offers a clear "log in to an existing account" action so legitimate users are not trapped in OTP verification when no signup OTP was issued
+- invalid-code and resend messages were made neutral as well
+
+Why this is safer than the PR-only patch:
+
+- PR `#19` removed the revealing branch but forced existing users into an OTP-only dead end
+- the landed version keeps the response neutral while preserving a usable login path for real users
+
+PR covered:
+
+- `#19`
+
 ## Files changed in the final remediation
 
 - `app/auth/callback/route.ts`
+- `app/dashboard/tournament/page.tsx`
 - `app/login/page.tsx`
 - `app/signup/page.tsx`
 - `app/actions/league.ts`
@@ -339,6 +414,7 @@ Operational note:
 - `.gitignore`
 - `supabase/migrations/20260423000018_restore_social_prediction_privacy.sql`
 - `supabase/migrations/20260423000019_enforce_prediction_lock_windows.sql`
+- `supabase/migrations/20260424000021_public_tournament_projection.sql`
 
 ## Operational note
 
@@ -348,17 +424,24 @@ The active Supabase project must run:
 
 - `20260423000018_restore_social_prediction_privacy.sql`
 - `20260423000019_enforce_prediction_lock_windows.sql`
+- `20260424000021_public_tournament_projection.sql`
 
 ## 2026-04-24 follow-up
 
-No new database migration was required for the 2026-04-24 browser QA pass.
+The initial 2026-04-24 browser QA pass did not require a new migration. The later PR `#18` remediation added `20260424000021_public_tournament_projection.sql` so the public tournament page can avoid service-role reads.
 
 Security-relevant follow-up:
 
-- signup now detects the Supabase "no new identity" response shape and avoids showing the OTP-entry screen when a new code is not expected
-- the copy was kept generic enough to guide the user toward login without explicitly saying that the submitted address is confirmed
-- `/dashboard/tournament` uses a server-side admin read only for public tournament projection data such as match slots, team names, flags, standings fields, and elimination state
+- signup now treats the Supabase "no new identity" response shape with a neutral check-email/OTP screen and a visible login action, instead of a distinct existing-account error
+- the copy is generic enough to guide the user without confirming whether the submitted address is already registered
+- `/dashboard/tournament` originally used a server-side admin read for public projection data; after PR `#18`, it uses explicit public projection views instead
 - social prediction privacy remains governed by the RLS/audit fixes above; the public tournament read does not expose user prediction rows
+
+Additional 2026-04-24 remediation after PRs `#18` and `#19`:
+
+- the public tournament route no longer uses the service-role client
+- public tournament reads now go through explicit public projection views for teams and matches
+- signup no longer reveals existing-account state while still giving real users an obvious login path
 
 ## Post-audit hardening landed later on 2026-04-23
 

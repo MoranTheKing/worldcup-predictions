@@ -38,6 +38,14 @@ type StatusDisplay = {
   pillClassName: string;
 };
 
+type PodiumTeam = Extract<ResolvedSeed, { kind: "team" }>["team"];
+
+type TournamentPodium = {
+  champion: PodiumTeam | null;
+  runnerUp: PodiumTeam | null;
+  thirdPlace: PodiumTeam | null;
+};
+
 type LeafBranchConfig = {
   roundOf16MatchNumber: number;
   roundOf32MatchNumbers: readonly [number, number];
@@ -81,6 +89,13 @@ const TEXT = {
   semiFinal: "חצי גמר",
   thirdPlace: "משחק על המקום השלישי",
   final: "הגמר",
+  podiumTitle: "בימת הסיום",
+  podiumSubtitle: "הטורניר מתכנס לרגעי ההכרעה",
+  champion: "מקום 1",
+  runnerUp: "מקום 2",
+  bronze: "מקום 3",
+  waitingFinal: "ממתינים לגמר",
+  bronzeLocked: "הברונזה כבר נעולה",
   teams32: "32 נבחרות",
   rounds5: "5 סיבובי הכרעה",
   verticalBracket: "בראקט אנכי מפוצל",
@@ -295,6 +310,11 @@ export default function TournamentClient({
 }: Props) {
   const [tab, setTab] = useState<Tab>("groups");
   const groupLetters = Object.keys(groupStandings).sort();
+  const podium = useMemo(
+    () => buildTournamentPodium(bracket, knockoutTree),
+    [bracket, knockoutTree],
+  );
+  const displayedTeamsRemaining = podium.champion ? 0 : podium.thirdPlace ? 2 : teamsRemaining;
   const qualifiedThirdPlaceTeamIds = useMemo(
     () =>
       new Set(
@@ -326,8 +346,11 @@ export default function TournamentClient({
             <p className="mt-4 max-w-3xl text-sm leading-7 text-wc-fg2">{TEXT.summary}</p>
           </div>
 
-          <div className="max-w-[14rem]">
-            <HeaderStat label={TEXT.remainingTeams} value={String(teamsRemaining)} accent="text-wc-neon" />
+          <div className="w-full max-w-[28rem]">
+            <TournamentFinalePanel
+              podium={podium}
+              teamsRemaining={displayedTeamsRemaining}
+            />
           </div>
         </div>
       </section>
@@ -421,6 +444,178 @@ export default function TournamentClient({
           <KnockoutBracket bracket={bracket} knockoutTree={knockoutTree} />
         </>
       )}
+    </div>
+  );
+}
+
+function buildTournamentPodium(
+  bracket: ResolvedBracketMatch[],
+  knockoutTree: Props["knockoutTree"],
+): TournamentPodium {
+  const matchesByNumber = new Map(bracket.map((match) => [match.matchNumber, match]));
+  const finalMatch =
+    (knockoutTree.finalMatchNumber
+      ? matchesByNumber.get(knockoutTree.finalMatchNumber)
+      : null) ?? bracket.find((match) => match.round === "final") ?? null;
+  const thirdPlaceMatch =
+    (knockoutTree.thirdPlaceMatchNumber
+      ? matchesByNumber.get(knockoutTree.thirdPlaceMatchNumber)
+      : null) ?? bracket.find((match) => match.round === "third_place") ?? null;
+  const finalOutcome = getFinishedTeamOutcome(finalMatch);
+  const thirdPlaceOutcome = getFinishedTeamOutcome(thirdPlaceMatch);
+
+  return {
+    champion: finalOutcome?.winner ?? null,
+    runnerUp: finalOutcome?.loser ?? null,
+    thirdPlace: thirdPlaceOutcome?.winner ?? null,
+  };
+}
+
+function getFinishedTeamOutcome(match: ResolvedBracketMatch | null) {
+  const liveMatch = match?.liveMatch;
+  if (
+    !match ||
+    !liveMatch ||
+    liveMatch.status !== "finished" ||
+    match.home.kind !== "team" ||
+    match.away.kind !== "team" ||
+    liveMatch.home_score === null ||
+    liveMatch.away_score === null
+  ) {
+    return null;
+  }
+
+  let homeWins: boolean | null = null;
+  if (
+    liveMatch.home_score === liveMatch.away_score &&
+    liveMatch.home_penalty_score !== null &&
+    liveMatch.home_penalty_score !== undefined &&
+    liveMatch.away_penalty_score !== null &&
+    liveMatch.away_penalty_score !== undefined
+  ) {
+    homeWins = liveMatch.home_penalty_score > liveMatch.away_penalty_score;
+  } else if (liveMatch.home_score !== liveMatch.away_score) {
+    homeWins = liveMatch.home_score > liveMatch.away_score;
+  }
+
+  if (homeWins === null) {
+    return null;
+  }
+
+  return {
+    winner: homeWins ? match.home.team : match.away.team,
+    loser: homeWins ? match.away.team : match.home.team,
+  };
+}
+
+function TournamentFinalePanel({
+  podium,
+  teamsRemaining,
+}: {
+  podium: TournamentPodium;
+  teamsRemaining: number;
+}) {
+  if (!podium.thirdPlace) {
+    return <HeaderStat label={TEXT.remainingTeams} value={String(teamsRemaining)} accent="text-wc-neon" />;
+  }
+
+  if (!podium.champion || !podium.runnerUp) {
+    return (
+      <div className="wc-panel overflow-hidden p-0 text-start">
+        <div className="bg-[radial-gradient(circle_at_90%_0%,rgba(205,127,50,0.22),transparent_45%),linear-gradient(135deg,rgba(255,255,255,0.08),rgba(255,255,255,0.025))] p-4">
+          <p className="text-xs tracking-[0.24em] text-wc-fg3">{TEXT.podiumSubtitle}</p>
+          <div className="mt-3 grid gap-3 sm:grid-cols-[0.82fr_1.18fr]">
+            <div className="rounded-[1.35rem] border border-wc-neon/20 bg-wc-neon/10 p-4">
+              <p className="text-xs font-bold text-wc-fg3">{TEXT.remainingTeams}</p>
+              <p className="wc-display mt-2 text-5xl text-wc-neon">{teamsRemaining}</p>
+              <p className="mt-2 text-xs text-wc-fg2">{TEXT.waitingFinal}</p>
+            </div>
+            <PodiumTeamCard
+              rankLabel={TEXT.bronze}
+              team={podium.thirdPlace}
+              tone="bronze"
+              eyebrow={TEXT.bronzeLocked}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="wc-panel overflow-hidden p-0 text-start">
+      <div className="bg-[radial-gradient(circle_at_50%_-20%,rgba(255,182,73,0.36),transparent_50%),linear-gradient(135deg,rgba(255,182,73,0.14),rgba(95,255,123,0.08)_48%,rgba(205,127,50,0.12))] p-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-xs tracking-[0.24em] text-wc-fg3">{TEXT.podiumTitle}</p>
+            <p className="wc-display mt-1 text-3xl text-wc-fg1">האלופה הוכתרה</p>
+          </div>
+          <div className="rounded-full border border-wc-amber/30 bg-wc-amber/15 px-3 py-1 text-xs font-black text-wc-amber">
+            2026
+          </div>
+        </div>
+
+        <div className="mt-5 grid items-end gap-3 sm:grid-cols-3">
+          <PodiumTeamCard rankLabel={TEXT.runnerUp} team={podium.runnerUp} tone="silver" />
+          <PodiumTeamCard rankLabel={TEXT.champion} team={podium.champion} tone="gold" featured />
+          <PodiumTeamCard rankLabel={TEXT.bronze} team={podium.thirdPlace} tone="bronze" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PodiumTeamCard({
+  rankLabel,
+  team,
+  tone,
+  eyebrow,
+  featured = false,
+}: {
+  rankLabel: string;
+  team: PodiumTeam;
+  tone: "gold" | "silver" | "bronze";
+  eyebrow?: string;
+  featured?: boolean;
+}) {
+  const toneClass =
+    tone === "gold"
+      ? "border-wc-amber/45 bg-[linear-gradient(180deg,rgba(255,182,73,0.24),rgba(255,182,73,0.08))] text-wc-amber"
+      : tone === "silver"
+        ? "border-white/25 bg-[linear-gradient(180deg,rgba(255,255,255,0.18),rgba(255,255,255,0.06))] text-wc-fg1"
+        : "border-[#CD7F32]/45 bg-[linear-gradient(180deg,rgba(205,127,50,0.22),rgba(205,127,50,0.07))] text-[#f0b27a]";
+
+  return (
+    <div
+      className={[
+        "relative overflow-hidden rounded-[1.4rem] border p-4 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]",
+        toneClass,
+        featured ? "sm:-translate-y-3 sm:scale-[1.04]" : "",
+      ].join(" ")}
+    >
+      <div className="pointer-events-none absolute inset-x-4 top-0 h-px bg-white/35" />
+      <p className="text-[10px] font-black tracking-[0.18em] text-wc-fg3">
+        {eyebrow ?? rankLabel}
+      </p>
+      <div className="mx-auto mt-3 grid h-14 w-14 place-items-center rounded-2xl border border-white/15 bg-black/20">
+        {team.logo_url ? (
+          <Image
+            src={team.logo_url}
+            alt={team.name_he ?? team.name}
+            width={44}
+            height={32}
+            style={{ width: 44, height: 32 }}
+            className="rounded-md object-cover"
+            unoptimized
+          />
+        ) : (
+          <span className="text-2xl">🏆</span>
+        )}
+      </div>
+      <p className="wc-display mt-3 text-2xl leading-none">{rankLabel}</p>
+      <p className="mt-2 truncate text-sm font-black text-wc-fg1" title={team.name_he ?? team.name}>
+        {team.name_he ?? team.name}
+      </p>
     </div>
   );
 }
