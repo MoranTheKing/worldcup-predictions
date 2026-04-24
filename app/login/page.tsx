@@ -6,6 +6,11 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 
+type LoginError = {
+  code?: string;
+  message?: string;
+};
+
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -30,7 +35,7 @@ export default function LoginPage() {
     });
 
     if (authError) {
-      setError("האימייל או הסיסמה שגויים");
+      setError(getLoginErrorMessage(authError));
     } else {
       router.push(nextPath);
       router.refresh();
@@ -121,7 +126,7 @@ export default function LoginPage() {
               disabled={loading}
               className="wc-button-primary mt-2 w-full px-4 py-3.5 text-sm disabled:opacity-50"
             >
-              {loading ? "מתחבר..." : "Login"}
+              {loading ? "מתחבר..." : "כניסה"}
             </button>
           </form>
         </div>
@@ -135,6 +140,16 @@ export default function LoginPage() {
       </div>
     </main>
   );
+}
+
+function getLoginErrorMessage(error: LoginError) {
+  const message = (error.message ?? "").toLowerCase();
+
+  if (error.code === "weak_password" || message.includes("weak password")) {
+    return "הסיסמה של החשבון חלשה מדי לפי מדיניות האבטחה החדשה. צריך לאפס סיסמה לסיסמה חזקה יותר, או להיכנס דרך Google אם החשבון מחובר אליו.";
+  }
+
+  return "האימייל או הסיסמה שגויים";
 }
 
 function GoogleIcon() {

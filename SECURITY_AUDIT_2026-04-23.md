@@ -286,6 +286,36 @@ PR covered:
 - `#15`
 - `#17`
 
+### 9. Weak email/password signup policy allowed trivial passwords
+
+Affected area before the fix:
+
+- `app/signup/page.tsx`
+- Supabase Auth password policy configuration
+
+What was vulnerable:
+
+- the signup UI only required 6 characters
+- passwords such as `123456` could be submitted from the app
+- if Supabase password security settings stayed permissive, weak passwords could become valid credentials
+
+How it could be exploited:
+
+- attackers could use credential stuffing and password-spraying against accounts with common passwords
+- users reusing leaked passwords would be at higher risk if leaked-password protection was not enabled in Supabase
+
+What changed:
+
+- added `lib/security/password-policy.ts`
+- signup now blocks submission until the password has at least 10 characters, lowercase and uppercase English letters, a number, a symbol, and no obvious sequence or email-derived value
+- the UI now shows a live Hebrew password-strength panel so users know exactly what is missing before submitting
+- login now shows a clearer message if Supabase returns a weak-password error after server-side policy hardening
+
+Operational note:
+
+- Supabase must also be configured under `Authentication -> Settings -> Password Security`
+- recommended settings are minimum length `10`, required lowercase/uppercase/numbers/symbols, and leaked-password protection when the project is on Pro or above
+
 ## Files changed in the final remediation
 
 - `app/auth/callback/route.ts`
@@ -303,6 +333,7 @@ PR covered:
 - `components/DevToolsFloatingButton.tsx`
 - `lib/game/league-join-rate-limit.ts`
 - `lib/game/tournament-start.ts`
+- `lib/security/password-policy.ts`
 - `lib/security/local-request.ts`
 - `lib/security/safe-redirect.ts`
 - `.gitignore`

@@ -1,6 +1,11 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
+import {
+  PASSWORD_MIN_LENGTH,
+  evaluatePasswordPolicy,
+  getPasswordPolicyError,
+} from "@/lib/security/password-policy";
 import { getSafeRedirectPath } from "@/lib/security/safe-redirect";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -28,6 +33,7 @@ export default function SignupPage() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const passwordPolicy = evaluatePasswordPolicy(password, email.trim().toLowerCase());
 
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault();
@@ -36,6 +42,13 @@ export default function SignupPage() {
     setNotice(null);
 
     const normalizedEmail = email.trim().toLowerCase();
+    const passwordPolicyError = getPasswordPolicyError(password, normalizedEmail);
+
+    if (passwordPolicyError) {
+      setError(passwordPolicyError);
+      setLoading(false);
+      return;
+    }
 
     const { data, error: authError } = await supabase.auth.signUp({
       email: normalizedEmail,
@@ -260,13 +273,15 @@ export default function SignupPage() {
             />
             <input
               type="password"
-              placeholder="סיסמה (לפחות 6 תווים)"
+              placeholder={`סיסמה חזקה (${PASSWORD_MIN_LENGTH}+ תווים)`}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              minLength={6}
+              minLength={PASSWORD_MIN_LENGTH}
+              autoComplete="new-password"
               className="wc-input text-start"
             />
+            <PasswordStrengthPanel policy={passwordPolicy} password={password} />
 
             {error && (
               <p className="rounded-2xl bg-[color:var(--wc-danger-bg)] px-4 py-3 text-center text-sm text-wc-danger">
@@ -276,7 +291,7 @@ export default function SignupPage() {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !passwordPolicy.passed}
               className="wc-button-primary mt-2 w-full px-4 py-3.5 text-sm disabled:opacity-50"
             >
               {loading ? "שולח קוד..." : "הרשמה וקבלת קוד"}
@@ -323,8 +338,12 @@ function getSignupErrorMessage(error: SignupError) {
     return "כתובת האימייל לא נראית תקינה.";
   }
 
-  if (message.includes("password")) {
-    return "הסיסמה לא עומדת בדרישות. נסה סיסמה ארוכה יותר.";
+  if (
+    error.code === "weak_password" ||
+    message.includes("weak password") ||
+    message.includes("password")
+  ) {
+    return "הסיסמה לא עומדת בדרישות האבטחה. בחר סיסמה של לפחות 10 תווים עם אות גדולה, אות קטנה, מספר וסימן מיוחד.";
   }
 
   if (message.includes("signup") && message.includes("disabled")) {
@@ -332,6 +351,80 @@ function getSignupErrorMessage(error: SignupError) {
   }
 
   return "לא הצלחנו לפתוח חשבון כרגע. בדוק את הפרטים ונסה שוב.";
+}
+
+function PasswordStrengthPanel({
+  policy,
+  password,
+}: {
+  policy: ReturnType<typeof evaluatePasswordPolicy>;
+  password: string;
+}) {
+  const progressPercent = Math.max(8, Math.round((policy.score / policy.requirements.length) * 100));
+
+  return (
+    <div className="rounded-[1.4rem] border border-white/10 bg-white/[0.045] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-black text-wc-fg1">כספת הסיסמה</p>
+          <p className="mt-1 text-xs leading-5 text-wc-fg3">
+            נבנה סיסמה שלא נשברת מ-123456 ודברים מביכים כאלה.
+          </p>
+        </div>
+        <span
+          className={[
+            "rounded-full px-3 py-1 text-xs font-black",
+            policy.passed
+              ? "bg-wc-neon/15 text-wc-neon"
+              : password
+                ? "bg-amber-400/15 text-amber-200"
+                : "bg-white/10 text-wc-fg3",
+          ].join(" ")}
+        >
+          {password ? policy.label : "עוד לא התחלת"}
+        </span>
+      </div>
+
+      <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/10" aria-hidden="true">
+        <div
+          className={[
+            "h-full rounded-full transition-all duration-300",
+            policy.passed
+              ? "bg-wc-neon"
+              : policy.score >= 4
+                ? "bg-amber-300"
+                : "bg-[color:var(--wc-danger)]",
+          ].join(" ")}
+          style={{ width: `${progressPercent}%` }}
+        />
+      </div>
+
+      <ul className="mt-4 grid gap-2 text-xs sm:grid-cols-2">
+        {policy.requirements.map((requirement) => (
+          <li
+            key={requirement.id}
+            className={[
+              "flex items-center gap-2 rounded-2xl px-3 py-2 transition-colors",
+              requirement.passed
+                ? "bg-wc-neon/10 text-wc-neon"
+                : "bg-white/[0.035] text-wc-fg3",
+            ].join(" ")}
+          >
+            <span
+              className={[
+                "grid h-5 w-5 shrink-0 place-items-center rounded-full text-[0.7rem] font-black",
+                requirement.passed ? "bg-wc-neon text-black" : "bg-white/10 text-wc-fg3",
+              ].join(" ")}
+              aria-hidden="true"
+            >
+              {requirement.passed ? "✓" : "•"}
+            </span>
+            <span>{requirement.label}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 }
 
 function GoogleIcon() {

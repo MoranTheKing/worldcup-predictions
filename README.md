@@ -7,7 +7,7 @@
 נכון ל-2026-04-24, האפליקציה כוללת:
 
 - דף בית ציבורי בעברית עבור `cup26picks.com` עם הודעת “בקרוב”, שמוצג רק כשהבקשה מגיעה מהדומיין הציבורי.
-- הרשמה עם מייל וסיסמה דרך קוד OTP בן 6 ספרות.
+- הרשמה עם מייל וסיסמה דרך קוד OTP בן 6 ספרות, כולל מד סיסמה חזק שמונע סיסמאות פשוטות כמו `123456`.
 - הרשמה קיימת/מאומתת כבר לא מציגה מסך "קוד נשלח" כשהמערכת לא באמת אמורה לשלוח OTP חדש; המשתמש מקבל הכוונה להתחברות או לכתובת אחרת.
 - התחברות Google שממשיכה ל-onboarding לפני כניסה למשחק.
 - onboarding עם כינוי ייחודי, תמונת פרופיל אופציונלית, זוכת טורניר ומלך שערים כשבחירות הטורניר עדיין פתוחות.
@@ -129,6 +129,40 @@ Body:
 ```text
 Authentication -> Providers -> Email -> Email OTP Length = 6
 ```
+
+## Supabase Password Security
+
+ב-Supabase צריך להקשיח את מדיניות הסיסמאות כדי שהשרת יאכוף את אותה חוויה שמופיעה ב-UI:
+
+```text
+Authentication -> Settings -> Password Security
+```
+
+ערכים מומלצים:
+
+```text
+Minimum password length: 10
+Required characters: lowercase, uppercase, numbers, symbols
+Leaked password protection: On אם הפרויקט בתוכנית Pro ומעלה
+```
+
+ה-UI במסך `/signup` כבר חוסם שליחה עד שהסיסמה כוללת לפחות 10 תווים, אות קטנה, אות גדולה, מספר, סימן מיוחד, ואינה נראית כמו רצף פשוט או חלק מהאימייל. Supabase נשאר קו ההגנה הסופי, ולכן חשוב להפעיל את ההגדרה גם בדשבורד.
+
+## Google OAuth Branding
+
+כדי שמסך Google לא יציג `plyzqdqcokspmgrffvrm.supabase.co`, הפתרון הרשמי הוא Supabase Custom Domain לתת-דומיין כמו:
+
+```text
+auth.cup26picks.com
+```
+
+הפיצ'ר הזה הוא add-on בתשלום לפרויקט Supabase בתוכנית בתשלום. אחרי הפעלה צריך להוסיף ב-Google Cloud גם את ה-callback החדש:
+
+```text
+https://auth.cup26picks.com/auth/v1/callback
+```
+
+בנוסף, Google Branding/Verification עם שם ולוגו של "ניחושי מונדיאל 2026" יכול לשפר אמון, אבל בלי Custom Domain עדיין ייתכן שיופיע דומיין Supabase במסך OAuth.
 
 ## Supabase SMTP
 
