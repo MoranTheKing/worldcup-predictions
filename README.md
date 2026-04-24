@@ -14,6 +14,9 @@
 
 ### כניסה, הרשמה ו־Onboarding
 
+- הרשמה עם מייל וסיסמה עובדת עכשיו עם קוד אימות חד־פעמי במייל במקום הסתמכות על קישור אישור
+- מסך ההרשמה מציג שלב ייעודי להזנת קוד בן 6 ספרות וממשיך ל־`/onboarding` אחרי אימות מוצלח
+- תבנית מייל עברית ומעוצבת ל־Supabase נמצאת תחת `supabase/email-templates`
 - כל משתמש חדש שעובר התחברות נשלח קודם ל־`/onboarding`
 - אי אפשר להיכנס ל־`/game` או ל־`/dashboard` לפני שבוחרים כינוי ציבורי ייחודי
 - אם הטורניר עדיין לא התחיל, ה־onboarding גם אוסף:
@@ -115,6 +118,24 @@
 - `20260423000020` אוכפת ייחודיות כינויים ברמת ה־DB
 - אין צורך במיגרציית SQL נוספת עבור העלאת תמונות אישיות
 - ה־bucket הפרטי של האווטארים נוצר ומוקשח אוטומטית בשרת בהעלאה הראשונה
+
+## הגדרות Auth חיצוניות
+
+### Supabase Email Templates
+
+כדי שהרשמה במייל תשלח קוד ולא קישור, יש לעדכן בפרויקט Supabase הפעיל:
+
+- `Authentication -> Email Templates -> Confirm signup`
+- `Subject`: `קוד האימות שלך למונדיאל 2026`
+- `Body`: התוכן המלא של `supabase/email-templates/confirm-signup-he.html`
+
+### Google OAuth
+
+את מסך ההרשאה של Google מגדירים ב־Google Cloud ולא בקוד:
+
+- `Google Cloud Console -> Google Auth Platform -> Branding`
+- להגדיר שם אפליקציה, לוגו, support email ו־authorized domain
+- כדי להחליף callback שנראה כמו `*.supabase.co`, צריך להגדיר Custom Domain או Vanity Subdomain ל־Supabase Auth
 
 ## פיתוח מקומי
 

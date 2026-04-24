@@ -30,8 +30,8 @@ export default function PlayerPicker({
 
   const sortedPlayers = useMemo(() => {
     return [...players].sort((left, right) => {
-      const leftWinner = left.team_id === winnerId;
-      const rightWinner = right.team_id === winnerId;
+      const leftWinner = String(left.team_id ?? "") === winnerId;
+      const rightWinner = String(right.team_id ?? "") === winnerId;
 
       if (leftWinner && !rightWinner) return -1;
       if (!leftWinner && rightWinner) return 1;

@@ -6,6 +6,8 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 
+const CODE_LENGTH = 6;
+
 export default function SignupPage() {
   const searchParams = useSearchParams();
   const supabase = createClient();
@@ -15,17 +17,22 @@ export default function SignupPage() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [verificationCode, setVerificationCode] = useState("");
+  const [pendingEmail, setPendingEmail] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setNotice(null);
+
+    const normalizedEmail = email.trim().toLowerCase();
 
     const { data, error: authError } = await supabase.auth.signUp({
-      email,
+      email: normalizedEmail,
       password,
       options: {
         emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`,
@@ -33,11 +40,69 @@ export default function SignupPage() {
     });
 
     if (authError) {
-      setError(authError.message === "User already registered" ? "האימייל הזה כבר רשום" : "שגיאה בהרשמה, נסה שוב");
+      setError(
+        authError.message === "User already registered"
+          ? "האימייל הזה כבר רשום. אפשר להתחבר במקום."
+          : "לא הצלחנו לפתוח חשבון כרגע. בדוק את הפרטים ונסה שוב.",
+      );
     } else if (data.session) {
       window.location.assign(`/onboarding?next=${encodeURIComponent(nextPath)}`);
     } else {
-      setSuccess(true);
+      setPendingEmail(normalizedEmail);
+      setVerificationCode("");
+      setNotice("שלחנו לך קוד אימות בן 6 ספרות. הוא מחכה באימייל.");
+    }
+
+    setLoading(false);
+  }
+
+  async function handleVerifyCode(e: React.FormEvent) {
+    e.preventDefault();
+    if (!pendingEmail || verificationCode.length !== CODE_LENGTH) {
+      setError("צריך להזין את כל 6 הספרות של קוד האימות.");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    setNotice(null);
+
+    const { error: authError } = await supabase.auth.verifyOtp({
+      email: pendingEmail,
+      token: verificationCode,
+      type: "email",
+    });
+
+    if (authError) {
+      setError("הקוד לא תקין או שפג תוקף. בדוק את המייל ונסה שוב.");
+      setLoading(false);
+      return;
+    }
+
+    window.location.assign(`/onboarding?next=${encodeURIComponent(nextPath)}`);
+  }
+
+  async function handleResendCode() {
+    if (!pendingEmail) {
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    setNotice(null);
+
+    const { error: authError } = await supabase.auth.resend({
+      type: "signup",
+      email: pendingEmail,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`,
+      },
+    });
+
+    if (authError) {
+      setError("לא הצלחנו לשלוח קוד חדש. חכה רגע קצר ונסה שוב.");
+    } else {
+      setNotice("שלחנו קוד חדש. אם הוא לא מופיע, בדוק גם קידומי מכירות או ספאם.");
     }
 
     setLoading(false);
@@ -46,6 +111,7 @@ export default function SignupPage() {
   async function handleGoogleLogin() {
     setLoading(true);
     setError(null);
+    setNotice(null);
 
     const { error: authError } = await supabase.auth.signInWithOAuth({
       provider: "google",
@@ -60,18 +126,89 @@ export default function SignupPage() {
     }
   }
 
-  if (success) {
+  if (pendingEmail) {
     return (
       <main className="wc-page flex min-h-screen items-center justify-center px-4 py-10">
-        <div className="wc-glass w-full max-w-md rounded-[2rem] p-8 text-center">
-          <div className="text-5xl">📨</div>
-          <h2 className="wc-display mt-4 text-4xl text-wc-fg1">בדוק את האימייל שלך</h2>
-          <p className="mt-4 text-sm leading-7 text-wc-fg2">
-            שלחנו לך קישור אימות ל-{email}. אחרי האישור תוכל להיכנס ולהמשיך למסך שביקשת.
-          </p>
-          <Link href={loginHref} className="mt-6 inline-block text-sm font-semibold text-wc-neon underline underline-offset-4">
-            חזרה לדף ההתחברות
-          </Link>
+        <div className="w-full max-w-md">
+          <div className="mb-7 text-center">
+            <div className="wc-badge mx-auto w-fit text-sm text-wc-fg2">
+              <span className="text-wc-neon">✦</span>
+              <span>אימות מהיר ובטוח</span>
+            </div>
+            <div className="mt-5 text-5xl">📨</div>
+            <h1 className="wc-display mt-4 text-5xl text-wc-fg1">הקוד בדרך אליך</h1>
+            <p className="mt-3 text-sm leading-7 text-wc-fg2">
+              שלחנו קוד אימות ל־<span dir="ltr" className="font-semibold text-wc-fg1">{pendingEmail}</span>.
+              הזן אותו כאן, ונמשיך ישר לבחירת הפרופיל שלך.
+            </p>
+          </div>
+
+          <div className="wc-glass rounded-[2rem] p-6 text-center sm:p-8">
+            <form onSubmit={handleVerifyCode} className="flex flex-col gap-4">
+              <label htmlFor="verification-code" className="text-sm font-semibold text-wc-fg2">
+                קוד אימות בן 6 ספרות
+              </label>
+              <input
+                id="verification-code"
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                dir="ltr"
+                maxLength={CODE_LENGTH}
+                value={verificationCode}
+                onChange={(event) =>
+                  setVerificationCode(event.target.value.replace(/\D/g, "").slice(0, CODE_LENGTH))
+                }
+                className="wc-input text-center text-2xl font-black tracking-[0.45em] text-wc-fg1"
+                placeholder="000000"
+                required
+              />
+
+              {notice && (
+                <p className="rounded-2xl border border-wc-neon/25 bg-wc-neon/10 px-4 py-3 text-center text-sm text-wc-neon">
+                  {notice}
+                </p>
+              )}
+
+              {error && (
+                <p className="rounded-2xl bg-[color:var(--wc-danger-bg)] px-4 py-3 text-center text-sm text-wc-danger">
+                  {error}
+                </p>
+              )}
+
+              <button
+                type="submit"
+                disabled={loading || verificationCode.length !== CODE_LENGTH}
+                className="wc-button-primary mt-1 w-full px-4 py-3.5 text-sm disabled:opacity-50"
+              >
+                {loading ? "בודק את הקוד..." : "אמת קוד והמשך"}
+              </button>
+            </form>
+
+            <div className="mt-5 flex flex-col items-center justify-center gap-3 text-sm text-wc-fg3 sm:flex-row">
+              <button
+                type="button"
+                onClick={handleResendCode}
+                disabled={loading}
+                className="font-semibold text-wc-neon underline underline-offset-4 disabled:opacity-50"
+              >
+                שלח קוד חדש
+              </button>
+              <span className="hidden h-1 w-1 rounded-full bg-white/25 sm:block" />
+              <button
+                type="button"
+                onClick={() => {
+                  setPendingEmail(null);
+                  setVerificationCode("");
+                  setError(null);
+                  setNotice(null);
+                }}
+                className="font-semibold text-wc-fg2 underline underline-offset-4"
+              >
+                החלפת אימייל
+              </button>
+            </div>
+        </div>
         </div>
       </main>
     );
@@ -88,7 +225,7 @@ export default function SignupPage() {
           <div className="mt-5 text-5xl">🏆</div>
           <h1 className="wc-display mt-4 text-5xl text-wc-fg1">הרשמה</h1>
           <p className="mt-3 text-sm leading-7 text-wc-fg2">
-            הצטרף לליגות, נחש תוצאות והתחל לצבור נקודות עם זהות גלובלית אחת לכל האפליקציה.
+            פותחים חשבון, מקבלים קוד קצר במייל, ואז בוחרים כינוי ותמונה לפני הכניסה למשחק.
           </p>
         </div>
 
@@ -138,7 +275,7 @@ export default function SignupPage() {
               disabled={loading}
               className="wc-button-primary mt-2 w-full px-4 py-3.5 text-sm disabled:opacity-50"
             >
-              {loading ? "נרשם..." : "Create account"}
+              {loading ? "שולח קוד..." : "הרשמה וקבלת קוד"}
             </button>
           </form>
         </div>
