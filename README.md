@@ -46,6 +46,7 @@ npm.cmd run build
 
 - `app/page.tsx` - דף הבית. ב-`cup26picks.com` מוצג דף “בקרוב”; ב-localhost ובשאר ה-hosts מוצג דף הבית הרגיל של האפליקציה.
 - `app/icon.svg` - אייקון האתר שמופיע בטאב הדפדפן.
+- `cloudflare/coming-soon-worker.js` - Worker זמני להצגת דף “בקרוב” ישירות דרך Cloudflare עד שהאתר האמיתי עולה.
 - `app/login/page.tsx` - התחברות.
 - `app/signup/page.tsx` - הרשמה עם קוד OTP.
 - `app/onboarding/page.tsx` ו-`app/onboarding/OnboardingForm.tsx` - מסך הפרופיל הראשוני.
@@ -71,6 +72,31 @@ cup26picks.com
 - `admin@cup26picks.com` - כתובת ניהול פנימית לחשבונות, התראות ושירותים.
 
 Cloudflare Email Routing משמש לקבלת מיילים בלבד. שליחת מיילי Auth מתבצעת דרך Brevo SMTP.
+
+## דף “בקרוב” בדומיין הציבורי
+
+כל עוד האתר האמיתי עדיין לא מחובר ל-hosting, צריך להציג את דף “בקרוב” דרך Cloudflare Worker:
+
+1. להיכנס ל-Cloudflare.
+2. לפתוח `Workers & Pages`.
+3. ליצור Worker בשם `cup26picks-coming-soon`.
+4. להדביק את הקוד מתוך `cloudflare/coming-soon-worker.js`.
+5. להוסיף Custom Domains או Routes עבור:
+
+```text
+cup26picks.com
+www.cup26picks.com
+```
+
+אם רוצים לתפוס גם כל תת-דומיין עתידי, מוסיפים route:
+
+```text
+*.cup26picks.com/*
+```
+
+ולוודא שב-DNS יש רשומות מתאימות ושהן במצב Proxied, כלומר ענן כתום.
+
+כשמעלים את האתר האמיתי, להסיר את ה-Worker routes/custom domains כדי שהדומיין יפנה ל-hosting האמיתי.
 
 ## Supabase Auth Email
 
