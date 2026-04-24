@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import { createClient } from "@/lib/supabase/server";
@@ -12,9 +13,17 @@ const worldCupDisplay = localFont({
   weight: "500",
 });
 
-export const metadata = {
-  title: "תחזיות מונדיאל 2026",
-  description: "משחק תחזיות מונדיאל 2026",
+export const metadata: Metadata = {
+  applicationName: "ניחושי מונדיאל 2026",
+  title: {
+    default: "ניחושי מונדיאל 2026",
+    template: "%s | ניחושי מונדיאל 2026",
+  },
+  description: "משחק ניחושי מונדיאל 2026 עם פרופילים, ליגות פרטיות וטבלת ניקוד.",
+  icons: {
+    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
+    shortcut: [{ url: "/icon.svg", type: "image/svg+xml" }],
+  },
 };
 
 export default async function RootLayout({

@@ -4,49 +4,81 @@
 
 בפרויקט Supabase הפעיל:
 
-1. היכנס אל `Authentication -> Email Templates`.
-2. פתח את `Confirm signup`.
-3. בשדה `Subject` הדבק:
+1. להיכנס אל `Authentication -> Email Templates`.
+2. לפתוח את `Confirm signup`.
+3. בשדה `Subject` להדביק:
 
 ```text
 קוד האימות שלך למונדיאל 2026
 ```
 
-4. בשדה `Body` הדבק את כל התוכן של:
+4. בשדה `Body` להדביק את כל התוכן של:
 
 ```text
 supabase/email-templates/confirm-signup-he.html
 ```
 
-5. שמור, ואז בדוק הרשמה חדשה עם מייל שלא קיים במערכת.
+5. לשמור ולבדוק הרשמה חדשה עם מייל שלא קיים במערכת.
 
-## למה משתמשים בקוד ולא בקישור
+## איך התבנית עובדת
 
 התבנית משתמשת ב-`{{ .Token }}` במקום `{{ .ConfirmationURL }}`.
-זה גורם למייל להציג קוד חד-פעמי בן 6 ספרות, והאפליקציה מאמתת אותו במסך ההרשמה באמצעות `supabase.auth.verifyOtp`.
+כך המשתמש מקבל קוד אימות חד-פעמי ומזין אותו במסך ההרשמה, במקום ללחוץ על קישור שנראה פחות אמין.
 
-היתרון:
+כדי שהקוד יהיה בן 6 ספרות, צריך לוודא ב-Supabase:
 
-- פחות תחושה של קישור חשוד במייל.
-- אין בעיה של מערכות מייל שסורקות ולפעמים "שורפות" קישורי אימות.
-- המשתמש נשאר בתוך חוויית ההרשמה של האפליקציה.
+```text
+Authentication -> Providers -> Email -> Email OTP Length = 6
+```
 
-## מומלץ לפרודקשן
+## כתובות המייל של הדומיין
 
-כדי שהמיילים ייראו אמינים יותר:
+הכתובות שנוצרו ב-Cloudflare Email Routing:
 
-- להגדיר `Custom SMTP` ב-Supabase.
-- לשלוח מכתובת כמו `no-reply@your-domain`.
-- להגדיר `Site URL` לדומיין האמיתי של האפליקציה כשיהיה כזה.
+- `support@cup26picks.com` - כתובת התמיכה הציבורית. אפשר לפרסם באתר, בתחתית מיילים ובעתיד בעמוד יצירת קשר.
+- `no-reply@cup26picks.com` - כתובת שליחת מיילי Auth. זו הכתובת שצריכה להופיע ב-Supabase כ-`Sender email`.
+- `admin@cup26picks.com` - כתובת ניהול פנימית להתראות, חשבונות שירות וגישה למערכות כמו Supabase, Brevo או Cloudflare.
 
-## Google OAuth branding
+חשוב: Cloudflare Email Routing מטפל בקבלת מיילים בלבד. שליחת מיילי Auth נעשית דרך Brevo SMTP.
 
-את מסך ההרשאה של Google לא משנים מתוך הקוד של האפליקציה.
-צריך להגדיר אותו ב-Google Cloud:
+## Supabase SMTP
 
-1. `Google Cloud Console -> Google Auth Platform -> Branding`.
-2. להגדיר שם אפליקציה ברור בעברית או באנגלית, למשל `World Cup Predictions`.
-3. להוסיף לוגו.
-4. להגדיר support email.
-5. להוסיף authorized domain של הדומיין האמיתי של האתר.
-6. אם רוצים להימנע ממראה של `supabase.co` במסך האישור, צריך להגדיר Custom Domain/Vanity Subdomain ב-Supabase Auth ולהשתמש בו כ-callback.
+ב-Supabase:
+
+```text
+Authentication -> Settings -> SMTP Settings
+```
+
+ערכים מומלצים:
+
+```text
+Sender email: no-reply@cup26picks.com
+Sender name: ניחושי מונדיאל 2026
+Host: smtp-relay.brevo.com
+Port: 587
+Username: ה-SMTP login מ-Brevo
+Password: ה-SMTP key מ-Brevo
+```
+
+לא לשמור סיסמאות או SMTP keys בקבצים של הפרויקט.
+
+## מגבלות שליחה
+
+Brevo Free מוגבל לכמות יומית לחשבון, ולכן כדאי להשאיר ב-Supabase מגבלות הגיוניות:
+
+```text
+Emails sent: 100 per hour
+OTP sent: 30-60 per hour
+OTP resend interval: 60 seconds
+Signup confirmation request: 60 seconds
+```
+
+אם יש יום השקה עם הרבה משתמשים, צריך להעלות תוכנית ב-Brevo או להכין מראש תור/רשימת המתנה.
+
+## תמונת שולח ב-Gmail
+
+הלוגו בתוך המייל נשלט על ידי קובץ ה-HTML.
+התמונה הקטנה ליד שם השולח בתיבת הדואר אינה מוגדרת ב-Supabase או ב-Brevo בכפתור פשוט.
+בשביל זה צריך BIMI: אימות SPF/DKIM/DMARC, מדיניות DMARC מחמירה, לוגו SVG מתאים, ולעיתים גם תעודה בתשלום.
+
+כרגע ההמלצה היא להשקיע בלוגו ובתוכן המייל עצמו, ולא להיכנס ל-BIMI עד שיש דומיין ואתר יציבים בפרודקשן.
