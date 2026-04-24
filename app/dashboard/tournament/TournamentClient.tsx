@@ -899,6 +899,7 @@ function SeedRow({
             alt={seed.team.name}
             width={12}
             height={9}
+            style={{ width: 12, height: 9 }}
             className="rounded-sm object-cover"
             unoptimized
           />
@@ -964,6 +965,7 @@ function PlaceholderSeedPart({
             alt={part.team.name}
             width={12}
             height={9}
+            style={{ width: 12, height: 9 }}
             className="h-[9px] w-3 rounded-[2px] object-cover"
             unoptimized
           />
@@ -1063,13 +1065,14 @@ function GroupTable({
                         <Image
                           src={entry.team.logo_url}
                           alt={entry.team.name}
-                          width={18}
+                          width={16}
                           height={12}
+                          style={{ width: 16, height: 12 }}
                           className="rounded-sm object-cover"
                           unoptimized
                         />
                       ) : (
-                        <div className="h-3 w-[18px] rounded-sm bg-white/10" />
+                        <div className="h-3 w-4 rounded-sm bg-white/10" />
                       )}
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 overflow-hidden">
@@ -1202,13 +1205,14 @@ function BestThirdRow({
             <Image
               src={entry.team.logo_url}
               alt={entry.team.name}
-              width={18}
+              width={16}
               height={12}
+              style={{ width: 16, height: 12 }}
               className="rounded-sm object-cover"
               unoptimized
             />
           ) : (
-            <div className="h-3 w-[18px] rounded-sm bg-white/10" />
+            <div className="h-3 w-4 rounded-sm bg-white/10" />
           )}
           <span className="truncate font-semibold text-wc-fg1">{entry.team.name_he ?? entry.team.name}</span>
         </div>
