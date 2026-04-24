@@ -122,7 +122,15 @@ function TeamBlock({ logo, name }: { logo: string | null; name: string }) {
   return (
     <div className="flex flex-col items-center gap-3">
       {logo ? (
-        <Image src={logo} alt={name} width={72} height={48} className="rounded-md object-cover" unoptimized />
+        <Image
+          src={logo}
+          alt={name}
+          width={72}
+          height={48}
+          className="rounded-md object-cover"
+          style={{ height: 48, width: 72 }}
+          unoptimized
+        />
       ) : (
         <div className="h-12 w-[72px] rounded-md bg-white/10" />
       )}

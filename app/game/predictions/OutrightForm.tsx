@@ -93,6 +93,7 @@ export default function OutrightForm({
                   width={40}
                   height={28}
                   className="h-7 w-10 rounded-[6px] object-cover"
+                  style={{ height: 28, width: 40 }}
                   unoptimized
                 />
               ) : (

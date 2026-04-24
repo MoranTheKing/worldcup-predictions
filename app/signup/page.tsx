@@ -50,7 +50,7 @@ export default function SignupPage() {
     } else if (data.session) {
       window.location.assign(`/onboarding?next=${encodeURIComponent(nextPath)}`);
     } else if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
-      setError("האימייל הזה כבר רשום ומאומת. אפשר להתחבר במקום, או להשתמש בכתובת אחרת להרשמה.");
+      setError("לא ניתן לפתוח הרשמה חדשה לכתובת הזו. אם כבר נרשמת, התחבר במקום; אחרת נסה כתובת אחרת.");
     } else {
       setPendingEmail(normalizedEmail);
       setVerificationCode("");
@@ -106,7 +106,7 @@ export default function SignupPage() {
     if (authError) {
       setError(getSignupErrorMessage(authError));
     } else {
-      setNotice("שלחנו קוד חדש אם הכתובת עדיין ממתינה לאימות. אם הוא לא מופיע, בדוק גם קידומי מכירות או ספאם; אם הכתובת כבר רשומה ומאומתת, צריך להתחבר במקום.");
+      setNotice("שלחנו קוד חדש אם הכתובת עדיין ממתינה לאימות. אם הוא לא מופיע, בדוק גם קידומי מכירות או ספאם; אם כבר נרשמת, צריך להתחבר במקום.");
     }
 
     setLoading(false);

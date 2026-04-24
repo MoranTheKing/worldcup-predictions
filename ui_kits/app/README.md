@@ -9,6 +9,7 @@ Dark-mode-first, Hebrew RTL, mobile-first (390px phone frame).
 |---|---|
 | Login | Launch page / Tweaks panel |
 | Sign Up | "הרשמה" link on login |
+| Onboarding | After first successful signup/login until profile setup is complete |
 | Dashboard — Matches | After login, default tab |
 | Tournament — Groups | "טורניר" tab → "שלב הבתים" |
 | Tournament — Knockout | "טורניר" tab → "נוקאאוט" |
@@ -34,3 +35,10 @@ Dark-mode-first, Hebrew RTL, mobile-first (390px phone frame).
 - `BottomNav` — frosted glass tab bar with neon active state
 - `DashboardHeader` — mobile header with streak pill
 - `TweaksPanel` — screen navigator (accessible via Tweaks toggle)
+
+## Production Parity Note - 2026-04-24
+
+The production app now requires onboarding before protected dashboard/game screens.
+The verified happy path is signup -> OTP verification -> onboarding profile/outright picks -> `/dashboard/matches`.
+
+Recent production fixes also added explicit CSS dimensions to real flag images to avoid Next 16 aspect-ratio warnings, and the root layout opts into `data-scroll-behavior="smooth"` because the global CSS uses smooth scrolling.

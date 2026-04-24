@@ -67,3 +67,10 @@ Required DB remediations:
 For the full security narrative, see:
 
 - `SECURITY_AUDIT_2026-04-23.md`
+
+## Public tournament projection
+
+`/dashboard/tournament` is a public dashboard view, not a social-prediction view.
+After the RLS privacy hardening, it uses a server-side admin client to read only public tournament fields needed for groups, bracket slots, flags, records, and elimination state.
+
+This keeps the public tournament page usable while leaving user predictions, league membership, and hidden outright picks under the social privacy rules above.

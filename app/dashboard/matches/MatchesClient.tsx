@@ -315,7 +315,15 @@ function TeamSide({
   return (
     <div className={`flex min-w-0 flex-1 items-center gap-2 ${reverse ? "flex-row-reverse text-end" : "text-start"}`}>
       {logo ? (
-        <Image src={logo} alt={name} width={26} height={18} className="rounded-sm object-cover" unoptimized />
+        <Image
+          src={logo}
+          alt={name}
+          width={26}
+          height={18}
+          className="rounded-sm object-cover"
+          style={{ height: 18, width: 26 }}
+          unoptimized
+        />
       ) : (
         <div className="h-[18px] w-[26px] rounded-sm bg-white/10" />
       )}

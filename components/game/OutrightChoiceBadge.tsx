@@ -100,6 +100,7 @@ function ChoiceIcon({
         className={`flex-shrink-0 rounded-[4px] object-cover ${
           hero ? "h-7 w-10" : "h-4 w-[22px]"
         }`}
+        style={{ height: hero ? 28 : 16, width: hero ? 40 : 22 }}
         unoptimized
       />
     );

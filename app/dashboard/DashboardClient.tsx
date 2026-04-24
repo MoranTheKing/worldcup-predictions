@@ -356,6 +356,7 @@ function ProfileTab({
                     width={40}
                     height={27}
                     className="rounded object-cover"
+                    style={{ height: 27, width: 40 }}
                     unoptimized
                   />
                 ) : (

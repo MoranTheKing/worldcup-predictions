@@ -41,6 +41,7 @@ export default async function RootLayout({
     <html
       lang="he"
       dir="rtl"
+      data-scroll-behavior="smooth"
       suppressHydrationWarning
       className={`${worldCupDisplay.variable} dark h-full`}
     >

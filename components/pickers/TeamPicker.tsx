@@ -71,6 +71,7 @@ export default function TeamPicker({
               width={22}
               height={16}
               className="h-4 w-[22px] flex-shrink-0 rounded-[4px] object-cover"
+              style={{ height: 16, width: 22 }}
               unoptimized
             />
           ) : (
@@ -127,6 +128,7 @@ export default function TeamPicker({
                         width={22}
                         height={15}
                         className="h-[15px] w-[22px] flex-shrink-0 rounded-[3px] object-cover"
+                        style={{ height: 15, width: 22 }}
                         unoptimized
                       />
                     ) : (

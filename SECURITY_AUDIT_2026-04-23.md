@@ -318,6 +318,17 @@ The active Supabase project must run:
 - `20260423000018_restore_social_prediction_privacy.sql`
 - `20260423000019_enforce_prediction_lock_windows.sql`
 
+## 2026-04-24 follow-up
+
+No new database migration was required for the 2026-04-24 browser QA pass.
+
+Security-relevant follow-up:
+
+- signup now detects the Supabase "no new identity" response shape and avoids showing the OTP-entry screen when a new code is not expected
+- the copy was kept generic enough to guide the user toward login without explicitly saying that the submitted address is confirmed
+- `/dashboard/tournament` uses a server-side admin read only for public tournament projection data such as match slots, team names, flags, standings fields, and elimination state
+- social prediction privacy remains governed by the RLS/audit fixes above; the public tournament read does not expose user prediction rows
+
 ## Post-audit hardening landed later on 2026-04-23
 
 Not tied to a specific open PR, but implemented as a direct follow-up:
