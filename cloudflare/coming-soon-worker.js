@@ -284,7 +284,14 @@ const HTML = `<!doctype html>
 </html>`;
 
 const worker = {
-  async fetch() {
+  async fetch(request) {
+    const url = new URL(request.url);
+
+    if (url.protocol === "http:") {
+      url.protocol = "https:";
+      return Response.redirect(url.toString(), 301);
+    }
+
     return new Response(HTML, {
       headers: {
         "content-type": "text/html;charset=UTF-8",
