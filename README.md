@@ -65,6 +65,7 @@ npm.cmd run build
 - `app/game/*` - אזור המשחק והליגות.
 - `supabase/email-templates/confirm-signup-he.html` - תבנית מייל האימות בעברית.
 - `SECURITY_AUDIT_2026-04-23.md` - פירוט האבטחה וה-PRs שטופלו.
+- `BSD_SYNC_ARCHITECTURE_2026-04-24.md` - מסמך תכנון בעברית לסנכרון עתידי מול BSD API, כולל Cloudflare Worker, Supabase, Realtime, odds וניקוד.
 
 ## דומיין ומיילים
 
