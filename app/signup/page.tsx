@@ -8,6 +8,12 @@ import { useState } from "react";
 
 const CODE_LENGTH = 6;
 
+type SignupError = {
+  code?: string;
+  message?: string;
+  status?: number;
+};
+
 export default function SignupPage() {
   const searchParams = useSearchParams();
   const supabase = createClient();
@@ -40,11 +46,7 @@ export default function SignupPage() {
     });
 
     if (authError) {
-      setError(
-        authError.message === "User already registered"
-          ? "האימייל הזה כבר רשום. אפשר להתחבר במקום."
-          : "לא הצלחנו לפתוח חשבון כרגע. בדוק את הפרטים ונסה שוב.",
-      );
+      setError(getSignupErrorMessage(authError));
     } else if (data.session) {
       window.location.assign(`/onboarding?next=${encodeURIComponent(nextPath)}`);
     } else {
@@ -100,7 +102,7 @@ export default function SignupPage() {
     });
 
     if (authError) {
-      setError("לא הצלחנו לשלוח קוד חדש. חכה רגע קצר ונסה שוב.");
+      setError(getSignupErrorMessage(authError));
     } else {
       setNotice("שלחנו קוד חדש. אם הוא לא מופיע, בדוק גם קידומי מכירות או ספאם.");
     }
@@ -289,6 +291,45 @@ export default function SignupPage() {
       </div>
     </main>
   );
+}
+
+function getSignupErrorMessage(error: SignupError) {
+  const message = (error.message ?? "").toLowerCase();
+
+  if (
+    error.code === "over_email_send_rate_limit" ||
+    message.includes("email rate limit") ||
+    message.includes("rate limit exceeded")
+  ) {
+    return "Supabase מגביל כרגע שליחת מיילים. חכה קצת ונסה שוב, או נגדיר Custom SMTP כדי להסיר את המגבלה הנמוכה של סביבת הפיתוח.";
+  }
+
+  if (
+    error.status === 429 ||
+    error.code === "over_request_rate_limit" ||
+    message.includes("only request this after") ||
+    message.includes("too many requests")
+  ) {
+    return "שלחנו קוד ממש עכשיו. מטעמי אבטחה צריך להמתין בערך דקה לפני שמבקשים קוד נוסף או נרשמים שוב.";
+  }
+
+  if (message.includes("user already registered")) {
+    return "האימייל הזה כבר רשום. אפשר להתחבר במקום.";
+  }
+
+  if (message.includes("invalid email")) {
+    return "כתובת האימייל לא נראית תקינה.";
+  }
+
+  if (message.includes("password")) {
+    return "הסיסמה לא עומדת בדרישות. נסה סיסמה ארוכה יותר.";
+  }
+
+  if (message.includes("signup") && message.includes("disabled")) {
+    return "הרשמה במייל כבויה כרגע בהגדרות Supabase.";
+  }
+
+  return "לא הצלחנו לפתוח חשבון כרגע. בדוק את הפרטים ונסה שוב.";
 }
 
 function GoogleIcon() {
