@@ -62,12 +62,10 @@ export default function SignupPage() {
       setError(getSignupErrorMessage(authError));
     } else if (data.session) {
       window.location.assign(`/onboarding?next=${encodeURIComponent(nextPath)}`);
-    } else if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
-      setError("לא ניתן לפתוח הרשמה חדשה לכתובת הזו. אם כבר נרשמת, התחבר במקום; אחרת נסה כתובת אחרת.");
     } else {
       setPendingEmail(normalizedEmail);
       setVerificationCode("");
-      setNotice("שלחנו לך קוד אימות בן 6 ספרות. הוא מחכה באימייל.");
+      setNotice("אם אפשר להמשיך עם ההרשמה לכתובת הזו, שלחנו קוד אימות בן 6 ספרות לאימייל.");
     }
 
     setLoading(false);
