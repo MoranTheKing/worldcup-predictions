@@ -1,5 +1,6 @@
 "use client";
 
+import { useDevLiveRefresh } from "@/lib/dev/live-refresh";
 import {
   formatMatchTimeLabel,
   getMatchScoreSummary,
@@ -30,6 +31,8 @@ function formatDateTime(iso: string) {
 }
 
 export default function MatchDetailClient({ match }: { match: MatchDetailRow }) {
+  useDevLiveRefresh();
+
   const scoreSummary = isMatchScoreVisible(match) ? getMatchScoreSummary(match) : null;
   const homeName = getTeamDisplayName(match.homeTeam, match.home_placeholder);
   const awayName = getTeamDisplayName(match.awayTeam, match.away_placeholder);

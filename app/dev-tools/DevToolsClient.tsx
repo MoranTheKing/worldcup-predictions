@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
+import { notifyDevLiveRefresh } from "@/lib/dev/live-refresh";
 import {
   getStageLabelHe,
   getTeamDisplayName,
@@ -161,6 +162,7 @@ function DevToolsClientInner({ matches, error }: Props) {
 
   function refreshWithMessage(nextMessage: string) {
     setMessage(nextMessage);
+    notifyDevLiveRefresh(nextMessage);
     startTransition(() => router.refresh());
   }
 

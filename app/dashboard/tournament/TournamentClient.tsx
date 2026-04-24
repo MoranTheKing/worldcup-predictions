@@ -5,6 +5,7 @@ import type {
   ResolvedBracketMatch,
   ResolvedSeed,
 } from "@/lib/bracket/knockout";
+import { useDevLiveRefresh } from "@/lib/dev/live-refresh";
 import type { StandingStatus, TeamStanding } from "@/lib/utils/standings";
 import Image from "next/image";
 import { useMemo, useState } from "react";
@@ -309,6 +310,8 @@ export default function TournamentClient({
   liveGroupScores,
 }: Props) {
   const [tab, setTab] = useState<Tab>("groups");
+  useDevLiveRefresh();
+
   const groupLetters = Object.keys(groupStandings).sort();
   const podium = useMemo(
     () => buildTournamentPodium(bracket, knockoutTree),

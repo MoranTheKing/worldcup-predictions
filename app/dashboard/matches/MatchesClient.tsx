@@ -1,5 +1,6 @@
 "use client";
 
+import { useDevLiveRefresh } from "@/lib/dev/live-refresh";
 import { buildKnockoutWinnerTree } from "@/lib/tournament/knockout-tree";
 import {
   formatMatchDateLabel,
@@ -83,6 +84,8 @@ function getStatusMeta(status: string, minute: number | null) {
 
 export default function MatchesClient({ matches }: { matches: MatchListRow[] }) {
   const [filter, setFilter] = useState<Filter>("all");
+  useDevLiveRefresh();
+
   const knockoutTree = useMemo(() => buildKnockoutWinnerTree(matches), [matches]);
   const knockoutNodesByMatchNumber = useMemo<Map<number, KnockoutSortNode>>(
     () =>
