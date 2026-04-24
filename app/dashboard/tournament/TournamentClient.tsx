@@ -983,9 +983,7 @@ function KnockoutMatchCard({
   const thirdVariant = variant === "third";
 
   const hasPenalties =
-    isFinished &&
     liveMatch &&
-    liveMatch.home_score === liveMatch.away_score &&
     liveMatch.home_penalty_score !== null &&
     liveMatch.home_penalty_score !== undefined &&
     liveMatch.away_penalty_score !== null &&
