@@ -1,4 +1,4 @@
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { buildTournamentTeams, getGroupMatches, type TournamentTeamStateRow } from "@/lib/tournament/tournament-state";
 import {
   buildTournamentStandings,
@@ -20,7 +20,7 @@ type LiveGroupScoreMap = Record<
 export const dynamic = "force-dynamic";
 
 export default async function TournamentPage() {
-  const supabase = createAdminClient();
+  const supabase = await createClient();
 
   const { data: matchesData } = await supabase
     .from("matches")
