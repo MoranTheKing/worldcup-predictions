@@ -105,23 +105,14 @@ export default function MfaSetupClient({ nextPath }: { nextPath: string }) {
     setError(null);
 
     try {
-      const { data: challenge, error: challengeError } = await supabase.auth.mfa.challenge({
+      const { error: verifyError } = await supabase.auth.mfa.challengeAndVerify({
         factorId: enrollment.factorId,
-      });
-
-      if (challengeError || !challenge?.id) {
-        setError("לא הצלחנו להתחיל אימות מול Authenticator. נסה שוב.");
-        return;
-      }
-
-      const { error: verifyError } = await supabase.auth.mfa.verify({
-        factorId: enrollment.factorId,
-        challengeId: challenge.id,
         code,
       });
 
       if (verifyError) {
-        setError("הקוד לא תקין או שכבר פג תוקפו. פתח את האפליקציה והזן קוד חדש.");
+        console.error("[MfaSetupClient] TOTP setup verification failed", verifyError);
+        setError(getMfaSetupVerifyErrorMessage(verifyError));
         return;
       }
 
@@ -299,4 +290,21 @@ function isMissingFactorError(error: { code?: string; message?: string }) {
     error.code === "mfa_factor_not_found" ||
     (error.message ?? "").toLowerCase().includes("factor not found")
   );
+}
+
+function getMfaSetupVerifyErrorMessage(error: { code?: string; message?: string; status?: number }) {
+  const message = (error.message ?? "").toLowerCase();
+
+  if (
+    error.code === "mfa_verification_failed" ||
+    error.code === "mfa_challenge_expired" ||
+    error.status === 422 ||
+    message.includes("invalid") ||
+    message.includes("expired") ||
+    message.includes("verification")
+  ) {
+    return "הקוד לא תקין או שכבר התחלף. פתח את אפליקציית האימות והזן את הקוד החדש שמופיע עכשיו.";
+  }
+
+  return "לא הצלחנו לאמת את ה-Authenticator כרגע. נסה לרענן את המסך ולסרוק קוד חדש.";
 }

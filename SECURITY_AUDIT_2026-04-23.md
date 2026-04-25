@@ -459,6 +459,7 @@ Security-relevant follow-up:
 - the root layout performs an initial MFA assurance check server-side, preventing protected page content from flashing before the TOTP challenge appears
 - dev live refresh polling now checks `/api/dev/matches/version` and calls `router.refresh()` only when match data changed, reducing unnecessary dev re-renders
 - email OTP resend/signup cooldown now shows a user-friendly 60-second countdown instead of exposing Supabase/SMTP rate-limit details
+- TOTP setup verification now uses Supabase `challengeAndVerify` as one atomic operation, preventing email/password signup users from failing between challenge creation and QR-code verification
 
 ## Post-audit hardening landed later on 2026-04-23
 
