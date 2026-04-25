@@ -165,6 +165,7 @@ Leaked password protection: On אם הפרויקט בתוכנית Pro ומעלה
 - במסך ההגדרה מוצגות אפליקציות Authenticator נפוצות: Google Authenticator, Microsoft Authenticator, 2FAS Auth ו-1Password.
 - אם משתמש בחר Authenticator והתחיל את ההגדרה אבל עבר ל-onboarding לפני שסיים, הוא מוחזר קודם ל-`/mfa/setup`.
 - בכניסות הבאות, רק משתמשים שיש להם factor מסוג TOTP במצב `verified` יקבלו מסך קוד נוסף אחרי סיסמה.
+- בדיקת ה-MFA ברקע לא מחליפה את המסך ולא מציגה מצב "בודקים"; מסך הקוד מופיע רק כש-Supabase מחזיר שבאמת נדרש `aal2`.
 - משתמשים שנרשמו דרך Google או מייל רגיל בלי לסמן Authenticator לא רואים את מסך הקוד הנוסף.
 
 הערה חשובה: Authenticator הוא שכבת MFA שנייה אחרי התחברות בסיסית, לא תחליף מלא למייל/סיסמה או Google. אם בעתיד נרצה לחייב MFA גם ל-Google, צריך להחליט זאת במפורש ולעדכן את זרימת ה-onboarding.

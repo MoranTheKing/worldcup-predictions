@@ -185,13 +185,12 @@ export function AuthProvider({
   };
 
   const shouldShowMfaGate =
-    Boolean(user) && !isMfaNeutralPath(pathname) && mfaGateState !== "clear";
+    Boolean(user) && !isMfaNeutralPath(pathname) && mfaGateState === "challenge";
 
   return (
     <AuthContext.Provider value={value}>
       {shouldShowMfaGate ? (
         <MfaChallengeScreen
-          isChecking={mfaGateState === "checking"}
           onSuccess={() => {
             setMfaGateState("clear");
             router.refresh();
@@ -227,12 +226,10 @@ function isMfaNeutralPath(pathname: string) {
 }
 
 function MfaChallengeScreen({
-  isChecking,
   onSignOut,
   onSuccess,
   supabase,
 }: {
-  isChecking: boolean;
   onSignOut: () => Promise<void>;
   onSuccess: () => void;
   supabase: ReturnType<typeof createClient>;
@@ -294,44 +291,38 @@ function MfaChallengeScreen({
         </div>
 
         <div className="wc-glass rounded-[2rem] p-6 sm:p-8">
-          {isChecking ? (
-            <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.045] px-4 py-5 text-center text-sm text-wc-fg2">
-              בודקים אם החשבון דורש קוד Authenticator...
-            </div>
-          ) : (
-            <form onSubmit={handleVerify} className="flex flex-col gap-4">
-              <label htmlFor="mfa-code" className="text-sm font-semibold text-wc-fg2">
-                קוד בן 6 ספרות
-              </label>
-              <input
-                id="mfa-code"
-                type="text"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                dir="ltr"
-                maxLength={6}
-                value={code}
-                onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
-                className="wc-input text-center text-2xl font-black tracking-[0.45em] text-wc-fg1"
-                placeholder="000000"
-                required
-              />
+          <form onSubmit={handleVerify} className="flex flex-col gap-4">
+            <label htmlFor="mfa-code" className="text-sm font-semibold text-wc-fg2">
+              קוד בן 6 ספרות
+            </label>
+            <input
+              id="mfa-code"
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              dir="ltr"
+              maxLength={6}
+              value={code}
+              onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
+              className="wc-input text-center text-2xl font-black tracking-[0.45em] text-wc-fg1"
+              placeholder="000000"
+              required
+            />
 
-              {error ? (
-                <p className="rounded-2xl bg-[color:var(--wc-danger-bg)] px-4 py-3 text-center text-sm text-wc-danger">
-                  {error}
-                </p>
-              ) : null}
+            {error ? (
+              <p className="rounded-2xl bg-[color:var(--wc-danger-bg)] px-4 py-3 text-center text-sm text-wc-danger">
+                {error}
+              </p>
+            ) : null}
 
-              <button
-                type="submit"
-                disabled={isVerifying || code.length !== 6}
-                className="wc-button-primary w-full px-4 py-3.5 text-sm disabled:opacity-50"
-              >
-                {isVerifying ? "בודק קוד..." : "אימות והמשך"}
-              </button>
-            </form>
-          )}
+            <button
+              type="submit"
+              disabled={isVerifying || code.length !== 6}
+              className="wc-button-primary w-full px-4 py-3.5 text-sm disabled:opacity-50"
+            >
+              {isVerifying ? "בודק קוד..." : "אימות והמשך"}
+            </button>
+          </form>
 
           <button
             type="button"

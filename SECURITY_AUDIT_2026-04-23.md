@@ -455,6 +455,7 @@ Security-relevant follow-up:
 - existing Google users who already completed app registration continue through login normally, while first-time Google users do not silently land inside the app
 - `/mfa/setup` now removes stale unverified TOTP factors before creating a new QR, so refreshes during setup do not leave users blocked by an unfinished enrollment
 - onboarding checks for an unfinished TOTP enrollment and redirects back to `/mfa/setup` before profile completion, preserving the user's explicit MFA choice
+- the global MFA assurance check is now visually silent while it is still checking; the challenge screen is shown only after Supabase reports that `aal2` is required
 
 ## Post-audit hardening landed later on 2026-04-23
 
