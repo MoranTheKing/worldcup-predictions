@@ -3,7 +3,7 @@ const SUPPORT_EMAIL = "support@moran65.com";
 const ADMIN_EMAIL = "admin@moran65.com";
 const LOGO_URL = "https://res.cloudinary.com/dytvwwlwc/image/upload/v1777140874/Moran65_Logo_yf7tbm.png";
 const LANDING_IMAGE_URL =
-  "https://res.cloudinary.com/dytvwwlwc/image/upload/v1777143927/Moran65_qluszk.png";
+  "https://res.cloudinary.com/dytvwwlwc/image/upload/v1777145663/Moran65_la8fed.png";
 
 const HTML = `<!doctype html>
 <html lang="he" dir="rtl">
