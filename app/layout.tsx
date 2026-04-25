@@ -23,8 +23,32 @@ export const metadata: Metadata = {
   },
   description: "משחק ניחושי מונדיאל 2026 בעברית עם פרופילים, ליגות פרטיות וטבלת ניקוד.",
   icons: {
-    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
-    shortcut: [{ url: "/icon.svg", type: "image/svg+xml" }],
+    icon: [{ url: "/icon.png", type: "image/png" }],
+    shortcut: [{ url: "/favicon.ico" }],
+    apple: [{ url: "/icon.png", type: "image/png" }],
+  },
+  openGraph: {
+    title: "Moran 65 - ניחושי מונדיאל 2026",
+    description:
+      "חוויית ניחושי מונדיאל 2026 עם תוצאות לייב, פרופילי שחקנים, טבלאות ודירוגים.",
+    url: "https://moran65.com",
+    siteName: "Moran 65",
+    images: [
+      {
+        url: "/brand/moran65-landing.png",
+        width: 1023,
+        height: 1537,
+        alt: "Moran65 World Cup 2026",
+      },
+    ],
+    locale: "he_IL",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Moran 65 - ניחושי מונדיאל 2026",
+    description: "אפליקציית ניחושי מונדיאל 2026 בעברית.",
+    images: ["/brand/moran65-landing.png"],
   },
 };
 

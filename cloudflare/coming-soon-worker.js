@@ -1,15 +1,9 @@
 const DOMAIN = "moran65.com";
 const SUPPORT_EMAIL = "support@moran65.com";
 const ADMIN_EMAIL = "admin@moran65.com";
-
-const favicon = encodeURIComponent(`
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="16" fill="#07111f"/>
-  <path d="M12 20h40v26H12z" fill="none" stroke="#5fff7b" stroke-width="4"/>
-  <path d="M32 20v26M12 33h40" stroke="#ffffff" stroke-width="2" opacity=".18"/>
-  <text x="32" y="40" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-size="23" font-weight="900" fill="#5fff7b">65</text>
-</svg>
-`);
+const LOGO_URL = "https://res.cloudinary.com/dytvwwlwc/image/upload/v1777140874/Moran65_Logo_yf7tbm.png";
+const LANDING_IMAGE_URL =
+  "https://res.cloudinary.com/dytvwwlwc/image/upload/v1777143927/Moran65_qluszk.png";
 
 const HTML = `<!doctype html>
 <html lang="he" dir="rtl">
@@ -21,7 +15,13 @@ const HTML = `<!doctype html>
       name="description"
       content="Moran 65 הוא משחק ניחושי מונדיאל 2026 בעברית. האתר נמצא בתהליכי הקמה וייפתח בקרוב."
     />
-    <link rel="icon" href="data:image/svg+xml,${favicon}" />
+    <meta property="og:title" content="Moran 65 - ניחושי מונדיאל 2026" />
+    <meta property="og:description" content="חוויית הניחושים המושלמת למונדיאל 2026." />
+    <meta property="og:image" content="${LANDING_IMAGE_URL}" />
+    <meta property="og:url" content="https://${DOMAIN}" />
+    <meta property="og:type" content="website" />
+    <link rel="icon" type="image/png" href="${LOGO_URL}" />
+    <link rel="apple-touch-icon" href="${LOGO_URL}" />
     <style>
       :root {
         color-scheme: dark;
@@ -131,15 +131,12 @@ const HTML = `<!doctype html>
         font-weight: 900;
       }
 
-      .brand-mark {
-        display: grid;
+      .brand-logo {
         width: 38px;
         height: 38px;
-        place-items: center;
         border-radius: 50%;
-        color: #041008;
-        background: linear-gradient(135deg, var(--neon), var(--mint));
-        font-weight: 1000;
+        object-fit: cover;
+        box-shadow: 0 0 24px rgba(255,182,73,.24);
       }
 
       .status-pill {
@@ -287,51 +284,21 @@ const HTML = `<!doctype html>
         filter: blur(18px);
       }
 
-      .logo-card {
+      .poster-card {
         position: relative;
-        display: grid;
-        width: min(100%, 360px);
-        aspect-ratio: 1;
+        width: min(100%, 420px);
         margin: 0 auto;
-        place-items: center;
-        border: 1px solid rgba(95,255,123,.22);
+        overflow: hidden;
+        border: 1px solid rgba(255,182,73,.30);
         border-radius: 46px;
-        background:
-          linear-gradient(150deg, rgba(95,255,123,.14), rgba(255,255,255,.035)),
-          #07111f;
-        box-shadow: 0 28px 90px rgba(0,0,0,.38), 0 0 80px rgba(95,255,123,.13);
+        background: #07111f;
+        box-shadow: 0 28px 90px rgba(0,0,0,.38), 0 0 80px rgba(255,182,73,.16);
       }
 
-      .logo-card::before {
-        content: "";
-        position: absolute;
-        inset: 28px;
-        border-radius: 36px;
-        border: 1px dashed rgba(255,255,255,.16);
-      }
-
-      .logo-number {
-        position: relative;
-        z-index: 1;
-        display: grid;
-        place-items: center;
-        text-align: center;
-      }
-
-      .logo-number strong {
-        color: var(--neon);
-        font-size: clamp(112px, 16vw, 158px);
-        line-height: .82;
-        letter-spacing: -0.08em;
-        text-shadow: 0 0 40px rgba(95,255,123,.20);
-      }
-
-      .logo-number span {
-        margin-top: 8px;
-        color: var(--muted);
-        font-size: 14px;
-        font-weight: 1000;
-        letter-spacing: .38em;
+      .poster-card img {
+        display: block;
+        width: 100%;
+        height: auto;
       }
 
       .progress-card {
@@ -415,7 +382,7 @@ const HTML = `<!doctype html>
       }
 
       @media (prefers-reduced-motion: no-preference) {
-        .logo-card {
+        .poster-card {
           animation: float 5s ease-in-out infinite;
         }
 
@@ -469,7 +436,7 @@ const HTML = `<!doctype html>
       <div class="shell">
         <section class="hero">
           <div class="topline">
-            <div class="brand"><span class="brand-mark">M65</span><span>${DOMAIN}</span></div>
+            <div class="brand"><img class="brand-logo" src="${LOGO_URL}" alt="" /><span>${DOMAIN}</span></div>
             <div class="status-pill">לפני שריקת הפתיחה</div>
           </div>
 
@@ -508,11 +475,8 @@ const HTML = `<!doctype html>
 
         <aside class="showcase">
           <div class="halo" aria-hidden="true"></div>
-          <div class="logo-card" aria-label="Moran 65">
-            <div class="logo-number">
-              <strong>65</strong>
-              <span>MORAN</span>
-            </div>
+          <div class="poster-card" aria-label="Moran65 World Cup 2026">
+            <img src="${LANDING_IMAGE_URL}" alt="Moran65 - נחש נכדיו, חוויית הניחושים המושלמת למונדיאל 2026" />
           </div>
 
           <div class="progress-card">

@@ -1,4 +1,5 @@
 import { headers } from "next/headers";
+import Image from "next/image";
 import Link from "next/link";
 
 const PUBLIC_DOMAIN_HOSTS = new Set(["moran65.com", "www.moran65.com"]);
@@ -6,6 +7,8 @@ const PUBLIC_DOMAIN_HOSTS = new Set(["moran65.com", "www.moran65.com"]);
 const PUBLIC_DOMAIN = "moran65.com";
 const SUPPORT_EMAIL = "support@moran65.com";
 const ADMIN_EMAIL = "admin@moran65.com";
+const BRAND_LOGO_SRC = "/brand/moran65-logo.png";
+const LANDING_POSTER_SRC = "/brand/moran65-landing.png";
 
 const APP_HIGHLIGHTS = [
   "טורניר חי עם בתים, נוקאאוט ופודיום",
@@ -44,7 +47,13 @@ function AppHome() {
         <div className="grid w-full gap-6 lg:grid-cols-[1.12fr_0.88fr] lg:items-center">
           <section className="text-center lg:text-start">
             <div className="wc-badge mx-auto w-fit text-sm text-wc-fg2 lg:mx-0">
-              <span className="text-base text-wc-neon">65</span>
+              <Image
+                src={BRAND_LOGO_SRC}
+                alt=""
+                width={48}
+                height={48}
+                className="size-8 rounded-full object-cover shadow-[0_0_22px_rgba(255,182,73,0.22)]"
+              />
               <span>World Cup 2026 Predictions</span>
             </div>
 
@@ -81,6 +90,16 @@ function AppHome() {
           <section className="wc-card relative overflow-hidden p-6 sm:p-8">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(95,255,123,0.18),_transparent_44%),radial-gradient(circle_at_bottom_left,_rgba(255,182,73,0.16),_transparent_34%)]" />
             <div className="relative">
+              <div className="mb-5 overflow-hidden rounded-[1.7rem] border border-wc-amber/25 bg-black/30 shadow-[0_24px_70px_rgba(0,0,0,0.34)]">
+                <Image
+                  src={LANDING_POSTER_SRC}
+                  alt="Moran65 - נחש נכדיו, חוויית הניחושים המושלמת למונדיאל 2026"
+                  width={1023}
+                  height={1537}
+                  priority
+                  className="h-auto w-full object-cover"
+                />
+              </div>
               <div className="wc-kicker">Matchday Experience</div>
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
                 <div className="wc-panel p-5">
@@ -128,9 +147,13 @@ function PublicLandingHome() {
           <section className="overflow-hidden rounded-[2.2rem] border border-white/12 bg-[rgba(10,24,42,0.72)] p-6 shadow-[0_30px_100px_rgba(0,0,0,0.46)] backdrop-blur-2xl sm:p-9 lg:p-12">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="inline-flex items-center gap-3 rounded-full border border-wc-neon/30 bg-wc-neon/8 px-4 py-2 text-sm font-black text-wc-neon">
-                <span className="grid size-9 place-items-center rounded-full bg-[linear-gradient(135deg,var(--wc-neon),#28ffcf)] text-[#041009]">
-                  M65
-                </span>
+                <Image
+                  src={BRAND_LOGO_SRC}
+                  alt=""
+                  width={56}
+                  height={56}
+                  className="size-10 rounded-full object-cover shadow-[0_0_24px_rgba(255,182,73,0.24)]"
+                />
                 <span dir="ltr">{PUBLIC_DOMAIN}</span>
               </div>
               <span className="rounded-full border border-wc-amber/30 bg-wc-amber/10 px-4 py-2 text-sm font-black text-wc-amber">
@@ -178,15 +201,16 @@ function PublicLandingHome() {
           </section>
 
           <aside className="relative overflow-hidden rounded-[2.2rem] border border-white/12 bg-[rgba(8,19,34,0.74)] p-6 shadow-[0_30px_100px_rgba(0,0,0,0.44)] backdrop-blur-2xl sm:p-9">
-            <div className="absolute left-1/2 top-8 size-96 -translate-x-1/2 rounded-full bg-[radial-gradient(circle,rgba(95,255,123,0.20),transparent_62%)] blur-2xl" />
-            <div className="relative mx-auto grid aspect-square max-w-[360px] place-items-center rounded-[2.4rem] border border-wc-neon/25 bg-[#07111f] shadow-[0_0_80px_rgba(95,255,123,0.14)]">
-              <div className="absolute inset-7 rounded-[1.8rem] border border-dashed border-white/15" />
-              <div className="text-center">
-                <div className="wc-display text-[8.5rem] leading-none tracking-[-0.09em] text-wc-neon drop-shadow-[0_0_34px_rgba(95,255,123,0.25)]">
-                  65
-                </div>
-                <div className="-mt-2 text-xs font-black tracking-[0.45em] text-wc-fg2">MORAN</div>
-              </div>
+            <div className="absolute left-1/2 top-8 size-96 -translate-x-1/2 rounded-full bg-[radial-gradient(circle,rgba(255,182,73,0.20),transparent_62%)] blur-2xl" />
+            <div className="relative mx-auto overflow-hidden rounded-[2.4rem] border border-wc-amber/30 bg-[#07111f] shadow-[0_0_80px_rgba(255,182,73,0.16)]">
+              <Image
+                src={LANDING_POSTER_SRC}
+                alt="דף נחיתה Moran65 למונדיאל 2026"
+                width={1023}
+                height={1537}
+                priority
+                className="h-auto w-full object-cover"
+              />
             </div>
 
             <div className="relative mt-6 rounded-[1.9rem] border border-white/10 bg-black/20 p-6">
