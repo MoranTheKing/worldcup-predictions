@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
+import { getServerMfaGateState } from "@/lib/auth/mfa-server";
 import { createClient } from "@/lib/supabase/server";
 import { fetchAuthProfile } from "@/lib/supabase/auth-profile";
 import { AuthProvider, type MfaGateState } from "@/components/auth/AuthProvider";
@@ -38,7 +39,7 @@ export default async function RootLayout({
   } = await supabase.auth.getUser();
   const profile = user ? await fetchAuthProfile(supabase, user.id) : null;
   const initialMfaGateState: MfaGateState = user
-    ? await getInitialMfaGateState(supabase)
+    ? await getServerMfaGateState(supabase)
     : "clear";
 
   return (
@@ -61,19 +62,4 @@ export default async function RootLayout({
       </body>
     </html>
   );
-}
-
-async function getInitialMfaGateState(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-): Promise<MfaGateState> {
-  const { data, error } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-
-  if (error) {
-    console.error("[RootLayout] MFA assurance check failed:", error.message);
-    return "checking";
-  }
-
-  return data?.nextLevel === "aal2" && data.currentLevel !== data.nextLevel
-    ? "challenge"
-    : "clear";
 }

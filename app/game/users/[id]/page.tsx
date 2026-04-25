@@ -7,6 +7,7 @@ import OutrightChoiceBadge from "@/components/game/OutrightChoiceBadge";
 import { loadPredictionsHubData } from "@/lib/game/predictions-hub";
 import { getUserGameStats } from "@/lib/game/stats";
 import { hasTournamentStarted } from "@/lib/game/tournament-start";
+import { requireServerMfa } from "@/lib/auth/mfa-server";
 import { attachTeamsToMatches } from "@/lib/tournament/matches";
 import type { MatchWithTeams } from "@/lib/tournament/matches";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -32,6 +33,8 @@ export default async function OpponentPredictionsPage({
   if (!user) {
     redirect(`/login?next=/game/users/${targetUserId}`);
   }
+
+  await requireServerMfa(supabase, `/game/users/${encodeURIComponent(targetUserId)}`);
 
   const admin = createAdminClient();
 

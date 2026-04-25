@@ -7,6 +7,7 @@ import {
   getJoinRateLimitError,
   recordFailedJoinAttempt,
 } from "@/lib/game/league-join-rate-limit";
+import { requireServerMfa } from "@/lib/auth/mfa-server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -296,6 +297,10 @@ async function requireAuthenticatedUser() {
   if (error) {
     console.error("[league actions] auth error:", formatSupabaseError(error));
     return null;
+  }
+
+  if (user) {
+    await requireServerMfa(supabase, "/game/leagues");
   }
 
   return user;

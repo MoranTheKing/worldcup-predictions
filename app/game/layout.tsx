@@ -3,6 +3,7 @@ import DashboardShell from "@/components/DashboardShell";
 import DevToolsFloatingButton from "@/components/DevToolsFloatingButton";
 import GameHeroShell from "@/components/game/GameHeroShell";
 import GameSubNav from "@/components/game/GameSubNav";
+import { requireServerMfa } from "@/lib/auth/mfa-server";
 import { getUserJokerUsage } from "@/lib/game/boosters";
 import { getUserGameStats } from "@/lib/game/stats";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -24,6 +25,8 @@ export default async function GameLayout({
   if (!user) {
     redirect("/login?next=/game");
   }
+
+  await requireServerMfa(supabase, "/game");
 
   const admin = createAdminClient();
 

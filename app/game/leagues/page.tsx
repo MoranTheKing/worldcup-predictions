@@ -1,3 +1,4 @@
+import { requireServerMfa } from "@/lib/auth/mfa-server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import LeaguesClient, { type LeagueRow } from "./LeaguesClient";
@@ -27,6 +28,8 @@ export default async function MyLeaguesPage() {
   let leagues: LeagueRow[] = [];
 
   if (user) {
+    await requireServerMfa(supabase, "/game/leagues");
+
     const admin = createAdminClient();
 
     const { data: memberRows, error: memberError } = await admin

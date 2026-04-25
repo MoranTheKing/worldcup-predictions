@@ -478,6 +478,26 @@ Security and correctness follow-up:
 - Dev Tools phase controls no longer include a fake "regular" phase; first-half, second-half and extra-time minute ranges are enforced in UI and API, ET appears only for knockout matches, and penalties require a knockout draw
 - `/mfa/setup` is server-gated so only a signup flow that explicitly requested Authenticator can open enrollment; verified users, completed users, or stale sessions with only a leftover unverified factor are redirected onward
 
+## PR #20 - server-side MFA enforcement for `/game`
+
+Finding:
+
+- MFA-protected accounts were primarily guarded by the client AuthProvider and the root server layout. That prevented visible UI flashes, but did not provide a dedicated server authorization boundary before `/game` layouts/pages or game server actions used admin reads/writes.
+
+Attack path:
+
+- An attacker with valid first-factor credentials for a TOTP-protected account could obtain an `aal1` Supabase session and then issue fast/direct requests to `/game` routes or server actions before completing the Authenticator code.
+- Because the sensitive game code used a valid session plus server/admin data access, the attacker could potentially read game profile/league/prediction data or submit game actions inside the MFA race window.
+- The PR branch attempted to redirect unauthenticated MFA state to `/?next=/game`, but `/` is an MFA-neutral path in this app. That would avoid the challenge screen instead of reliably presenting it.
+
+Fix:
+
+- added `lib/auth/mfa-server.ts` as a shared server-side MFA assurance helper
+- `/game` layout and game pages now call `requireServerMfa()` before admin reads
+- league and prediction server actions now call the same guard before DB writes
+- failed assurance checks now fail closed to an MFA challenge instead of allowing protected children to render
+- added `/mfa/challenge` as a non-neutral challenge route that redirects onward only after Supabase reports `aal2`
+
 Migration required:
 
 - `20260425000022_add_match_phase.sql`

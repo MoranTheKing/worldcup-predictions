@@ -1,3 +1,4 @@
+import { requireServerMfa } from "@/lib/auth/mfa-server";
 import { createClient } from "@/lib/supabase/server";
 import { loadPredictionsHubData } from "@/lib/game/predictions-hub";
 import PredictionsClient from "./PredictionsClient";
@@ -9,6 +10,10 @@ export default async function PredictionsPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  if (user) {
+    await requireServerMfa(supabase, "/game/predictions");
+  }
 
   const data = await loadPredictionsHubData(user?.id ?? null);
 

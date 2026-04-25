@@ -247,7 +247,7 @@ export function AuthProvider({
 
         if (error) {
           console.error("[AuthProvider] MFA assurance check failed:", error);
-          setMfaGateState("clear");
+          setMfaGateState("challenge");
           return;
         }
 

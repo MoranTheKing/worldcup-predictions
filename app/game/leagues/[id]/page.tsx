@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { requireServerMfa } from "@/lib/auth/mfa-server";
 import { hasTournamentStarted } from "@/lib/game/tournament-start";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -37,6 +38,8 @@ export default async function LeaguePage({
   if (!user) {
     redirect(`/login?next=/game/leagues/${id}`);
   }
+
+  await requireServerMfa(supabase, `/game/leagues/${encodeURIComponent(id)}`);
 
   const admin = createAdminClient();
 

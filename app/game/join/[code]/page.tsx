@@ -3,6 +3,7 @@ import {
   hasActiveJoinRateLimit,
   recordFailedJoinAttempt,
 } from "@/lib/game/league-join-rate-limit";
+import { requireServerMfa } from "@/lib/auth/mfa-server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import JoinLeagueLandingClient from "./JoinLeagueLandingClient";
@@ -29,6 +30,8 @@ export default async function JoinLeagueByCodePage({
   if (!user) {
     redirect(`/login?next=/game/join/${normalizedCode}`);
   }
+
+  await requireServerMfa(supabase, `/game/join/${normalizedCode}`);
 
   const admin = createAdminClient();
   const isRateLimited = await hasActiveJoinRateLimit(admin, user.id);

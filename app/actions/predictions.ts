@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { requireServerMfa } from "@/lib/auth/mfa-server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getJokerBucket, getUserJokerUsage } from "@/lib/game/boosters";
@@ -30,7 +31,6 @@ export async function upsertMatchPrediction(
   formData: FormData,
 ): Promise<PredictionActionState> {
   const supabase = await createClient();
-  const admin = createAdminClient();
   const {
     data: { user },
     error: authError,
@@ -44,6 +44,10 @@ export async function upsertMatchPrediction(
   if (!user) {
     return { error: "צריך להתחבר כדי לשמור ניחוש." };
   }
+
+  await requireServerMfa(supabase, "/game/predictions");
+
+  const admin = createAdminClient();
 
   const { data: matchRow, error: matchError } = await admin
     .from("matches")
@@ -159,7 +163,6 @@ export async function upsertTournamentPrediction(
   formData: FormData,
 ): Promise<PredictionActionState> {
   const supabase = await createClient();
-  const admin = createAdminClient();
   const {
     data: { user },
     error: authError,
@@ -173,6 +176,10 @@ export async function upsertTournamentPrediction(
   if (!user) {
     return { error: "צריך להתחבר כדי לשמור ניחושי טורניר." };
   }
+
+  await requireServerMfa(supabase, "/game/predictions");
+
+  const admin = createAdminClient();
 
   const { data: kickoffMatch, error: kickoffError } = await admin
     .from("matches")
