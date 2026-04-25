@@ -1,30 +1,40 @@
+const DOMAIN = "moran65.com";
+const SUPPORT_EMAIL = "support@moran65.com";
+const ADMIN_EMAIL = "admin@moran65.com";
+
+const favicon = encodeURIComponent(`
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="16" fill="#07111f"/>
+  <path d="M12 20h40v26H12z" fill="none" stroke="#5fff7b" stroke-width="4"/>
+  <path d="M32 20v26M12 33h40" stroke="#ffffff" stroke-width="2" opacity=".18"/>
+  <text x="32" y="40" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-size="23" font-weight="900" fill="#5fff7b">65</text>
+</svg>
+`);
+
 const HTML = `<!doctype html>
 <html lang="he" dir="rtl">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>ניחושי מונדיאל 2026 - בקרוב</title>
+    <title>Moran 65 - ניחושי מונדיאל 2026</title>
     <meta
       name="description"
-      content="ניחושי מונדיאל 2026 נמצא בתהליכי הקמה. בקרוב תוכלו להיכנס, לנחש ולהתחרות עם חברים."
+      content="Moran 65 הוא משחק ניחושי מונדיאל 2026 בעברית. האתר נמצא בתהליכי הקמה וייפתח בקרוב."
     />
-    <link rel="preconnect" href="https://res.cloudinary.com" />
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%2307111f'/%3E%3Ccircle cx='32' cy='32' r='23' fill='none' stroke='%235fff7b' stroke-width='5'/%3E%3Ctext x='32' y='41' text-anchor='middle' font-family='Arial,sans-serif' font-size='25' font-weight='900' fill='%235fff7b'%3E26%3C/text%3E%3C/svg%3E" />
+    <link rel="icon" href="data:image/svg+xml,${favicon}" />
     <style>
       :root {
         color-scheme: dark;
-        --bg: #030711;
+        --bg: #020711;
+        --card: rgba(10, 24, 42, 0.72);
+        --card-strong: rgba(8, 19, 34, 0.78);
+        --line: rgba(255, 255, 255, 0.13);
         --ink: #f8fbff;
         --muted: #b7c4d8;
         --quiet: #7f8da6;
-        --glass: rgba(9, 21, 38, 0.72);
-        --glass-strong: rgba(15, 31, 53, 0.88);
-        --line: rgba(255, 255, 255, 0.13);
         --neon: #5fff7b;
-        --mint: #25ffd0;
+        --mint: #28ffcf;
         --amber: #ffb649;
-        --blue: #6ab7ff;
-        --rose: #ff4f9a;
       }
 
       * {
@@ -36,78 +46,51 @@ const HTML = `<!doctype html>
       }
 
       body {
-        margin: 0;
         min-height: 100vh;
+        margin: 0;
         overflow-x: hidden;
-        color: var(--ink);
-        font-family: "Segoe UI", Arial, sans-serif;
-        direction: rtl;
         background:
-          radial-gradient(circle at 10% 12%, rgba(95, 255, 123, 0.20), transparent 24rem),
-          radial-gradient(circle at 86% 8%, rgba(255, 182, 73, 0.18), transparent 27rem),
-          radial-gradient(circle at 64% 86%, rgba(106, 183, 255, 0.16), transparent 26rem),
-          linear-gradient(145deg, #0a1d34 0%, var(--bg) 50%, #010309 100%);
-      }
-
-      body::before,
-      body::after {
-        content: "";
-        position: fixed;
-        inset: auto;
-        z-index: 0;
-        border-radius: 999px;
-        pointer-events: none;
-        filter: blur(24px);
-        opacity: 0.72;
+          radial-gradient(circle at 12% 12%, rgba(95, 255, 123, 0.22), transparent 24rem),
+          radial-gradient(circle at 88% 8%, rgba(255, 182, 73, 0.18), transparent 28rem),
+          radial-gradient(circle at 62% 88%, rgba(40, 255, 207, 0.13), transparent 24rem),
+          linear-gradient(145deg, #0a1d34 0%, var(--bg) 52%, #010309 100%);
+        color: var(--ink);
+        direction: rtl;
+        font-family: "Segoe UI", Arial, sans-serif;
       }
 
       body::before {
-        width: 32rem;
-        height: 32rem;
-        right: -14rem;
-        top: -12rem;
-        background: radial-gradient(circle, rgba(95, 255, 123, 0.16), transparent 68%);
-      }
-
-      body::after {
-        width: 30rem;
-        height: 30rem;
-        left: -12rem;
-        bottom: -14rem;
-        background: radial-gradient(circle, rgba(255, 79, 154, 0.14), transparent 68%);
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background-image:
+          linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+        background-size: 72px 72px;
+        opacity: 0.45;
+        mask-image: radial-gradient(circle at center, black, transparent 74%);
       }
 
       a {
         color: inherit;
       }
 
-      .stadium-lines {
-        position: fixed;
-        inset: 0;
-        z-index: 0;
-        pointer-events: none;
-        background-image:
-          linear-gradient(rgba(255,255,255,0.045) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px);
-        background-size: 64px 64px;
-        mask-image: radial-gradient(circle at center, black 0%, transparent 74%);
-      }
-
       main {
         position: relative;
         z-index: 1;
-        display: grid;
         min-height: 100vh;
-        place-items: center;
         padding: clamp(18px, 3vw, 42px);
       }
 
       .shell {
-        width: min(1180px, 100%);
         display: grid;
-        grid-template-columns: minmax(0, 1.07fr) minmax(320px, 0.93fr);
+        width: min(1240px, 100%);
+        min-height: calc(100vh - clamp(36px, 6vw, 84px));
+        margin: 0 auto;
+        grid-template-columns: minmax(0, 1.08fr) minmax(320px, 0.92fr);
         gap: clamp(18px, 3vw, 34px);
-        align-items: stretch;
+        align-items: center;
       }
 
       .hero,
@@ -118,7 +101,7 @@ const HTML = `<!doctype html>
         border-radius: clamp(30px, 4vw, 46px);
         background:
           linear-gradient(145deg, rgba(255,255,255,0.10), rgba(255,255,255,0.025)),
-          var(--glass);
+          var(--card);
         box-shadow:
           0 30px 100px rgba(0, 0, 0, 0.46),
           inset 0 1px 0 rgba(255,255,255,0.12);
@@ -126,18 +109,7 @@ const HTML = `<!doctype html>
       }
 
       .hero {
-        min-height: 660px;
         padding: clamp(28px, 5vw, 58px);
-      }
-
-      .hero::before {
-        content: "";
-        position: absolute;
-        inset: -2px;
-        z-index: -1;
-        background:
-          radial-gradient(circle at 18% 12%, rgba(95,255,123,.14), transparent 32%),
-          radial-gradient(circle at 82% 10%, rgba(255,182,73,.11), transparent 30%);
       }
 
       .topline {
@@ -161,11 +133,11 @@ const HTML = `<!doctype html>
 
       .brand-mark {
         display: grid;
-        width: 34px;
-        height: 34px;
+        width: 38px;
+        height: 38px;
         place-items: center;
         border-radius: 50%;
-        color: #05120b;
+        color: #041008;
         background: linear-gradient(135deg, var(--neon), var(--mint));
         font-weight: 1000;
       }
@@ -182,7 +154,7 @@ const HTML = `<!doctype html>
       }
 
       h1 {
-        max-width: 790px;
+        max-width: 820px;
         margin: 54px 0 0;
         font-size: clamp(72px, 12vw, 142px);
         line-height: 0.86;
@@ -199,7 +171,7 @@ const HTML = `<!doctype html>
       }
 
       .lead {
-        max-width: 680px;
+        max-width: 700px;
         margin: 26px 0 0;
         color: var(--muted);
         font-size: clamp(18px, 2.2vw, 24px);
@@ -216,11 +188,11 @@ const HTML = `<!doctype html>
       .button,
       .ghost {
         display: inline-flex;
-        min-height: 50px;
+        min-height: 52px;
         align-items: center;
         justify-content: center;
         border-radius: 999px;
-        padding: 0 22px;
+        padding: 0 24px;
         text-decoration: none;
         font-weight: 900;
       }
@@ -244,17 +216,22 @@ const HTML = `<!doctype html>
         margin-top: 44px;
       }
 
-      .metric {
+      .metric,
+      .contact,
+      .feature {
         border: 1px solid rgba(255,255,255,.10);
+        background: rgba(255,255,255,.045);
+      }
+
+      .metric {
         border-radius: 24px;
         padding: 18px;
-        background: rgba(255,255,255,.045);
       }
 
       .metric strong {
         display: block;
         color: var(--ink);
-        font-size: 24px;
+        font-size: 28px;
       }
 
       .metric span {
@@ -273,11 +250,9 @@ const HTML = `<!doctype html>
       }
 
       .contact {
-        border: 1px solid rgba(255,255,255,.10);
         border-radius: 22px;
         padding: 16px 18px;
         text-decoration: none;
-        background: rgba(0,0,0,.14);
       }
 
       .contact small {
@@ -295,7 +270,6 @@ const HTML = `<!doctype html>
       }
 
       .showcase {
-        min-height: 660px;
         padding: clamp(26px, 4vw, 42px);
       }
 
@@ -406,7 +380,7 @@ const HTML = `<!doctype html>
       }
 
       .fill {
-        width: 78%;
+        width: 82%;
         height: 100%;
         border-radius: inherit;
         background: linear-gradient(90deg, var(--neon), var(--mint), var(--amber));
@@ -423,11 +397,9 @@ const HTML = `<!doctype html>
         display: flex;
         align-items: center;
         gap: 12px;
-        border: 1px solid rgba(255,255,255,.08);
         border-radius: 18px;
         padding: 13px 14px;
         color: var(--muted);
-        background: rgba(255,255,255,.035);
       }
 
       .check {
@@ -467,11 +439,6 @@ const HTML = `<!doctype html>
         .shell {
           grid-template-columns: 1fr;
         }
-
-        .hero,
-        .showcase {
-          min-height: auto;
-        }
       }
 
       @media (max-width: 640px) {
@@ -498,62 +465,61 @@ const HTML = `<!doctype html>
     </style>
   </head>
   <body>
-    <div class="stadium-lines" aria-hidden="true"></div>
     <main>
       <div class="shell">
         <section class="hero">
           <div class="topline">
-            <div class="brand"><span class="brand-mark">26</span><span>cup26picks.com</span></div>
-            <div class="status-pill">האתר בהרצה פנימית</div>
+            <div class="brand"><span class="brand-mark">M65</span><span>${DOMAIN}</span></div>
+            <div class="status-pill">לפני שריקת הפתיחה</div>
           </div>
 
           <h1>
             מונדיאל 2026
-            <span class="gradient-text">מתחמם</span>
+            <span class="gradient-text">מתחיל כאן</span>
           </h1>
 
           <p class="lead">
-            אנחנו בונים עכשיו את משחק הניחושים של החבורה: פרופילים, ליגות פרטיות,
-            ניחושי משחקים, טבלת ניקוד וחוויה בעברית שנראית כמו מוצר אמיתי.
+            אנחנו מכינים את משחק הניחושים של החבורה: הרשמה מאובטחת, פרופיל אישי,
+            ליגות פרטיות, ניחושי משחקים, טבלת ניקוד וחוויית טורניר חיה בעברית מלאה.
           </p>
 
           <div class="cta-row">
-            <a class="button" href="mailto:support@cup26picks.com">רוצה עדכון כשנפתח?</a>
-            <a class="ghost" href="mailto:admin@cup26picks.com">יצירת קשר טכני</a>
+            <a class="button" href="mailto:${SUPPORT_EMAIL}">רוצה עדכון כשנפתח?</a>
+            <a class="ghost" href="mailto:${ADMIN_EMAIL}">יצירת קשר טכני</a>
           </div>
 
           <div class="meta-grid" aria-label="מה נבנה עכשיו">
-            <div class="metric"><strong>48</strong><span>נבחרות מוכנות לטורניר</span></div>
-            <div class="metric"><strong>104</strong><span>משחקים לאורך כל המונדיאל</span></div>
-            <div class="metric"><strong>RTL</strong><span>חוויה מלאה בעברית</span></div>
+            <div class="metric"><strong>48</strong><span>נבחרות בטורניר</span></div>
+            <div class="metric"><strong>104</strong><span>משחקים עד הגמר</span></div>
+            <div class="metric"><strong>RTL</strong><span>חוויה עברית מלאה</span></div>
           </div>
 
           <div class="contact-strip">
-            <a class="contact" href="mailto:support@cup26picks.com">
+            <a class="contact" href="mailto:${SUPPORT_EMAIL}">
               <small>תמיכה</small>
-              <span>support@cup26picks.com</span>
+              <span>${SUPPORT_EMAIL}</span>
             </a>
-            <a class="contact" href="mailto:admin@cup26picks.com">
+            <a class="contact" href="mailto:${ADMIN_EMAIL}">
               <small>ניהול ועדכונים</small>
-              <span>admin@cup26picks.com</span>
+              <span>${ADMIN_EMAIL}</span>
             </a>
           </div>
         </section>
 
         <aside class="showcase">
           <div class="halo" aria-hidden="true"></div>
-          <div class="logo-card" aria-label="Cup 26 Picks">
+          <div class="logo-card" aria-label="Moran 65">
             <div class="logo-number">
-              <strong>26</strong>
-              <span>PICKS</span>
+              <strong>65</strong>
+              <span>MORAN</span>
             </div>
           </div>
 
           <div class="progress-card">
             <div class="progress-head">
               <div>
-                <h2>כמעט מוכנים לשריקת הפתיחה</h2>
-                <p>הדומיין, המיילים והאבטחה כבר מחוברים. עכשיו אנחנו מסיימים בדיקות ופוליש לפני פתיחה מסודרת.</p>
+                <h2>כמעט מוכנים לעלות לאוויר</h2>
+                <p>הדומיין, המיילים והאבטחה מתחברים עכשיו. נשארים בדיקות, פוליש אחרון והעלאה מסודרת.</p>
               </div>
               <div class="beta">Beta</div>
             </div>

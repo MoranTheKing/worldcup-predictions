@@ -14,12 +14,13 @@ const worldCupDisplay = localFont({
 });
 
 export const metadata: Metadata = {
-  applicationName: "ניחושי מונדיאל 2026",
+  metadataBase: new URL("https://moran65.com"),
+  applicationName: "Moran 65 - ניחושי מונדיאל 2026",
   title: {
-    default: "ניחושי מונדיאל 2026",
-    template: "%s | ניחושי מונדיאל 2026",
+    default: "Moran 65 - ניחושי מונדיאל 2026",
+    template: "%s | Moran 65",
   },
-  description: "משחק ניחושי מונדיאל 2026 עם פרופילים, ליגות פרטיות וטבלת ניקוד.",
+  description: "משחק ניחושי מונדיאל 2026 בעברית עם פרופילים, ליגות פרטיות וטבלת ניקוד.",
   icons: {
     icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
     shortcut: [{ url: "/icon.svg", type: "image/svg+xml" }],

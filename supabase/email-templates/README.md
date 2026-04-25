@@ -44,11 +44,11 @@ Authentication -> Providers -> Email -> Email OTP Length = 6
 
 ## כתובות המייל של הדומיין
 
-הכתובות שנוצרו ב-Cloudflare Email Routing:
+הכתובות שצריך ליצור ב-Cloudflare Email Routing:
 
-- `support@cup26picks.com` - כתובת התמיכה הציבורית. אפשר לפרסם באתר, בתחתית מיילים ובעתיד בעמוד יצירת קשר.
-- `no-reply@cup26picks.com` - כתובת שליחת מיילי Auth. זו הכתובת שצריכה להופיע ב-Supabase כ-`Sender email`.
-- `admin@cup26picks.com` - כתובת ניהול פנימית להתראות, חשבונות שירות וגישה למערכות כמו Supabase, Brevo או Cloudflare.
+- `support@moran65.com` - כתובת התמיכה הציבורית. אפשר לפרסם באתר, בתחתית מיילים ובעתיד בעמוד יצירת קשר.
+- `no-reply@moran65.com` - כתובת שליחת מיילי Auth. זו הכתובת שצריכה להופיע ב-Supabase כ-`Sender email`.
+- `admin@moran65.com` - כתובת ניהול פנימית להתראות, חשבונות שירות וגישה למערכות כמו Supabase, Brevo או Cloudflare.
 
 חשוב: Cloudflare Email Routing מטפל בקבלת מיילים בלבד. שליחת מיילי Auth נעשית דרך Brevo SMTP.
 
@@ -63,7 +63,7 @@ Authentication -> Settings -> SMTP Settings
 ערכים מומלצים:
 
 ```text
-Sender email: no-reply@cup26picks.com
+Sender email: no-reply@moran65.com
 Sender name: ניחושי מונדיאל 2026
 Host: smtp-relay.brevo.com
 Port: 587
