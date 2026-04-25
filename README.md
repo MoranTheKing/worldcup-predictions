@@ -165,7 +165,9 @@ Leaked password protection: On אם הפרויקט בתוכנית Pro ומעלה
 - במסך `/signup` המשתמש יכול לבחור הגנה נוספת עם אפליקציית אימות לפני בחירת Google או מייל וסיסמה.
 - אחרי הרשמה ב-Google או אחרי אימות OTP במייל, משתמש שבחר בכך מופנה ל-`/mfa/setup`, סורק QR ומאמת קוד בן 6 ספרות.
 - מסך `/mfa/setup` מנקה ניסיון TOTP לא מאומת לפני יצירת QR חדש, כדי שרענון באמצע ההגדרה לא ישאיר את המשתמש עם factor תקוע.
+- הכנת ה-QR במסך `/mfa/setup` נעולה ברמת הטאב, כדי למנוע מצב שבו React dev/Strict Mode יוצר שני factors ומוחק את ה-factor שהמשתמש בדיוק סרק.
 - אימות ה-QR במסך `/mfa/setup` מתבצע דרך `challengeAndVerify` בפעולה אחת, כדי למנוע נפילה בין יצירת challenge לאימות הקוד אצל משתמשי מייל וסיסמה.
+- אם Supabase מחזיר `Factor not found` בזמן אימות Authenticator, המסך יוצר QR חדש ומבקש סריקה מחדש במקום להשאיר את המשתמש תקוע.
 - ה-QR מוצג גם אם Supabase מחזיר SVG גולמי וגם אם הוא מחזיר data URL, ולצידו מוצג `secret` ידני למקרה שהסריקה לא עובדת.
 - במסך ההגדרה מוצגות אפליקציות Authenticator נפוצות: Google Authenticator, Microsoft Authenticator, 2FAS Auth ו-1Password.
 - אם משתמש בחר Authenticator והתחיל את ההגדרה אבל עבר ל-onboarding לפני שסיים, הוא מוחזר קודם ל-`/mfa/setup`.

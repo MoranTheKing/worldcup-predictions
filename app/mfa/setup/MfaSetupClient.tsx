@@ -11,6 +11,14 @@ type Enrollment = {
   secret: string;
 };
 
+type EnrollmentPreparationResult =
+  | { status: "ready"; enrollment: Enrollment }
+  | { status: "already-verified" }
+  | { status: "error"; message: string };
+
+let enrollmentPreparationPromise: Promise<EnrollmentPreparationResult> | null = null;
+let enrollmentPreparationUserId: string | null = null;
+
 export default function MfaSetupClient({ nextPath }: { nextPath: string }) {
   const router = useRouter();
   const [supabase] = useState(() => createClient());
@@ -28,61 +36,23 @@ export default function MfaSetupClient({ nextPath }: { nextPath: string }) {
       setIsLoading(true);
       setError(null);
 
-      const { data: factors, error: factorsError } = await supabase.auth.mfa.listFactors();
+      const result = await getEnrollmentPreparation(supabase);
 
       if (!isActive) return;
 
-      if (factorsError) {
-        setError("לא הצלחנו לבדוק את הגדרות ה-Authenticator של החשבון.");
-        setIsLoading(false);
-        return;
-      }
-
-      if ((factors?.totp?.length ?? 0) > 0) {
+      if (result.status === "already-verified") {
         setNotice("כבר מוגדר Authenticator לחשבון הזה. אפשר להמשיך למשחק.");
         setIsLoading(false);
         return;
       }
 
-      const pendingTotpFactors =
-        factors?.all?.filter(
-          (factor) => factor.factor_type === "totp" && factor.status === "unverified",
-        ) ?? [];
-
-      for (const factor of pendingTotpFactors) {
-        const { error: unenrollError } = await supabase.auth.mfa.unenroll({
-          factorId: factor.id,
-        });
-
-        if (unenrollError && !isMissingFactorError(unenrollError)) {
-          setError("לא הצלחנו לנקות ניסיון Authenticator קודם. נסה להתנתק ולהיכנס שוב.");
-          setIsLoading(false);
-          return;
-        }
-      }
-
-      const { data, error: enrollError } = await supabase.auth.mfa.enroll({
-        factorType: "totp",
-        friendlyName: "Moran 65",
-        issuer: "Moran 65",
-      });
-
-      if (!isActive) return;
-
-      const qrCodeUrl = data?.totp ? getQrImageSource(data.totp.qr_code) : null;
-
-      if (enrollError || !data?.totp || !qrCodeUrl) {
-        setError("לא הצלחנו ליצור קוד QR ל-Authenticator. נסה לרענן או להתחבר מחדש.");
+      if (result.status === "error") {
+        setError(result.message);
         setIsLoading(false);
         return;
       }
 
-      setEnrollment({
-        authenticatorUri: data.totp.uri,
-        factorId: data.id,
-        qrCodeUrl,
-        secret: data.totp.secret,
-      });
+      setEnrollment(result.enrollment);
       setIsLoading(false);
     }
 
@@ -111,7 +81,18 @@ export default function MfaSetupClient({ nextPath }: { nextPath: string }) {
       });
 
       if (verifyError) {
-        console.error("[MfaSetupClient] TOTP setup verification failed", verifyError);
+        if (isMissingFactorError(verifyError)) {
+          resetEnrollmentPreparation();
+          setCode("");
+          setError("ה-QR הקודם כבר לא פעיל. יצרנו עכשיו QR חדש, סרוק אותו מחדש והזן את הקוד החדש.");
+          await refreshEnrollmentAfterMissingFactor();
+          return;
+        }
+
+        if (!isExpectedMfaSetupVerifyError(verifyError)) {
+          console.error("[MfaSetupClient] TOTP setup verification failed", verifyError);
+        }
+
         setError(getMfaSetupVerifyErrorMessage(verifyError));
         return;
       }
@@ -120,6 +101,24 @@ export default function MfaSetupClient({ nextPath }: { nextPath: string }) {
     } finally {
       setIsVerifying(false);
     }
+  }
+
+  async function refreshEnrollmentAfterMissingFactor() {
+    setIsLoading(true);
+
+    const result = await getEnrollmentPreparation(supabase, { forceFresh: true });
+
+    if (result.status === "ready") {
+      setEnrollment(result.enrollment);
+    } else if (result.status === "already-verified") {
+      setEnrollment(null);
+      setNotice("כבר מוגדר Authenticator לחשבון הזה. אפשר להמשיך למשחק.");
+    } else {
+      setEnrollment(null);
+      setError(result.message);
+    }
+
+    setIsLoading(false);
   }
 
   return (
@@ -289,6 +288,114 @@ function isMissingFactorError(error: { code?: string; message?: string }) {
   return (
     error.code === "mfa_factor_not_found" ||
     (error.message ?? "").toLowerCase().includes("factor not found")
+  );
+}
+
+async function getEnrollmentPreparation(
+  supabase: ReturnType<typeof createClient>,
+  options?: { forceFresh?: boolean },
+) {
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    resetEnrollmentPreparation();
+    return {
+      status: "error",
+      message: "לא הצלחנו לזהות את החשבון המחובר. נסה להתחבר מחדש.",
+    } satisfies EnrollmentPreparationResult;
+  }
+
+  if (
+    options?.forceFresh ||
+    !enrollmentPreparationPromise ||
+    enrollmentPreparationUserId !== user.id
+  ) {
+    enrollmentPreparationUserId = user.id;
+    enrollmentPreparationPromise = prepareTotpEnrollment(supabase);
+  }
+
+  return enrollmentPreparationPromise;
+}
+
+async function prepareTotpEnrollment(
+  supabase: ReturnType<typeof createClient>,
+): Promise<EnrollmentPreparationResult> {
+  const { data: factors, error: factorsError } = await supabase.auth.mfa.listFactors();
+
+  if (factorsError) {
+    return {
+      status: "error",
+      message: "לא הצלחנו לבדוק את הגדרות ה-Authenticator של החשבון.",
+    };
+  }
+
+  if ((factors?.totp?.length ?? 0) > 0) {
+    return { status: "already-verified" };
+  }
+
+  const pendingTotpFactors =
+    factors?.all?.filter(
+      (factor) => factor.factor_type === "totp" && factor.status === "unverified",
+    ) ?? [];
+
+  for (const factor of pendingTotpFactors) {
+    const { error: unenrollError } = await supabase.auth.mfa.unenroll({
+      factorId: factor.id,
+    });
+
+    if (unenrollError && !isMissingFactorError(unenrollError)) {
+      return {
+        status: "error",
+        message: "לא הצלחנו לנקות ניסיון Authenticator קודם. נסה להתנתק ולהיכנס שוב.",
+      };
+    }
+  }
+
+  const { data, error: enrollError } = await supabase.auth.mfa.enroll({
+    factorType: "totp",
+    friendlyName: "Moran 65",
+    issuer: "Moran 65",
+  });
+
+  const qrCodeUrl = data?.totp ? getQrImageSource(data.totp.qr_code) : null;
+
+  if (enrollError || !data?.totp || !qrCodeUrl) {
+    return {
+      status: "error",
+      message: "לא הצלחנו ליצור קוד QR ל-Authenticator. נסה לרענן או להתחבר מחדש.",
+    };
+  }
+
+  return {
+    status: "ready",
+    enrollment: {
+      authenticatorUri: data.totp.uri,
+      factorId: data.id,
+      qrCodeUrl,
+      secret: data.totp.secret,
+    },
+  };
+}
+
+function resetEnrollmentPreparation() {
+  enrollmentPreparationPromise = null;
+  enrollmentPreparationUserId = null;
+}
+
+function isExpectedMfaSetupVerifyError(error: { code?: string; message?: string; status?: number }) {
+  const message = (error.message ?? "").toLowerCase();
+
+  return (
+    isMissingFactorError(error) ||
+    error.code === "mfa_verification_failed" ||
+    error.code === "mfa_challenge_expired" ||
+    error.status === 422 ||
+    message.includes("invalid") ||
+    message.includes("expired") ||
+    message.includes("verification")
   );
 }
 
