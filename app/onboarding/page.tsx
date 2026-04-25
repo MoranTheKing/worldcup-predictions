@@ -22,6 +22,13 @@ export default async function OnboardingPage({
     redirect(`/login?next=${encodeURIComponent("/onboarding")}`);
   }
 
+  const { data: mfaFactors, error: mfaFactorsError } = await supabase.auth.mfa.listFactors();
+
+  if (!mfaFactorsError && hasPendingTotpEnrollment(mfaFactors)) {
+    const onboardingPath = `/onboarding?next=${encodeURIComponent(nextPath)}`;
+    redirect(`/mfa/setup?next=${encodeURIComponent(onboardingPath)}`);
+  }
+
   const onboardingStatus = await fetchOnboardingStatus(supabase, user.id);
 
   if (onboardingStatus.isComplete) {
@@ -64,5 +71,26 @@ export default async function OnboardingPage({
       tournamentPrediction={onboardingStatus.tournamentPrediction}
       tournamentStarted={onboardingStatus.tournamentStarted}
     />
+  );
+}
+
+function hasPendingTotpEnrollment(
+  factors:
+    | {
+        all?: Array<{ factor_type?: string; status?: string }>;
+        totp?: unknown[];
+      }
+    | null
+    | undefined,
+) {
+  const hasVerifiedTotp = Boolean(factors?.totp?.length);
+
+  return (
+    !hasVerifiedTotp &&
+    Boolean(
+      factors?.all?.some(
+        (factor) => factor.factor_type === "totp" && factor.status === "unverified",
+      ),
+    )
   );
 }

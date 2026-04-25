@@ -160,6 +160,10 @@ Leaked password protection: On אם הפרויקט בתוכנית Pro ומעלה
 
 - במסך `/signup` המשתמש יכול לבחור הגנה נוספת עם אפליקציית אימות לפני בחירת Google או מייל וסיסמה.
 - אחרי הרשמה ב-Google או אחרי אימות OTP במייל, משתמש שבחר בכך מופנה ל-`/mfa/setup`, סורק QR ומאמת קוד בן 6 ספרות.
+- מסך `/mfa/setup` מנקה ניסיון TOTP לא מאומת לפני יצירת QR חדש, כדי שרענון באמצע ההגדרה לא ישאיר את המשתמש עם factor תקוע.
+- ה-QR מוצג גם אם Supabase מחזיר SVG גולמי וגם אם הוא מחזיר data URL, ולצידו מוצג `secret` ידני למקרה שהסריקה לא עובדת.
+- במסך ההגדרה מוצגות אפליקציות Authenticator נפוצות: Google Authenticator, Microsoft Authenticator, 2FAS Auth ו-1Password.
+- אם משתמש בחר Authenticator והתחיל את ההגדרה אבל עבר ל-onboarding לפני שסיים, הוא מוחזר קודם ל-`/mfa/setup`.
 - בכניסות הבאות, רק משתמשים שיש להם factor מסוג TOTP במצב `verified` יקבלו מסך קוד נוסף אחרי סיסמה.
 - משתמשים שנרשמו דרך Google או מייל רגיל בלי לסמן Authenticator לא רואים את מסך הקוד הנוסף.
 

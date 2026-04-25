@@ -453,6 +453,8 @@ Security-relevant follow-up:
 - signup redirects now preserve the intended flow as `/mfa/setup?next=/onboarding?...`, preventing MFA setup from skipping the required profile onboarding step
 - Google OAuth started from `/login` is marked as a login flow; if the account has not yet started app registration, the session is signed out and the user is redirected to `/signup` with a clear registration message
 - existing Google users who already completed app registration continue through login normally, while first-time Google users do not silently land inside the app
+- `/mfa/setup` now removes stale unverified TOTP factors before creating a new QR, so refreshes during setup do not leave users blocked by an unfinished enrollment
+- onboarding checks for an unfinished TOTP enrollment and redirects back to `/mfa/setup` before profile completion, preserving the user's explicit MFA choice
 
 ## Post-audit hardening landed later on 2026-04-23
 

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 type Enrollment = {
+  authenticatorUri: string;
   factorId: string;
   qrCodeUrl: string;
   secret: string;
@@ -43,23 +44,43 @@ export default function MfaSetupClient({ nextPath }: { nextPath: string }) {
         return;
       }
 
+      const pendingTotpFactors =
+        factors?.all?.filter(
+          (factor) => factor.factor_type === "totp" && factor.status === "unverified",
+        ) ?? [];
+
+      for (const factor of pendingTotpFactors) {
+        const { error: unenrollError } = await supabase.auth.mfa.unenroll({
+          factorId: factor.id,
+        });
+
+        if (unenrollError && !isMissingFactorError(unenrollError)) {
+          setError("לא הצלחנו לנקות ניסיון Authenticator קודם. נסה להתנתק ולהיכנס שוב.");
+          setIsLoading(false);
+          return;
+        }
+      }
+
       const { data, error: enrollError } = await supabase.auth.mfa.enroll({
         factorType: "totp",
-        friendlyName: "Moran 65 Authenticator",
+        friendlyName: "Moran 65",
         issuer: "Moran 65",
       });
 
       if (!isActive) return;
 
-      if (enrollError || !data?.totp) {
+      const qrCodeUrl = data?.totp ? getQrImageSource(data.totp.qr_code) : null;
+
+      if (enrollError || !data?.totp || !qrCodeUrl) {
         setError("לא הצלחנו ליצור קוד QR ל-Authenticator. נסה לרענן או להתחבר מחדש.");
         setIsLoading(false);
         return;
       }
 
       setEnrollment({
+        authenticatorUri: data.totp.uri,
         factorId: data.id,
-        qrCodeUrl: `data:image/svg+xml;utf-8,${encodeURIComponent(data.totp.qr_code)}`,
+        qrCodeUrl,
         secret: data.totp.secret,
       });
       setIsLoading(false);
@@ -121,8 +142,8 @@ export default function MfaSetupClient({ nextPath }: { nextPath: string }) {
           <div className="mt-5 text-5xl">🔐</div>
           <h1 className="wc-display mt-4 text-5xl text-wc-fg1">חיבור Authenticator</h1>
           <p className="mx-auto mt-3 max-w-xl text-sm leading-7 text-wc-fg2">
-            סרוק את הקוד עם Google Authenticator, Microsoft Authenticator או אפליקציה דומה.
-            מרגע שהחיבור יאומת, החשבון יבקש קוד נוסף בכל כניסה אחרי הסיסמה.
+            סרוק את ה-QR עם אפליקציית אימות. מרגע שהחיבור יאומת, החשבון יבקש קוד נוסף
+            בכל כניסה אחרי הסיסמה.
           </p>
         </div>
 
@@ -145,16 +166,50 @@ export default function MfaSetupClient({ nextPath }: { nextPath: string }) {
               </button>
             </div>
           ) : enrollment ? (
-            <div className="grid gap-6 md:grid-cols-[260px_1fr] md:items-center">
-              <div className="rounded-[1.75rem] border border-white/10 bg-white p-4 shadow-[0_24px_70px_rgba(0,0,0,0.35)]">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={enrollment.qrCodeUrl} alt="קוד QR לחיבור Authenticator" className="h-full w-full" />
+            <div className="grid gap-6 md:grid-cols-[270px_1fr] md:items-start">
+              <div className="space-y-4">
+                <div className="mx-auto aspect-square w-full max-w-[270px] rounded-[1.75rem] border border-white/10 bg-white p-4 shadow-[0_24px_70px_rgba(0,0,0,0.35)]">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={enrollment.qrCodeUrl}
+                    alt="קוד QR לחיבור Authenticator"
+                    className="block aspect-square w-full"
+                    onError={() => {
+                      setError(
+                        "לא הצלחנו להציג את תמונת ה-QR. אפשר להשתמש ב-secret הידני או לרענן ליצירת QR חדש.",
+                      );
+                    }}
+                  />
+                </div>
+
+                <a
+                  href={enrollment.authenticatorUri}
+                  className="wc-button-secondary block rounded-2xl px-4 py-3 text-center text-xs"
+                >
+                  בטלפון? פתיחה באפליקציית אימות
+                </a>
               </div>
 
               <div className="text-start">
-                <p className="text-sm font-black text-wc-fg1">לא מצליח לסרוק?</p>
+                <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.045] p-4">
+                  <p className="text-sm font-black text-wc-fg1">איזו אפליקציה אפשר להוריד?</p>
+                  <p className="mt-2 text-xs leading-6 text-wc-fg3">
+                    כל אפליקציית TOTP טובה תעבוד. הכי פשוט להתחיל עם אחת מאלה:
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2 text-xs font-bold text-wc-fg2">
+                    <span className="rounded-full bg-white/8 px-3 py-1.5">Google Authenticator</span>
+                    <span className="rounded-full bg-white/8 px-3 py-1.5">Microsoft Authenticator</span>
+                    <span className="rounded-full bg-white/8 px-3 py-1.5">2FAS Auth</span>
+                    <span className="rounded-full bg-white/8 px-3 py-1.5">1Password</span>
+                  </div>
+                </div>
+
+                <p className="mt-5 text-sm font-black text-wc-fg1">לא מצליח לסרוק?</p>
                 <p className="mt-2 text-xs leading-6 text-wc-fg3">
-                  אפשר להזין ידנית את הסוד הבא באפליקציית ה-Authenticator. אל תשתף אותו עם אף אחד.
+                  אפשר להזין ידנית את ה-secret הבא באפליקציית ה-Authenticator. אל תשתף אותו עם אף אחד.
+                </p>
+                <p className="mt-3 text-xs font-black uppercase tracking-[0.22em] text-wc-fg3">
+                  secret
                 </p>
                 <code
                   dir="ltr"
@@ -214,5 +269,34 @@ export default function MfaSetupClient({ nextPath }: { nextPath: string }) {
         </div>
       </div>
     </main>
+  );
+}
+
+function getQrImageSource(qrCode: string) {
+  const trimmedQrCode = qrCode.trim();
+
+  if (!trimmedQrCode) {
+    return null;
+  }
+
+  if (trimmedQrCode.startsWith("data:image/")) {
+    return trimmedQrCode;
+  }
+
+  if (trimmedQrCode.startsWith("<svg")) {
+    return `data:image/svg+xml;utf8,${encodeURIComponent(trimmedQrCode)}`;
+  }
+
+  if (trimmedQrCode.toLowerCase().startsWith("%3csvg")) {
+    return `data:image/svg+xml;utf8,${trimmedQrCode}`;
+  }
+
+  return null;
+}
+
+function isMissingFactorError(error: { code?: string; message?: string }) {
+  return (
+    error.code === "mfa_factor_not_found" ||
+    (error.message ?? "").toLowerCase().includes("factor not found")
   );
 }
