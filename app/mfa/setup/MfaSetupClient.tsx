@@ -16,6 +16,8 @@ type EnrollmentPreparationResult =
   | { status: "already-verified" }
   | { status: "error"; message: string };
 
+const MFA_SETUP_REQUESTED_METADATA_KEY = "mfa_setup_requested";
+
 let enrollmentPreparationPromise: Promise<EnrollmentPreparationResult> | null = null;
 let enrollmentPreparationUserId: string | null = null;
 
@@ -96,6 +98,10 @@ export default function MfaSetupClient({ nextPath }: { nextPath: string }) {
         setError(getMfaSetupVerifyErrorMessage(verifyError));
         return;
       }
+
+      await supabase.auth.updateUser({
+        data: { [MFA_SETUP_REQUESTED_METADATA_KEY]: false },
+      });
 
       window.location.assign(nextPath);
     } finally {

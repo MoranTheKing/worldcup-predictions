@@ -13,6 +13,7 @@ import { useEffect, useState } from "react";
 
 const CODE_LENGTH = 6;
 const EMAIL_CODE_COOLDOWN_SECONDS = 60;
+const MFA_SETUP_REQUESTED_METADATA_KEY = "mfa_setup_requested";
 
 type SignupError = {
   code?: string;
@@ -119,6 +120,7 @@ export default function SignupPage() {
       password,
       options: {
         emailRedirectTo: `${window.location.origin}/auth/callback?flow=signup&next=${encodeURIComponent(buildPostSignupPath(wantsAuthenticator, nextPath))}`,
+        data: { [MFA_SETUP_REQUESTED_METADATA_KEY]: wantsAuthenticator },
       },
     });
 
@@ -187,10 +189,18 @@ export default function SignupPage() {
     if (pendingEmailFlow === "existing_account_password") {
       const { error: updateError } = await supabase.auth.updateUser({
         password,
+        data: { [MFA_SETUP_REQUESTED_METADATA_KEY]: wantsAuthenticator },
       });
 
       if (updateError) {
         setError(getPasswordLinkErrorMessage(updateError));
+        setLoading(false);
+        return;
+      }
+    } else if (wantsAuthenticator) {
+      const rememberedMfaChoice = await rememberMfaSetupChoice();
+
+      if (!rememberedMfaChoice) {
         setLoading(false);
         return;
       }
@@ -312,6 +322,19 @@ export default function SignupPage() {
       }
 
       setError(getSignupErrorMessage(otpError));
+      return false;
+    }
+
+    return true;
+  }
+
+  async function rememberMfaSetupChoice() {
+    const { error: updateError } = await supabase.auth.updateUser({
+      data: { [MFA_SETUP_REQUESTED_METADATA_KEY]: true },
+    });
+
+    if (updateError) {
+      setError("אימתנו את המייל, אבל לא הצלחנו לשמור את בחירת ה-Authenticator. נסה להירשם שוב או להמשיך בלי שכבת האימות הנוספת.");
       return false;
     }
 

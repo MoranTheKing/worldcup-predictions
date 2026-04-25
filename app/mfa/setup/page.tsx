@@ -6,6 +6,8 @@ import MfaSetupClient from "./MfaSetupClient";
 
 export const dynamic = "force-dynamic";
 
+const MFA_SETUP_REQUESTED_METADATA_KEY = "mfa_setup_requested";
+
 export default async function MfaSetupPage({
   searchParams,
 }: {
@@ -28,20 +30,16 @@ export default async function MfaSetupPage({
     fetchOnboardingStatus(supabase, user.id),
   ]);
   const hasVerifiedTotp = !factorsError && Boolean(factors?.totp?.length);
-  const hasPendingTotp =
-    !factorsError &&
-    Boolean(
-      factors?.all?.some(
-        (factor) => factor.factor_type === "totp" && factor.status === "unverified",
-      ),
-    );
+  const hasRequestedMfaSetup =
+    user.user_metadata?.[MFA_SETUP_REQUESTED_METADATA_KEY] === true ||
+    user.user_metadata?.[MFA_SETUP_REQUESTED_METADATA_KEY] === "true";
 
   if (hasVerifiedTotp) {
     redirect(nextPath);
   }
 
-  if (!hasPendingTotp && onboardingStatus.isComplete) {
-    redirect(nextPath);
+  if (!hasRequestedMfaSetup) {
+    redirect(onboardingStatus.isComplete ? nextPath : "/onboarding");
   }
 
   return <MfaSetupClient nextPath={nextPath} />;

@@ -18,13 +18,13 @@ type Props = { matches: DevMatchRow[]; error: string | null };
 
 type Filter = "all" | "scheduled" | "live" | "finished";
 
-const MATCH_PHASE_OPTIONS: Array<{ value: MatchPhase | ""; label: string }> = [
+const MATCH_PHASE_OPTIONS: Array<{ value: MatchPhase | ""; label: string; knockoutOnly?: boolean }> = [
   { value: "", label: "רגיל" },
   { value: "first_half", label: "מחצית 1" },
   { value: "halftime", label: "מחצית" },
   { value: "second_half", label: "מחצית 2" },
-  { value: "extra_time", label: "הארכה" },
-  { value: "penalties", label: "פנדלים" },
+  { value: "extra_time", label: "הארכה", knockoutOnly: true },
+  { value: "penalties", label: "פנדלים", knockoutOnly: true },
 ];
 
 function isKnockoutMatch(matchNumber: number) {
@@ -496,22 +496,20 @@ function DevToolsClientInner({ matches, error }: Props) {
         </div>
 
         <div className="overflow-x-auto rounded-[1.5rem] wc-card">
-          <table className="w-full min-w-[1440px] text-sm">
+          <table className="w-full min-w-[1420px] text-sm">
             <thead>
               <tr className="border-b border-white/10 text-xs text-wc-fg3">
                 <th className="px-3 py-3 text-start">#</th>
                 <th className="px-3 py-3 text-start">שלב</th>
+                <th className="px-3 py-3 text-center">סטטוס</th>
+                <th className="px-3 py-3 text-center">מצב</th>
+                <th className="px-3 py-3 text-center">דקה</th>
+                <th className="px-3 py-3 text-center">פעולות</th>
                 <th className="px-3 py-3 text-start">בית</th>
                 <th className="px-3 py-3 text-center">תוצאה</th>
                 <th className="px-3 py-3 text-start">חוץ</th>
                 <th className="px-3 py-3 text-center">ET</th>
                 <th className="px-3 py-3 text-center">פנדלים</th>
-                <th className="px-3 py-3 text-center">סטטוס</th>
-                <th className="px-3 py-3 text-center">מצב</th>
-                <th className="px-3 py-3 text-center">דקה</th>
-                <th className="sticky left-0 z-20 bg-[color:var(--wc-panel)] px-4 py-3 text-center shadow-[-18px_0_30px_rgba(4,3,11,0.45)]">
-                  פעולות
-                </th>
               </tr>
             </thead>
             <tbody>
@@ -624,10 +622,124 @@ function DevMatchRowEditor({
     );
   }
 
+  const phaseOptions = MATCH_PHASE_OPTIONS.filter((option) => !option.knockoutOnly || knockout);
+  const canEditPhase = !busy && match.status !== "finished";
+
+  function updatePhase(value: MatchPhase | "") {
+    const nextPhase = value || null;
+    update((current) => ({
+      ...current,
+      status: value ? "live" : current.status,
+      match_phase: nextPhase,
+      minute:
+        isMinuteLockedPhase(nextPhase)
+          ? null
+          : value === "extra_time" && (current.minute === null || current.minute < 90)
+            ? 91
+            : current.minute,
+      is_extra_time:
+        isExtraTimePhase(nextPhase)
+          ? true
+          : value
+            ? false
+            : current.is_extra_time,
+    }));
+  }
+
   return (
     <tr className="border-b border-white/5 last:border-0">
       <td className="px-3 py-3 font-mono text-xs text-wc-fg3">{match.match_number}</td>
       <td className="px-3 py-3 text-xs text-wc-fg2">{getStageLabelHe(match.stage)}</td>
+      <td className="px-3 py-3 text-center align-top">
+        <div className="flex w-[168px] flex-col items-center gap-2">
+          <span
+            className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${statusClass}`}
+          >
+            {match.status}
+          </span>
+          <div className="grid w-full grid-cols-3 gap-1">
+            <button
+              onClick={() => updateStatus("live")}
+              disabled={busy || match.status === "live"}
+              className="rounded-xl bg-[rgba(255,92,130,0.12)] px-2 py-2 text-[10px] font-black text-wc-danger transition hover:bg-[rgba(255,92,130,0.22)] disabled:opacity-40"
+            >
+              LIVE
+            </button>
+            <button
+              onClick={() => updateStatus("finished")}
+              disabled={busy || match.status === "finished"}
+              className="rounded-xl bg-white/6 px-2 py-2 text-[10px] font-black text-wc-fg2 transition hover:bg-white/12 disabled:opacity-40"
+            >
+              FINISH
+            </button>
+            <button
+              onClick={() => onReset(match.match_number)}
+              disabled={busy || match.status === "scheduled"}
+              className="rounded-xl bg-white/4 px-2 py-2 text-[10px] font-black text-wc-fg3 transition hover:bg-white/10 disabled:opacity-40"
+            >
+              RESET
+            </button>
+          </div>
+        </div>
+      </td>
+      <td className="px-3 py-3 text-center align-top">
+        <div className="grid w-[248px] grid-cols-3 gap-1 rounded-2xl border border-white/10 bg-black/20 p-1 shadow-inner shadow-black/20">
+          {phaseOptions.map((option) => {
+            const activeValue = match.match_phase ?? "";
+            const isActive = activeValue === option.value;
+            const isDisabled = !canEditPhase || (!option.value && match.status === "scheduled");
+
+            return (
+              <button
+                key={option.value || "none"}
+                type="button"
+                onClick={() => updatePhase(option.value)}
+                disabled={isDisabled}
+                aria-pressed={isActive}
+                className={`rounded-xl px-2 py-2 text-[11px] font-black transition disabled:cursor-not-allowed disabled:opacity-35 ${
+                  isActive
+                    ? "bg-wc-neon text-black shadow-[0_0_18px_rgba(95,255,123,0.18)]"
+                    : "bg-white/[0.055] text-wc-fg2 hover:bg-white/10 hover:text-wc-fg1"
+                }`}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+      </td>
+      <td className="px-3 py-3 text-center align-top">
+        <input
+          dir="ltr"
+          type="number"
+          value={match.minute ?? ""}
+          min={0}
+          max={130}
+          placeholder="-"
+          onChange={(event) => {
+            const value = event.target.value;
+            update((current) => ({
+              ...current,
+              minute: value === "" ? null : Number(value),
+              match_phase:
+                current.match_phase ??
+                (value === "" ? null : Number(value) <= 45 ? "first_half" : "second_half"),
+            }));
+          }}
+          disabled={busy || match.status === "scheduled" || match.status === "finished" || isMinuteLocked}
+          className="w-16 rounded-xl border border-white/10 bg-black/30 px-2 py-2 text-center text-xs font-black text-wc-fg1 outline-none transition focus:border-wc-neon disabled:cursor-not-allowed disabled:opacity-35"
+          title={isMinuteLocked ? "במחצית ובפנדלים אין דקת משחק פעילה" : undefined}
+        />
+      </td>
+      <td className="px-3 py-3 text-center align-top">
+        <button
+          onClick={() => onSave(match.match_number)}
+          disabled={busy}
+          className="rounded-xl bg-[rgba(95,255,123,0.15)] px-4 py-2 text-[11px] font-black text-wc-neon transition hover:bg-[rgba(95,255,123,0.28)] disabled:opacity-50"
+        >
+          שמור
+        </button>
+      </td>
       <td className="px-3 py-3 text-xs text-wc-fg1">{homeName}</td>
       <td className="px-3 py-3">
         <div dir="ltr" className="flex flex-row-reverse items-center justify-center gap-1">
@@ -731,108 +843,6 @@ function DevMatchRowEditor({
         ) : (
           <span className="text-xs text-wc-fg3">-</span>
         )}
-      </td>
-      <td className="px-3 py-3 text-center">
-        <div className="flex flex-col items-center gap-1">
-          <span
-            className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${statusClass}`}
-          >
-            {match.status}
-          </span>
-          <div className="flex flex-wrap items-center justify-center gap-1">
-            <button
-              onClick={() => updateStatus("live")}
-              disabled={busy || match.status === "live"}
-              className="rounded-lg bg-[rgba(255,92,130,0.12)] px-2 py-1 text-[10px] font-bold text-wc-danger hover:bg-[rgba(255,92,130,0.22)] disabled:opacity-40"
-            >
-              LIVE
-            </button>
-            <button
-              onClick={() => updateStatus("finished")}
-              disabled={busy || match.status === "finished"}
-              className="rounded-lg bg-white/6 px-2 py-1 text-[10px] font-bold text-wc-fg2 hover:bg-white/12 disabled:opacity-40"
-            >
-              FINISH
-            </button>
-            <button
-              onClick={() => onReset(match.match_number)}
-              disabled={busy || match.status === "scheduled"}
-              className="rounded-lg bg-white/4 px-2 py-1 text-[10px] font-bold text-wc-fg3 hover:bg-white/10 disabled:opacity-40"
-            >
-              RESET
-            </button>
-          </div>
-        </div>
-      </td>
-      <td className="px-3 py-3 text-center">
-        <select
-          value={match.match_phase ?? ""}
-          onChange={(event) => {
-            const value = event.target.value as MatchPhase | "";
-            const nextPhase = value || null;
-            update((current) => ({
-              ...current,
-              status: value ? "live" : current.status,
-              match_phase: nextPhase,
-              minute:
-                isMinuteLockedPhase(nextPhase)
-                  ? null
-                  : value === "extra_time" && (current.minute === null || current.minute < 90)
-                    ? 91
-                    : current.minute,
-              is_extra_time:
-                isExtraTimePhase(nextPhase)
-                  ? true
-                  : value
-                    ? false
-                    : current.is_extra_time,
-            }));
-          }}
-          disabled={busy || match.status === "scheduled" || match.status === "finished"}
-          className="w-28 rounded-lg border border-white/10 bg-black/30 px-2 py-1 text-center text-xs text-wc-fg1 outline-none focus:border-wc-neon disabled:opacity-40"
-          aria-label={`Match phase for match ${match.match_number}`}
-        >
-          {MATCH_PHASE_OPTIONS.map((option) => (
-            <option
-              key={option.value || "none"}
-              value={option.value}
-              disabled={!knockout && isExtraTimePhase(option.value || null)}
-            >
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </td>
-      <td className="px-3 py-3 text-center">
-        <input
-          dir="ltr"
-          type="number"
-          value={match.minute ?? ""}
-          min={0}
-          max={130}
-          placeholder="-"
-          onChange={(event) => {
-            const value = event.target.value;
-            update((current) => ({
-              ...current,
-              minute: value === "" ? null : Number(value),
-              match_phase:
-                current.match_phase ??
-                (value === "" ? null : Number(value) <= 45 ? "first_half" : "second_half"),
-            }));
-          }}
-          disabled={busy || match.status === "scheduled" || match.status === "finished" || isMinuteLocked}
-          className="w-16 rounded-lg border border-white/10 bg-black/30 px-2 py-1 text-center text-xs text-wc-fg1 outline-none focus:border-wc-neon disabled:opacity-40"
-        />
-      </td>
-      <td className="sticky left-0 z-10 bg-[color:var(--wc-panel)] px-4 py-3 text-center shadow-[-18px_0_30px_rgba(4,3,11,0.42)]">
-        <button
-          onClick={() => onSave(match.match_number)}
-          disabled={busy}
-          className="rounded-lg bg-[rgba(95,255,123,0.15)] px-3 py-1 text-[10px] font-bold text-wc-neon hover:bg-[rgba(95,255,123,0.28)] disabled:opacity-50"
-        >
-          שמור
-        </button>
       </td>
     </tr>
   );

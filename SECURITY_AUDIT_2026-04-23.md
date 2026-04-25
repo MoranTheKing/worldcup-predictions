@@ -464,6 +464,7 @@ Security-relevant follow-up:
 - the client AuthProvider now validates the current Supabase user on focus, visibility return and a short interval; if an admin deleted the user while the browser still holds a stale session, the local session/profile are cleared and the UI stops showing authenticated controls
 - TOTP enrollment preparation is now deduplicated per browser tab, preventing duplicate React dev effects from creating and deleting competing unverified factors; `Factor not found` during setup triggers a fresh QR instead of a dead-end error
 - existing real Google accounts are no longer treated like a dead-end signup collision: when a user tries to add email/password with the same address, signup now sends a real `signInWithOtp` code with `shouldCreateUser: false`, verifies ownership, and only then links the chosen password through `updateUser`
+- `/mfa/setup` now requires the explicit signup marker `user_metadata.mfa_setup_requested`; an unverified TOTP factor alone is not enough to open enrollment, and the marker is cleared after successful QR verification
 
 ## 2026-04-25 match-state and signup hardening follow-up
 
@@ -474,7 +475,8 @@ Security and correctness follow-up:
 - Dev Tools `LIVE`, `FINISH` and `RESET` status buttons now persist immediately through the guarded dev APIs and run the existing tournament sync pipeline, reducing the chance that an operator thinks a state was applied while it only exists locally in the browser
 - `20260425000022_add_match_phase.sql` adds the DB constraint for allowed `match_phase` values and extends the public tournament projection without exposing user prediction rows
 - the same migration now also constrains `match_phase` to live matches, clears minute for halftime/penalties, and prevents extra-time/penalty phases before knockout matches
-- `/mfa/setup` is server-gated so a fully onboarded user cannot manually open the enrollment page and accidentally create a new Authenticator factor; verified users or completed users without pending setup are redirected onward
+- Dev Tools phase controls are now rendered as visible buttons near the start of the RTL table, with extra-time and penalty options shown only for knockout matches; minute input remains disabled for halftime and penalties
+- `/mfa/setup` is server-gated so only a signup flow that explicitly requested Authenticator can open enrollment; verified users, completed users, or stale sessions with only a leftover unverified factor are redirected onward
 
 Migration required:
 

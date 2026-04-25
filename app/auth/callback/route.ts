@@ -5,6 +5,8 @@ import { fetchOnboardingStatus } from "@/lib/supabase/onboarding";
 import { NextResponse } from "next/server";
 import type { User } from "@supabase/supabase-js";
 
+const MFA_SETUP_REQUESTED_METADATA_KEY = "mfa_setup_requested";
+
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
@@ -15,6 +17,16 @@ export async function GET(request: Request) {
     const supabase = await createClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
+      if (flow === "signup") {
+        const { error: metadataError } = await supabase.auth.updateUser({
+          data: { [MFA_SETUP_REQUESTED_METADATA_KEY]: redirectPath.startsWith("/mfa/setup") },
+        });
+
+        if (metadataError) {
+          console.error("[auth/callback] Failed to mark MFA setup choice:", metadataError.message);
+        }
+      }
+
       if (flow === "login") {
         const {
           data: { user },
