@@ -9,14 +9,20 @@ import {
 import { getSafeRedirectPath } from "@/lib/security/safe-redirect";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const CODE_LENGTH = 6;
+const EMAIL_CODE_COOLDOWN_SECONDS = 60;
 
 type SignupError = {
   code?: string;
   message?: string;
   status?: number;
+};
+
+type EmailCodeCooldown = {
+  email: string;
+  seconds: number;
 };
 
 export default function SignupPage() {
@@ -36,9 +42,39 @@ export default function SignupPage() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(signupNotice);
   const [loading, setLoading] = useState(false);
+  const [emailCodeCooldown, setEmailCodeCooldown] = useState<EmailCodeCooldown | null>(null);
   const passwordPolicy = evaluatePasswordPolicy(password, email.trim().toLowerCase());
   const hasPasswordConfirmation = passwordConfirmation.length > 0;
   const passwordConfirmationMatches = password === passwordConfirmation;
+  const normalizedEmailInput = email.trim().toLowerCase();
+  const signupCooldownSeconds = getEmailCooldownSeconds(emailCodeCooldown, normalizedEmailInput);
+  const pendingCooldownSeconds = getEmailCooldownSeconds(emailCodeCooldown, pendingEmail);
+  const signupBlockedByCooldown = signupCooldownSeconds > 0;
+
+  useEffect(() => {
+    if (!emailCodeCooldown) {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      setEmailCodeCooldown((current) => {
+        if (!current) {
+          return null;
+        }
+
+        if (current.seconds <= 1) {
+          return null;
+        }
+
+        return {
+          ...current,
+          seconds: current.seconds - 1,
+        };
+      });
+    }, 1000);
+
+    return () => window.clearInterval(intervalId);
+  }, [emailCodeCooldown]);
 
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault();
@@ -47,7 +83,14 @@ export default function SignupPage() {
     setNotice(null);
 
     const normalizedEmail = email.trim().toLowerCase();
+    const cooldownSeconds = getEmailCooldownSeconds(emailCodeCooldown, normalizedEmail);
     const passwordPolicyError = getPasswordPolicyError(password, normalizedEmail);
+
+    if (cooldownSeconds > 0) {
+      setError(getEmailCooldownMessage(cooldownSeconds));
+      setLoading(false);
+      return;
+    }
 
     if (!passwordConfirmationMatches) {
       setError("אימות הסיסמה לא תואם לסיסמה שבחרת. כתוב את אותה סיסמה בשני השדות.");
@@ -73,7 +116,12 @@ export default function SignupPage() {
       setPendingEmail(normalizedEmail);
       setVerificationCode("");
       setNotice("אם אפשר להמשיך עם הרשמה לכתובת הזו, שלחנו קוד אימות בן 6 ספרות לאימייל.");
+      startEmailCodeCooldown(normalizedEmail);
     } else if (authError) {
+      if (isEmailSendCooldownError(authError)) {
+        startEmailCodeCooldown(normalizedEmail);
+      }
+
       setError(getSignupErrorMessage(authError));
     } else if (data.session) {
       window.location.assign(buildPostSignupPath(wantsAuthenticator, nextPath));
@@ -81,6 +129,7 @@ export default function SignupPage() {
       setPendingEmail(normalizedEmail);
       setVerificationCode("");
       setNotice("אם אפשר להמשיך עם הרשמה לכתובת הזו, שלחנו קוד אימות בן 6 ספרות לאימייל.");
+      startEmailCodeCooldown(normalizedEmail);
     }
 
     setLoading(false);
@@ -117,6 +166,12 @@ export default function SignupPage() {
       return;
     }
 
+    const cooldownSeconds = getEmailCooldownSeconds(emailCodeCooldown, pendingEmail);
+    if (cooldownSeconds > 0) {
+      setError(getEmailCooldownMessage(cooldownSeconds));
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setNotice(null);
@@ -130,9 +185,14 @@ export default function SignupPage() {
     });
 
     if (authError) {
+      if (isEmailSendCooldownError(authError)) {
+        startEmailCodeCooldown(pendingEmail);
+      }
+
       setError(getSignupErrorMessage(authError));
     } else {
       setNotice("אם הכתובת עדיין ממתינה לאימות, שלחנו קוד חדש. אם כבר יש לך חשבון, אפשר להתחבר במקום.");
+      startEmailCodeCooldown(pendingEmail);
     }
 
     setLoading(false);
@@ -154,6 +214,19 @@ export default function SignupPage() {
       setError("שגיאה בהתחברות עם Google");
       setLoading(false);
     }
+  }
+
+  function startEmailCodeCooldown(targetEmail: string) {
+    const normalizedEmail = targetEmail.trim().toLowerCase();
+
+    if (!normalizedEmail) {
+      return;
+    }
+
+    setEmailCodeCooldown({
+      email: normalizedEmail,
+      seconds: EMAIL_CODE_COOLDOWN_SECONDS,
+    });
   }
 
   if (pendingEmail) {
@@ -213,6 +286,10 @@ export default function SignupPage() {
                 </p>
               )}
 
+              {pendingCooldownSeconds > 0 && (
+                <EmailCodeCooldownCard seconds={pendingCooldownSeconds} />
+              )}
+
               {error && (
                 <p className="rounded-2xl bg-[color:var(--wc-danger-bg)] px-4 py-3 text-center text-sm text-wc-danger">
                   {error}
@@ -232,10 +309,12 @@ export default function SignupPage() {
               <button
                 type="button"
                 onClick={handleResendCode}
-                disabled={loading}
+                disabled={loading || pendingCooldownSeconds > 0}
                 className="font-semibold text-wc-neon underline underline-offset-4 disabled:opacity-50"
               >
-                שלח קוד חדש
+                {pendingCooldownSeconds > 0
+                  ? `אפשר לשלוח שוב בעוד ${formatCooldownSeconds(pendingCooldownSeconds)}`
+                  : "שלח קוד חדש"}
               </button>
               <span className="hidden h-1 w-1 rounded-full bg-white/25 sm:block" />
               <button
@@ -345,6 +424,10 @@ export default function SignupPage() {
             )}
             <PasswordStrengthPanel policy={passwordPolicy} password={password} />
 
+            {signupCooldownSeconds > 0 && (
+              <EmailCodeCooldownCard seconds={signupCooldownSeconds} />
+            )}
+
             {error && (
               <p className="rounded-2xl bg-[color:var(--wc-danger-bg)] px-4 py-3 text-center text-sm text-wc-danger">
                 {error}
@@ -353,10 +436,19 @@ export default function SignupPage() {
 
             <button
               type="submit"
-              disabled={loading || !passwordPolicy.passed || !passwordConfirmationMatches}
+              disabled={
+                loading ||
+                signupBlockedByCooldown ||
+                !passwordPolicy.passed ||
+                !passwordConfirmationMatches
+              }
               className="wc-button-primary mt-2 w-full px-4 py-3.5 text-sm disabled:opacity-50"
             >
-              {loading ? "שולח קוד..." : "הרשמה וקבלת קוד"}
+              {loading
+                ? "שולח קוד..."
+                : signupBlockedByCooldown
+                  ? `אפשר לשלוח שוב בעוד ${formatCooldownSeconds(signupCooldownSeconds)}`
+                  : "הרשמה וקבלת קוד"}
             </button>
           </form>
         </div>
@@ -380,7 +472,7 @@ function getSignupErrorMessage(error: SignupError) {
     message.includes("email rate limit") ||
     message.includes("rate limit exceeded")
   ) {
-    return "Supabase מגביל כרגע שליחת מיילים. חכה קצת ונסה שוב, או נגדיר Custom SMTP כדי להסיר את המגבלה הנמוכה של סביבת הפיתוח.";
+    return getEmailCooldownMessage(EMAIL_CODE_COOLDOWN_SECONDS);
   }
 
   if (
@@ -389,7 +481,7 @@ function getSignupErrorMessage(error: SignupError) {
     message.includes("only request this after") ||
     message.includes("too many requests")
   ) {
-    return "שלחנו קוד ממש עכשיו. מטעמי אבטחה צריך להמתין בערך דקה לפני שמבקשים קוד נוסף או נרשמים שוב.";
+    return getEmailCooldownMessage(EMAIL_CODE_COOLDOWN_SECONDS);
   }
 
   if (message.includes("invalid email")) {
@@ -409,6 +501,73 @@ function getSignupErrorMessage(error: SignupError) {
   }
 
   return "לא הצלחנו לפתוח חשבון כרגע. בדוק את הפרטים ונסה שוב.";
+}
+
+function isEmailSendCooldownError(error: SignupError) {
+  const message = (error.message ?? "").toLowerCase();
+
+  return (
+    error.status === 429 ||
+    error.code === "over_email_send_rate_limit" ||
+    error.code === "over_request_rate_limit" ||
+    message.includes("email rate limit") ||
+    message.includes("rate limit exceeded") ||
+    message.includes("only request this after") ||
+    message.includes("too many requests")
+  );
+}
+
+function getEmailCooldownSeconds(
+  cooldown: EmailCodeCooldown | null,
+  targetEmail: string | null | undefined,
+) {
+  const normalizedEmail = targetEmail?.trim().toLowerCase();
+
+  if (!cooldown || !normalizedEmail || cooldown.email !== normalizedEmail) {
+    return 0;
+  }
+
+  return Math.max(0, cooldown.seconds);
+}
+
+function getEmailCooldownMessage(seconds: number) {
+  return `שלחנו קוד ממש עכשיו. אפשר לבקש קוד חדש בעוד ${formatCooldownSeconds(seconds)}.`;
+}
+
+function formatCooldownSeconds(seconds: number) {
+  return `${Math.max(1, seconds)} שניות`;
+}
+
+function EmailCodeCooldownCard({ seconds }: { seconds: number }) {
+  const progress = Math.min(
+    100,
+    Math.max(0, ((EMAIL_CODE_COOLDOWN_SECONDS - seconds) / EMAIL_CODE_COOLDOWN_SECONDS) * 100),
+  );
+
+  return (
+    <div className="rounded-[1.4rem] border border-wc-amber/25 bg-wc-amber/10 p-4 text-start">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-black text-wc-fg1">הקוד בדרך אליך</p>
+          <p className="mt-1 text-xs leading-5 text-wc-fg3">
+            כדי לשמור על החשבון, אפשר לבקש קוד חדש בעוד רגע קצר.
+          </p>
+        </div>
+        <span
+          dir="ltr"
+          className="rounded-full border border-wc-amber/30 bg-black/20 px-3 py-1 text-sm font-black text-wc-amber"
+        >
+          {seconds}s
+        </span>
+      </div>
+      <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/10" aria-hidden="true">
+        <div
+          className="h-full rounded-full bg-[linear-gradient(90deg,var(--wc-amber),var(--wc-neon))] transition-all duration-500"
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+    </div>
+  );
 }
 
 function getSignupNotice(notice: string | null) {
