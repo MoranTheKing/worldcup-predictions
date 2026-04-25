@@ -19,7 +19,11 @@ UPDATE public.matches
 SET match_phase = NULL
 WHERE status IS DISTINCT FROM 'live';
 
-CREATE OR REPLACE VIEW public.public_tournament_matches AS
+-- Recreate the view instead of CREATE OR REPLACE: Postgres does not allow
+-- inserting a new view column in the middle of an existing column order.
+DROP VIEW IF EXISTS public.public_tournament_matches;
+
+CREATE VIEW public.public_tournament_matches AS
 SELECT
   match_number,
   stage,
@@ -30,7 +34,6 @@ SELECT
   home_score,
   away_score,
   status,
-  match_phase,
   minute,
   date_time,
   is_extra_time,
