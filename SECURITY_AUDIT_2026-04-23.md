@@ -475,7 +475,7 @@ Security and correctness follow-up:
 - Dev Tools `LIVE`, `FINISH` and `RESET` status buttons now persist immediately through the guarded dev APIs and run the existing tournament sync pipeline, reducing the chance that an operator thinks a state was applied while it only exists locally in the browser
 - `20260425000022_add_match_phase.sql` adds the DB constraint for allowed `match_phase` values and extends the public tournament projection without exposing user prediction rows
 - the same migration now also constrains `match_phase` to live matches, clears minute for halftime/penalties, and prevents extra-time/penalty phases before knockout matches
-- Dev Tools phase controls are now rendered as visible buttons near the start of the RTL table, with ET and penalty controls moved next to the match state; minute 91+ in knockout automatically sets `extra_time`, and entering penalty scores automatically sets `penalties`
+- Dev Tools phase controls no longer include a fake "regular" phase; first-half, second-half and extra-time minute ranges are enforced in UI and API, ET appears only for knockout matches, and penalties require a knockout draw
 - `/mfa/setup` is server-gated so only a signup flow that explicitly requested Authenticator can open enrollment; verified users, completed users, or stale sessions with only a leftover unverified factor are redirected onward
 
 Migration required:

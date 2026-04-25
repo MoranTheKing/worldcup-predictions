@@ -18,8 +18,7 @@ type Props = { matches: DevMatchRow[]; error: string | null };
 
 type Filter = "all" | "scheduled" | "live" | "finished";
 
-const MATCH_PHASE_OPTIONS: Array<{ value: MatchPhase | ""; label: string; knockoutOnly?: boolean }> = [
-  { value: "", label: "רגיל" },
+const MATCH_PHASE_OPTIONS: Array<{ value: MatchPhase; label: string; knockoutOnly?: boolean }> = [
   { value: "first_half", label: "מחצית 1" },
   { value: "halftime", label: "מחצית" },
   { value: "second_half", label: "מחצית 2" },
@@ -54,6 +53,35 @@ function isExtraTimePhase(phase: MatchPhase | null) {
   return phase === "extra_time" || phase === "penalties";
 }
 
+function getMinuteBounds(phase: MatchPhase | null, knockout: boolean) {
+  if (phase === "first_half") {
+    return { min: 0, max: 60 };
+  }
+
+  if (phase === "second_half") {
+    return { min: 46, max: knockout ? 90 : 130 };
+  }
+
+  if (phase === "extra_time") {
+    return { min: 91, max: 130 };
+  }
+
+  return { min: 0, max: 130 };
+}
+
+function isMinuteAllowedForPhase(phase: MatchPhase | null, knockout: boolean, minute: number | null) {
+  if (minute === null) {
+    return true;
+  }
+
+  if (isMinuteLockedPhase(phase)) {
+    return false;
+  }
+
+  const bounds = getMinuteBounds(phase, knockout);
+  return minute >= bounds.min && minute <= bounds.max;
+}
+
 function hasPenaltyScore(match: Pick<DevMatchRow, "home_penalty_score" | "away_penalty_score">) {
   return match.home_penalty_score !== null || match.away_penalty_score !== null;
 }
@@ -75,7 +103,14 @@ function getPhaseFromMinute(
     return minute <= 45 ? "first_half" : "second_half";
   }
 
-  return currentPhase ?? (minute <= 45 ? "first_half" : "second_half");
+  if (
+    currentPhase !== null &&
+    isMinuteAllowedForPhase(currentPhase, isKnockoutMatch(matchNumber), minute)
+  ) {
+    return currentPhase;
+  }
+
+  return minute <= 45 ? "first_half" : "second_half";
 }
 
 function normalizeDraft(match: DevMatchRow): DevMatchRow {
@@ -665,18 +700,19 @@ function DevMatchRowEditor({
   const phaseOptions = MATCH_PHASE_OPTIONS.filter((option) => !option.knockoutOnly || knockout);
   const canEditPhase = !busy && match.status !== "finished";
 
-  function updatePhase(value: MatchPhase | "") {
-    const nextPhase = value || null;
+  function updatePhase(nextPhase: MatchPhase) {
     update((current) => ({
       ...current,
-      status: value ? "live" : current.status,
+      status: "live",
       match_phase: nextPhase,
       minute:
         isMinuteLockedPhase(nextPhase)
           ? null
-          : value === "extra_time" && (current.minute === null || current.minute < 90)
+          : nextPhase === "extra_time" && (current.minute === null || current.minute < 91)
             ? 91
-            : current.minute,
+            : isMinuteAllowedForPhase(nextPhase, knockout, current.minute)
+              ? current.minute
+              : null,
       is_extra_time: isExtraTimePhase(nextPhase),
     }));
   }
@@ -722,11 +758,13 @@ function DevMatchRowEditor({
           {phaseOptions.map((option) => {
             const activeValue = match.match_phase ?? "";
             const isActive = activeValue === option.value;
-            const isDisabled = !canEditPhase || (!option.value && match.status === "scheduled");
+            const isDisabled =
+              !canEditPhase ||
+              (option.value === "penalties" && (!regularDraw || match.status === "scheduled"));
 
             return (
               <button
-                key={option.value || "none"}
+                key={option.value}
                 type="button"
                 onClick={() => updatePhase(option.value)}
                 disabled={isDisabled}
@@ -748,12 +786,13 @@ function DevMatchRowEditor({
           dir="ltr"
           type="number"
           value={match.minute ?? ""}
-          min={0}
-          max={130}
           placeholder="-"
           onChange={(event) => {
             const value = event.target.value;
             const nextMinute = value === "" ? null : Number(value);
+            if (!isMinuteAllowedForPhase(match.match_phase, knockout, nextMinute)) {
+              return;
+            }
             const nextPhase = getPhaseFromMinute(match.match_number, nextMinute, match.match_phase);
             update((current) => ({
               ...current,
@@ -764,13 +803,18 @@ function DevMatchRowEditor({
             }));
           }}
           disabled={busy || match.status === "scheduled" || match.status === "finished" || isMinuteLocked}
+          min={getMinuteBounds(match.match_phase, knockout).min}
+          max={getMinuteBounds(match.match_phase, knockout).max}
           className="w-16 rounded-xl border border-white/10 bg-black/30 px-2 py-2 text-center text-xs font-black text-wc-fg1 outline-none transition focus:border-wc-neon disabled:cursor-not-allowed disabled:opacity-35"
           title={isMinuteLocked ? "במחצית ובפנדלים אין דקת משחק פעילה" : undefined}
         />
       </td>
       <td className="px-3 py-3 text-center align-top">
         {knockout ? (
-          <label className="inline-flex items-center justify-center gap-2 rounded-xl bg-white/[0.045] px-3 py-2 text-xs font-black text-wc-fg2">
+          <label
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-white/[0.045] px-3 py-2 text-xs font-black text-wc-fg2"
+            title="ET זמין רק במשחקי נוקאאוט"
+          >
             <input
               type="checkbox"
               checked={Boolean(match.is_extra_time) || match.match_phase === "extra_time"}
@@ -802,12 +846,18 @@ function DevMatchRowEditor({
             ET
           </label>
         ) : (
-          <span className="text-xs text-wc-fg3">-</span>
+          <span className="text-[10px] font-bold text-wc-fg3" title="ET זמין רק במשחקי נוקאאוט">
+            נוקאאוט
+          </span>
         )}
       </td>
       <td className="px-3 py-3 align-top">
         {knockout ? (
-          <div dir="ltr" className="flex flex-row-reverse items-center justify-center gap-1">
+          <div
+            dir="ltr"
+            className="flex flex-row-reverse items-center justify-center gap-1"
+            title={!regularDraw ? "פנדלים זמינים רק כשהתוצאה הרגילה בתיקו" : undefined}
+          >
             <input
               type="number"
               value={match.home_penalty_score ?? ""}
@@ -875,7 +925,9 @@ function DevMatchRowEditor({
             />
           </div>
         ) : (
-          <span className="block text-center text-xs text-wc-fg3">-</span>
+          <span className="block text-center text-[10px] font-bold text-wc-fg3" title="פנדלים זמינים רק בנוקאאוט">
+            נוקאאוט
+          </span>
         )}
       </td>
       <td className="px-3 py-3 text-center align-top">

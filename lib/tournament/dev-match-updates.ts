@@ -47,6 +47,35 @@ function isExtraTimePhase(phase: MatchPhase | null) {
   return phase === "extra_time" || phase === "penalties";
 }
 
+function getMinuteBounds(phase: MatchPhase | null, knockout: boolean) {
+  if (phase === "first_half") {
+    return { min: 0, max: 60 };
+  }
+
+  if (phase === "second_half") {
+    return { min: 46, max: knockout ? 90 : 130 };
+  }
+
+  if (phase === "extra_time") {
+    return { min: 91, max: 130 };
+  }
+
+  return { min: 0, max: 130 };
+}
+
+function isMinuteAllowedForPhase(phase: MatchPhase | null, knockout: boolean, minute: number | null) {
+  if (minute === null) {
+    return true;
+  }
+
+  if (isMinuteLockedPhase(phase)) {
+    return false;
+  }
+
+  const bounds = getMinuteBounds(phase, knockout);
+  return minute >= bounds.min && minute <= bounds.max;
+}
+
 function hasPenaltyScore(match: Pick<EditableMatchState, "home_penalty_score" | "away_penalty_score">) {
   return match.home_penalty_score !== null || match.away_penalty_score !== null;
 }
@@ -68,7 +97,11 @@ function getPhaseFromMinute(
     return minute <= 45 ? "first_half" : "second_half";
   }
 
-  return currentPhase ?? (minute <= 45 ? "first_half" : "second_half");
+  if (currentPhase !== null && isMinuteAllowedForPhase(currentPhase, knockout, minute)) {
+    return currentPhase;
+  }
+
+  return minute <= 45 ? "first_half" : "second_half";
 }
 
 function normalizeInt(value: unknown, min: number, max: number) {
@@ -160,6 +193,20 @@ export function buildDevMatchUpdate(existing: EditableMatchState, patch: DevMatc
   const regularDraw = next.home_score === next.away_score;
   const knockout = isKnockoutStage(next.stage);
   const hasPenalties = hasPenaltyScore(next);
+  const explicitlySetPhase = patch.match_phase !== undefined;
+
+  if (next.status === "live" && explicitlySetPhase && next.match_phase !== null) {
+    if (isMinuteLockedPhase(next.match_phase)) {
+      next.minute = null;
+      update.minute = null;
+    } else if (next.match_phase === "extra_time" && !isMinuteAllowedForPhase(next.match_phase, knockout, next.minute)) {
+      next.minute = 91;
+      update.minute = 91;
+    } else if (!isMinuteAllowedForPhase(next.match_phase, knockout, next.minute)) {
+      next.minute = null;
+      update.minute = null;
+    }
+  }
 
   if (next.status === "scheduled") {
     next.home_score = 0;
