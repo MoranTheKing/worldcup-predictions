@@ -54,10 +54,50 @@ function isExtraTimePhase(phase: MatchPhase | null) {
   return phase === "extra_time" || phase === "penalties";
 }
 
+function hasPenaltyScore(match: Pick<DevMatchRow, "home_penalty_score" | "away_penalty_score">) {
+  return match.home_penalty_score !== null || match.away_penalty_score !== null;
+}
+
+function getPhaseFromMinute(
+  matchNumber: number,
+  minute: number | null,
+  currentPhase: MatchPhase | null,
+) {
+  if (minute === null) {
+    return currentPhase;
+  }
+
+  if (isKnockoutMatch(matchNumber) && minute >= 91) {
+    return "extra_time";
+  }
+
+  if (currentPhase === "extra_time") {
+    return minute <= 45 ? "first_half" : "second_half";
+  }
+
+  return currentPhase ?? (minute <= 45 ? "first_half" : "second_half");
+}
+
 function normalizeDraft(match: DevMatchRow): DevMatchRow {
   const knockout = isKnockoutMatch(match.match_number);
   const regularDraw = isRegularDraw(match);
-  const matchPhase = match.status === "live" ? match.match_phase : null;
+  let matchPhase = match.status === "live" ? match.match_phase : null;
+
+  if (match.status === "live") {
+    if (!knockout && isExtraTimePhase(matchPhase)) {
+      matchPhase = null;
+    }
+
+    if (knockout && regularDraw && hasPenaltyScore(match)) {
+      matchPhase = "penalties";
+    } else {
+      matchPhase = getPhaseFromMinute(match.match_number, match.minute, matchPhase);
+    }
+
+    if ((!knockout || !regularDraw) && matchPhase === "penalties") {
+      matchPhase = null;
+    }
+  }
 
   if (match.status === "scheduled") {
     return {
@@ -496,7 +536,7 @@ function DevToolsClientInner({ matches, error }: Props) {
         </div>
 
         <div className="overflow-x-auto rounded-[1.5rem] wc-card">
-          <table className="w-full min-w-[1420px] text-sm">
+          <table className="w-full min-w-[1240px] text-sm">
             <thead>
               <tr className="border-b border-white/10 text-xs text-wc-fg3">
                 <th className="px-3 py-3 text-start">#</th>
@@ -504,12 +544,12 @@ function DevToolsClientInner({ matches, error }: Props) {
                 <th className="px-3 py-3 text-center">סטטוס</th>
                 <th className="px-3 py-3 text-center">מצב</th>
                 <th className="px-3 py-3 text-center">דקה</th>
+                <th className="px-3 py-3 text-center">ET</th>
+                <th className="px-3 py-3 text-center">פנדלים</th>
                 <th className="px-3 py-3 text-center">פעולות</th>
                 <th className="px-3 py-3 text-start">בית</th>
                 <th className="px-3 py-3 text-center">תוצאה</th>
                 <th className="px-3 py-3 text-start">חוץ</th>
-                <th className="px-3 py-3 text-center">ET</th>
-                <th className="px-3 py-3 text-center">פנדלים</th>
               </tr>
             </thead>
             <tbody>
@@ -637,12 +677,7 @@ function DevMatchRowEditor({
           : value === "extra_time" && (current.minute === null || current.minute < 90)
             ? 91
             : current.minute,
-      is_extra_time:
-        isExtraTimePhase(nextPhase)
-          ? true
-          : value
-            ? false
-            : current.is_extra_time,
+      is_extra_time: isExtraTimePhase(nextPhase),
     }));
   }
 
@@ -683,7 +718,7 @@ function DevMatchRowEditor({
         </div>
       </td>
       <td className="px-3 py-3 text-center align-top">
-        <div className="grid w-[248px] grid-cols-3 gap-1 rounded-2xl border border-white/10 bg-black/20 p-1 shadow-inner shadow-black/20">
+        <div className="grid w-[220px] grid-cols-3 gap-1 rounded-2xl border border-white/10 bg-black/20 p-1 shadow-inner shadow-black/20">
           {phaseOptions.map((option) => {
             const activeValue = match.match_phase ?? "";
             const isActive = activeValue === option.value;
@@ -718,18 +753,130 @@ function DevMatchRowEditor({
           placeholder="-"
           onChange={(event) => {
             const value = event.target.value;
+            const nextMinute = value === "" ? null : Number(value);
+            const nextPhase = getPhaseFromMinute(match.match_number, nextMinute, match.match_phase);
             update((current) => ({
               ...current,
-              minute: value === "" ? null : Number(value),
-              match_phase:
-                current.match_phase ??
-                (value === "" ? null : Number(value) <= 45 ? "first_half" : "second_half"),
+              minute: nextMinute,
+              status: nextMinute !== null ? "live" : current.status,
+              match_phase: nextPhase,
+              is_extra_time: isExtraTimePhase(nextPhase),
             }));
           }}
           disabled={busy || match.status === "scheduled" || match.status === "finished" || isMinuteLocked}
           className="w-16 rounded-xl border border-white/10 bg-black/30 px-2 py-2 text-center text-xs font-black text-wc-fg1 outline-none transition focus:border-wc-neon disabled:cursor-not-allowed disabled:opacity-35"
           title={isMinuteLocked ? "במחצית ובפנדלים אין דקת משחק פעילה" : undefined}
         />
+      </td>
+      <td className="px-3 py-3 text-center align-top">
+        {knockout ? (
+          <label className="inline-flex items-center justify-center gap-2 rounded-xl bg-white/[0.045] px-3 py-2 text-xs font-black text-wc-fg2">
+            <input
+              type="checkbox"
+              checked={Boolean(match.is_extra_time) || match.match_phase === "extra_time"}
+              onChange={(event) => {
+                const checked = event.target.checked;
+                update((current) => {
+                  const nextMinute =
+                    checked && (current.minute === null || current.minute < 91) ? 91 : current.minute;
+                  const nextPhase = checked
+                    ? "extra_time"
+                    : isExtraTimePhase(current.match_phase)
+                      ? getPhaseFromMinute(current.match_number, nextMinute, null)
+                      : current.match_phase;
+
+                  return {
+                    ...current,
+                    status: checked ? "live" : current.status,
+                    minute: checked ? nextMinute : current.minute,
+                    match_phase: nextPhase,
+                    is_extra_time: checked,
+                    home_penalty_score: checked ? current.home_penalty_score : null,
+                    away_penalty_score: checked ? current.away_penalty_score : null,
+                  };
+                });
+              }}
+              disabled={busy || match.status === "finished"}
+              className="h-4 w-4 rounded border-white/10 bg-black/30"
+            />
+            ET
+          </label>
+        ) : (
+          <span className="text-xs text-wc-fg3">-</span>
+        )}
+      </td>
+      <td className="px-3 py-3 align-top">
+        {knockout ? (
+          <div dir="ltr" className="flex flex-row-reverse items-center justify-center gap-1">
+            <input
+              type="number"
+              value={match.home_penalty_score ?? ""}
+              min={0}
+              max={30}
+              placeholder="-"
+              aria-label={`Home penalty score for ${homeName}`}
+              onChange={(event) => {
+                const value = event.target.value;
+                const nextPenaltyScore = value === "" ? null : Number(value);
+                update((current) => {
+                  const hasAnyPenalty =
+                    nextPenaltyScore !== null || current.away_penalty_score !== null;
+                  const nextPhase = hasAnyPenalty
+                    ? "penalties"
+                    : current.match_phase === "penalties"
+                      ? null
+                      : current.match_phase;
+
+                  return {
+                    ...current,
+                    status: hasAnyPenalty ? "live" : current.status,
+                    match_phase: nextPhase,
+                    minute: hasAnyPenalty ? null : current.minute,
+                    is_extra_time: isExtraTimePhase(nextPhase),
+                    home_penalty_score: nextPenaltyScore,
+                  };
+                });
+              }}
+              disabled={busy || !regularDraw || match.status === "finished"}
+              className="w-10 rounded-lg border border-white/10 bg-black/30 px-1.5 py-2 text-center text-xs font-bold text-wc-fg1 outline-none focus:border-wc-neon disabled:opacity-40"
+            />
+            <span className="text-wc-fg3">-</span>
+            <input
+              type="number"
+              value={match.away_penalty_score ?? ""}
+              min={0}
+              max={30}
+              placeholder="-"
+              aria-label={`Away penalty score for ${awayName}`}
+              onChange={(event) => {
+                const value = event.target.value;
+                const nextPenaltyScore = value === "" ? null : Number(value);
+                update((current) => {
+                  const hasAnyPenalty =
+                    current.home_penalty_score !== null || nextPenaltyScore !== null;
+                  const nextPhase = hasAnyPenalty
+                    ? "penalties"
+                    : current.match_phase === "penalties"
+                      ? null
+                      : current.match_phase;
+
+                  return {
+                    ...current,
+                    status: hasAnyPenalty ? "live" : current.status,
+                    match_phase: nextPhase,
+                    minute: hasAnyPenalty ? null : current.minute,
+                    is_extra_time: isExtraTimePhase(nextPhase),
+                    away_penalty_score: nextPenaltyScore,
+                  };
+                });
+              }}
+              disabled={busy || !regularDraw || match.status === "finished"}
+              className="w-10 rounded-lg border border-white/10 bg-black/30 px-1.5 py-2 text-center text-xs font-bold text-wc-fg1 outline-none focus:border-wc-neon disabled:opacity-40"
+            />
+          </div>
+        ) : (
+          <span className="block text-center text-xs text-wc-fg3">-</span>
+        )}
       </td>
       <td className="px-3 py-3 text-center align-top">
         <button
@@ -779,71 +926,6 @@ function DevMatchRowEditor({
         </div>
       </td>
       <td className="px-3 py-3 text-xs text-wc-fg1">{awayName}</td>
-      <td className="px-3 py-3 text-center">
-        {knockout ? (
-          <label className="inline-flex items-center justify-center gap-2 text-xs text-wc-fg2">
-            <input
-              type="checkbox"
-              checked={Boolean(match.is_extra_time)}
-              onChange={(event) => {
-                const checked = event.target.checked;
-                update((current) => ({
-                  ...current,
-                  is_extra_time: checked,
-                }));
-              }}
-              disabled={busy}
-              className="h-4 w-4 rounded border-white/10 bg-black/30"
-            />
-            ET
-          </label>
-        ) : (
-          <span className="text-xs text-wc-fg3">-</span>
-        )}
-      </td>
-      <td className="px-3 py-3">
-        {knockout ? (
-          <div dir="ltr" className="flex flex-row-reverse items-center justify-center gap-1">
-            <input
-              type="number"
-              value={match.home_penalty_score ?? ""}
-              min={0}
-              max={30}
-              placeholder="-"
-              aria-label={`Home penalty score for ${homeName}`}
-              onChange={(event) => {
-                const value = event.target.value;
-                update((current) => ({
-                  ...current,
-                  home_penalty_score: value === "" ? null : Number(value),
-                }));
-              }}
-              disabled={busy || !regularDraw}
-              className="w-12 rounded-lg border border-white/10 bg-black/30 px-2 py-1 text-center text-xs text-wc-fg1 outline-none focus:border-wc-neon disabled:opacity-40"
-            />
-            <span className="text-wc-fg3">-</span>
-            <input
-              type="number"
-              value={match.away_penalty_score ?? ""}
-              min={0}
-              max={30}
-              placeholder="-"
-              aria-label={`Away penalty score for ${awayName}`}
-              onChange={(event) => {
-                const value = event.target.value;
-                update((current) => ({
-                  ...current,
-                  away_penalty_score: value === "" ? null : Number(value),
-                }));
-              }}
-              disabled={busy || !regularDraw}
-              className="w-12 rounded-lg border border-white/10 bg-black/30 px-2 py-1 text-center text-xs text-wc-fg1 outline-none focus:border-wc-neon disabled:opacity-40"
-            />
-          </div>
-        ) : (
-          <span className="text-xs text-wc-fg3">-</span>
-        )}
-      </td>
     </tr>
   );
 }

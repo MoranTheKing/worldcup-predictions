@@ -47,6 +47,30 @@ function isExtraTimePhase(phase: MatchPhase | null) {
   return phase === "extra_time" || phase === "penalties";
 }
 
+function hasPenaltyScore(match: Pick<EditableMatchState, "home_penalty_score" | "away_penalty_score">) {
+  return match.home_penalty_score !== null || match.away_penalty_score !== null;
+}
+
+function getPhaseFromMinute(
+  knockout: boolean,
+  minute: number | null,
+  currentPhase: MatchPhase | null,
+) {
+  if (minute === null) {
+    return currentPhase;
+  }
+
+  if (knockout && minute >= 91) {
+    return "extra_time";
+  }
+
+  if (currentPhase === "extra_time") {
+    return minute <= 45 ? "first_half" : "second_half";
+  }
+
+  return currentPhase ?? (minute <= 45 ? "first_half" : "second_half");
+}
+
 function normalizeInt(value: unknown, min: number, max: number) {
   if (value === undefined) return undefined;
   if (value === null) return null;
@@ -135,6 +159,7 @@ export function buildDevMatchUpdate(existing: EditableMatchState, patch: DevMatc
 
   const regularDraw = next.home_score === next.away_score;
   const knockout = isKnockoutStage(next.stage);
+  const hasPenalties = hasPenaltyScore(next);
 
   if (next.status === "scheduled") {
     next.home_score = 0;
@@ -156,6 +181,13 @@ export function buildDevMatchUpdate(existing: EditableMatchState, patch: DevMatc
     next.away_penalty_score = null;
     update.home_penalty_score = null;
     update.away_penalty_score = null;
+
+    if (next.match_phase === "penalties") {
+      next.match_phase = null;
+      update.match_phase = null;
+      next.is_extra_time = false;
+      update.is_extra_time = false;
+    }
   }
 
   if (next.status === "finished") {
@@ -164,9 +196,20 @@ export function buildDevMatchUpdate(existing: EditableMatchState, patch: DevMatc
     update.match_phase = null;
     update.minute = null;
   } else if (next.status === "live") {
-    if (next.match_phase === null && next.minute !== null) {
-      next.match_phase = next.minute <= 45 ? "first_half" : "second_half";
+    if (knockout && regularDraw && hasPenalties) {
+      next.match_phase = "penalties";
       update.match_phase = next.match_phase;
+      next.minute = null;
+      update.minute = null;
+      next.is_extra_time = true;
+      update.is_extra_time = true;
+    } else {
+      const phaseFromMinute = getPhaseFromMinute(knockout, next.minute, next.match_phase);
+
+      if (phaseFromMinute !== next.match_phase) {
+        next.match_phase = phaseFromMinute;
+        update.match_phase = next.match_phase;
+      }
     }
 
     if (isMinuteLockedPhase(next.match_phase)) {
