@@ -16,6 +16,10 @@ type UseDevLiveRefreshOptions = {
   pollIntervalMs?: number;
 };
 
+type DevMatchesVersionResponse = {
+  version?: unknown;
+};
+
 function isDevLiveRefreshMessage(value: unknown): value is DevLiveRefreshMessage {
   if (!value || typeof value !== "object") return false;
 
@@ -48,6 +52,8 @@ export function notifyDevLiveRefresh(reason?: string) {
 export function useDevLiveRefresh({ pollIntervalMs = 0 }: UseDevLiveRefreshOptions = {}) {
   const router = useRouter();
   const lastRefreshAtRef = useRef(0);
+  const lastPolledVersionRef = useRef<string | null>(null);
+  const pollInFlightRef = useRef(false);
 
   useEffect(() => {
     function refreshAt(timestamp: number) {
@@ -92,9 +98,38 @@ export function useDevLiveRefresh({ pollIntervalMs = 0 }: UseDevLiveRefreshOptio
     const intervalId =
       pollIntervalMs > 0
         ? window.setInterval(() => {
-            if (document.visibilityState === "visible") {
-              refreshAt(Date.now());
-            }
+            if (document.visibilityState !== "visible" || pollInFlightRef.current) return;
+
+            pollInFlightRef.current = true;
+
+            void fetch("/api/dev/matches/version", { cache: "no-store" })
+              .then(async (response) => {
+                if (!response.ok) return;
+
+                const payload = (await response.json().catch(() => null)) as
+                  | DevMatchesVersionResponse
+                  | null;
+                const nextVersion =
+                  typeof payload?.version === "string" ? payload.version : null;
+
+                if (!nextVersion) return;
+
+                if (lastPolledVersionRef.current === null) {
+                  lastPolledVersionRef.current = nextVersion;
+                  return;
+                }
+
+                if (lastPolledVersionRef.current !== nextVersion) {
+                  lastPolledVersionRef.current = nextVersion;
+                  refreshAt(Date.now());
+                }
+              })
+              .catch(() => {
+                // The dev endpoint can be unavailable outside localhost; ignore silently.
+              })
+              .finally(() => {
+                pollInFlightRef.current = false;
+              });
           }, pollIntervalMs)
         : null;
 

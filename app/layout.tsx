@@ -3,7 +3,7 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { createClient } from "@/lib/supabase/server";
 import { fetchAuthProfile } from "@/lib/supabase/auth-profile";
-import { AuthProvider } from "@/components/auth/AuthProvider";
+import { AuthProvider, type MfaGateState } from "@/components/auth/AuthProvider";
 import AppNavbar from "@/components/AppNavbar";
 
 const worldCupDisplay = localFont({
@@ -37,6 +37,9 @@ export default async function RootLayout({
     data: { user },
   } = await supabase.auth.getUser();
   const profile = user ? await fetchAuthProfile(supabase, user.id) : null;
+  const initialMfaGateState: MfaGateState = user
+    ? await getInitialMfaGateState(supabase)
+    : "clear";
 
   return (
     <html
@@ -47,11 +50,30 @@ export default async function RootLayout({
       className={`${worldCupDisplay.variable} dark h-full`}
     >
       <body className="min-h-screen overflow-x-hidden bg-wc-bg font-sans text-wc-fg1 antialiased">
-        <AuthProvider initialUser={user} initialProfile={profile}>
+        <AuthProvider
+          initialMfaGateState={initialMfaGateState}
+          initialUser={user}
+          initialProfile={profile}
+        >
           <AppNavbar />
           {children}
         </AuthProvider>
       </body>
     </html>
   );
+}
+
+async function getInitialMfaGateState(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+): Promise<MfaGateState> {
+  const { data, error } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+
+  if (error) {
+    console.error("[RootLayout] MFA assurance check failed:", error.message);
+    return "checking";
+  }
+
+  return data?.nextLevel === "aal2" && data.currentLevel !== data.nextLevel
+    ? "challenge"
+    : "clear";
 }

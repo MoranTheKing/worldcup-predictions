@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, startTransition, useContext, useEffect, useState } from "react";
+import { createContext, startTransition, useContext, useEffect, useRef, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -20,18 +20,20 @@ type AuthContextValue = {
   signOut: () => Promise<void>;
 };
 
-type MfaGateState = "checking" | "clear" | "challenge";
+export type MfaGateState = "checking" | "clear" | "challenge";
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 type AuthProviderProps = {
   children: React.ReactNode;
+  initialMfaGateState: MfaGateState;
   initialUser: User | null;
   initialProfile: AuthProfile | null;
 };
 
 export function AuthProvider({
   children,
+  initialMfaGateState,
   initialUser,
   initialProfile,
 }: AuthProviderProps) {
@@ -42,8 +44,16 @@ export function AuthProvider({
   const [profile, setProfile] = useState<AuthProfile | null>(initialProfile);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [mfaGateState, setMfaGateState] = useState<MfaGateState>(() =>
-    initialUser && !isMfaNeutralPath(pathname) ? "checking" : "clear",
+    initialUser && !isMfaNeutralPath(pathname) ? initialMfaGateState : "clear",
   );
+  const lastMfaCheckedUserIdRef = useRef<string | null>(
+    initialUser && initialMfaGateState !== "checking" ? initialUser.id : null,
+  );
+  const mfaGateStateRef = useRef(mfaGateState);
+
+  useEffect(() => {
+    mfaGateStateRef.current = mfaGateState;
+  }, [mfaGateState]);
 
   useEffect(() => {
     startTransition(() => {
@@ -51,6 +61,18 @@ export function AuthProvider({
       setProfile(initialProfile);
     });
   }, [initialProfile, initialUser]);
+
+  useEffect(() => {
+    startTransition(() => {
+      setMfaGateState(initialUser && !isMfaNeutralPath(pathname) ? initialMfaGateState : "clear");
+    });
+
+    if (initialUser && initialMfaGateState !== "checking") {
+      lastMfaCheckedUserIdRef.current = initialUser.id;
+    } else if (!initialUser) {
+      lastMfaCheckedUserIdRef.current = null;
+    }
+  }, [initialMfaGateState, initialUser, pathname]);
 
   useEffect(() => {
     let isActive = true;
@@ -105,10 +127,29 @@ export function AuthProvider({
   useEffect(() => {
     let isActive = true;
 
-    if (!user || isMfaNeutralPath(pathname)) {
+    if (!user) {
+      lastMfaCheckedUserIdRef.current = null;
       startTransition(() => {
         setMfaGateState("clear");
       });
+      return () => {
+        isActive = false;
+      };
+    }
+
+    if (isMfaNeutralPath(pathname)) {
+      startTransition(() => {
+        setMfaGateState("clear");
+      });
+      return () => {
+        isActive = false;
+      };
+    }
+
+    if (
+      lastMfaCheckedUserIdRef.current === user.id &&
+      mfaGateStateRef.current !== "checking"
+    ) {
       return () => {
         isActive = false;
       };
@@ -129,11 +170,13 @@ export function AuthProvider({
           return;
         }
 
-        setMfaGateState(
+        const nextMfaGateState =
           data?.nextLevel === "aal2" && data.currentLevel !== data.nextLevel
             ? "challenge"
-            : "clear",
-        );
+            : "clear";
+
+        lastMfaCheckedUserIdRef.current = user.id;
+        setMfaGateState(nextMfaGateState);
       });
 
     return () => {
@@ -186,22 +229,43 @@ export function AuthProvider({
 
   const shouldShowMfaGate =
     Boolean(user) && !isMfaNeutralPath(pathname) && mfaGateState === "challenge";
+  const shouldHideForMfaCheck =
+    Boolean(user) && !isMfaNeutralPath(pathname) && mfaGateState === "checking";
 
   return (
     <AuthContext.Provider value={value}>
       {shouldShowMfaGate ? (
         <MfaChallengeScreen
           onSuccess={() => {
+            lastMfaCheckedUserIdRef.current = user?.id ?? null;
             setMfaGateState("clear");
             router.refresh();
           }}
           onSignOut={signOut}
           supabase={supabase}
         />
+      ) : shouldHideForMfaCheck ? (
+        <MfaCheckingScreen />
       ) : (
         children
       )}
     </AuthContext.Provider>
+  );
+}
+
+function MfaCheckingScreen() {
+  return (
+    <main className="wc-page flex min-h-screen items-center justify-center px-4 py-10">
+      <div className="wc-glass w-full max-w-md rounded-[2rem] p-7 text-center sm:p-8">
+        <div className="mx-auto grid size-14 place-items-center rounded-2xl border border-wc-neon/25 bg-wc-neon/10 text-2xl">
+          🔐
+        </div>
+        <p className="mt-5 text-sm font-black text-wc-fg1">מאמתים את שכבת האבטחה</p>
+        <p className="mt-2 text-xs leading-6 text-wc-fg3">
+          רגע קצר, בודקים אם החשבון צריך קוד נוסף לפני שנציג תוכן אישי.
+        </p>
+      </div>
+    </main>
   );
 }
 

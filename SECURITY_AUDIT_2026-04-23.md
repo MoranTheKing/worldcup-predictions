@@ -456,6 +456,8 @@ Security-relevant follow-up:
 - `/mfa/setup` now removes stale unverified TOTP factors before creating a new QR, so refreshes during setup do not leave users blocked by an unfinished enrollment
 - onboarding checks for an unfinished TOTP enrollment and redirects back to `/mfa/setup` before profile completion, preserving the user's explicit MFA choice
 - the global MFA assurance check is now visually silent while it is still checking; the challenge screen is shown only after Supabase reports that `aal2` is required
+- the root layout performs an initial MFA assurance check server-side, preventing protected page content from flashing before the TOTP challenge appears
+- dev live refresh polling now checks `/api/dev/matches/version` and calls `router.refresh()` only when match data changed, reducing unnecessary dev re-renders
 
 ## Post-audit hardening landed later on 2026-04-23
 
