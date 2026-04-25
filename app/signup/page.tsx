@@ -572,7 +572,7 @@ function EmailCodeCooldownCard({ seconds }: { seconds: number }) {
 
 function getSignupNotice(notice: string | null) {
   if (notice === "google_signup_required") {
-    return "כדי להמשיך עם Google צריך להירשם קודם. בחר Google כאן במסך ההרשמה, ואז נשלים פרופיל בצורה מסודרת.";
+    return "כדי להמשיך צריך להירשם קודם. אפשר לבחור Google כאן במסך ההרשמה, או להירשם עם מייל וסיסמה ולקבל קוד אימות רגיל.";
   }
 
   return null;

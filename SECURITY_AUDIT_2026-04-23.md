@@ -460,6 +460,7 @@ Security-relevant follow-up:
 - dev live refresh polling now checks `/api/dev/matches/version` and calls `router.refresh()` only when match data changed, reducing unnecessary dev re-renders
 - email OTP resend/signup cooldown now shows a user-friendly 60-second countdown instead of exposing Supabase/SMTP rate-limit details
 - TOTP setup verification now uses Supabase `challengeAndVerify` as one atomic operation, preventing email/password signup users from failing between challenge creation and QR-code verification
+- first-time Google OAuth attempts started from `/login` now delete the unused Google-only Auth user before redirecting to `/signup`, preventing a ghost Supabase user from blocking email/password signup with the same email
 
 ## Post-audit hardening landed later on 2026-04-23
 
