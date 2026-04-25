@@ -442,6 +442,8 @@ Additional 2026-04-24 remediation after PRs `#18` and `#19`:
 - the public tournament route no longer uses the service-role client
 - public tournament reads now go through explicit public projection views for teams and matches
 - signup no longer reveals existing-account state while still giving real users an obvious login path
+- optional Supabase TOTP MFA was added for users who choose Authenticator during signup
+- TOTP is enforced only after a verified factor exists, so Google and regular email users are not surprised by an unavailable extra step
 
 ## Post-audit hardening landed later on 2026-04-23
 

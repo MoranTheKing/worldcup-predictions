@@ -115,6 +115,11 @@ export default function LoginPage() {
               className="wc-input text-start"
             />
 
+            <p className="rounded-[1.2rem] border border-white/10 bg-white/[0.045] px-4 py-3 text-xs leading-5 text-wc-fg3">
+              אם החשבון שלך נרשם עם Authenticator, אחרי בדיקת הסיסמה יופיע מסך
+              להזנת קוד בן 6 ספרות. משתמשים בלי Authenticator לא יראו את השלב הזה.
+            </p>
+
             {error && (
               <p className="rounded-2xl bg-[color:var(--wc-danger-bg)] px-4 py-3 text-center text-sm text-wc-danger">
                 {error}

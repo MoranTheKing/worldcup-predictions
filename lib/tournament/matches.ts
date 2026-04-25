@@ -196,6 +196,11 @@ export function isMatchScoreVisible(match: Pick<TournamentMatchRecord, "status">
   return match.status === "live" || match.status === "finished";
 }
 
+export function getLiveMatchStatusLabel(minute: number | null) {
+  if (minute === 45) return "מחצית";
+  return minute !== null ? `${minute}' LIVE` : "LIVE";
+}
+
 export function getMatchScoreSummary(match: {
   home_score: number | null;
   away_score: number | null;

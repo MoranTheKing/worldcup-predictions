@@ -8,6 +8,7 @@ import {
   type PredictionActionState,
 } from "@/app/actions/predictions";
 import {
+  getLiveMatchStatusLabel,
   getMatchScoreSummary,
   getStageLabelHe,
   type MatchWithTeams,
@@ -142,7 +143,7 @@ export default function MatchPredictionCard({
         >
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-[11px] font-semibold text-wc-fg3">{stageLabel}</span>
-            <StatusPill isFinished={isFinished} isLive={isLive} />
+            <StatusPill isFinished={isFinished} isLive={isLive} minute={match.minute} />
             {tone === "jackpot" ? (
               <span className="rounded-full bg-[rgba(168,85,247,0.18)] px-2 py-0.5 text-[10px] font-black text-[#F1B7FF] shadow-[0_0_18px_rgba(168,85,247,0.38)]">
                 👑 JOKER EXACT HIT
@@ -502,15 +503,17 @@ function ScoreInput({
 function StatusPill({
   isFinished,
   isLive,
+  minute,
 }: {
   isFinished: boolean;
   isLive: boolean;
+  minute: number | null;
 }) {
   if (isLive) {
     return (
       <span className="inline-flex items-center gap-1 rounded-full bg-[rgba(34,211,238,0.12)] px-2 py-0.5 text-[10px] font-bold text-cyan-300">
         <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-cyan-300" />
-        LIVE
+        {getLiveMatchStatusLabel(minute)}
       </span>
     );
   }

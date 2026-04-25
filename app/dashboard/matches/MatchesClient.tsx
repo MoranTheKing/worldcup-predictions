@@ -7,6 +7,7 @@ import {
   formatMatchTimeLabel,
   getMatchScoreSummary,
   getMatchStageKind,
+  getLiveMatchStatusLabel,
   getStageLabelHe,
   getTeamDisplayLogo,
   getTeamDisplayName,
@@ -61,7 +62,7 @@ const TEXT: Record<Filter, { label: string; empty: string }> = {
 function getStatusMeta(status: string, minute: number | null) {
   if (status === "live") {
     return {
-      label: minute !== null ? `${minute}' LIVE` : "LIVE",
+      label: getLiveMatchStatusLabel(minute),
       pillClassName: "bg-[rgba(255,92,130,0.18)] text-wc-danger border border-[rgba(255,92,130,0.35)]",
       cardClassName: "border-[rgba(255,92,130,0.28)] shadow-[0_0_28px_rgba(255,92,130,0.08)]",
     };

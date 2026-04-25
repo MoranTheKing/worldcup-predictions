@@ -3,6 +3,7 @@
 import { useDevLiveRefresh } from "@/lib/dev/live-refresh";
 import {
   formatMatchTimeLabel,
+  getLiveMatchStatusLabel,
   getMatchScoreSummary,
   getStageLabelHe,
   getTeamDisplayLogo,
@@ -70,9 +71,7 @@ export default function MatchDetailClient({ match }: { match: MatchDetailRow }) 
             )}
             <p className="mt-2 text-xs font-bold text-wc-fg3">
               {match.status === "live"
-                ? match.minute !== null
-                  ? `${match.minute}' LIVE`
-                  : "LIVE"
+                ? getLiveMatchStatusLabel(match.minute)
                 : match.status === "finished"
                   ? "הסתיים"
                   : `${formatMatchTimeLabel(match.date_time)} IDT`}

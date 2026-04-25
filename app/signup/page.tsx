@@ -29,6 +29,7 @@ export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirmation, setPasswordConfirmation] = useState("");
+  const [wantsAuthenticator, setWantsAuthenticator] = useState(false);
   const [verificationCode, setVerificationCode] = useState("");
   const [pendingEmail, setPendingEmail] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -74,7 +75,7 @@ export default function SignupPage() {
     } else if (authError) {
       setError(getSignupErrorMessage(authError));
     } else if (data.session) {
-      window.location.assign(`/onboarding?next=${encodeURIComponent(nextPath)}`);
+      window.location.assign(buildPostSignupPath(wantsAuthenticator, nextPath));
     } else {
       setPendingEmail(normalizedEmail);
       setVerificationCode("");
@@ -107,7 +108,7 @@ export default function SignupPage() {
       return;
     }
 
-    window.location.assign(`/onboarding?next=${encodeURIComponent(nextPath)}`);
+    window.location.assign(buildPostSignupPath(wantsAuthenticator, nextPath));
   }
 
   async function handleResendCode() {
@@ -331,6 +332,24 @@ export default function SignupPage() {
             )}
             <PasswordStrengthPanel policy={passwordPolicy} password={password} />
 
+            <label className="group flex cursor-pointer gap-3 rounded-[1.4rem] border border-white/10 bg-white/[0.045] p-4 text-start transition hover:border-wc-neon/30 hover:bg-wc-neon/5">
+              <input
+                type="checkbox"
+                checked={wantsAuthenticator}
+                onChange={(event) => setWantsAuthenticator(event.target.checked)}
+                className="mt-1 h-4 w-4 accent-[var(--wc-neon)]"
+              />
+              <span>
+                <span className="block text-sm font-black text-wc-fg1">
+                  להוסיף Authenticator אחרי אימות המייל
+                </span>
+                <span className="mt-1 block text-xs leading-5 text-wc-fg3">
+                  מי שמפעיל את זה יחבר אפליקציית אימות, ובכל כניסה עתידית נבקש קוד
+                  בן 6 ספרות אחרי הסיסמה. בלי הבחירה הזאת לא יופיע מסך הקוד.
+                </span>
+              </span>
+            </label>
+
             {error && (
               <p className="rounded-2xl bg-[color:var(--wc-danger-bg)] px-4 py-3 text-center text-sm text-wc-danger">
                 {error}
@@ -407,6 +426,13 @@ function isExistingAccountSignupResponse(error: SignupError) {
     message.includes("already registered") ||
     message.includes("already been registered")
   );
+}
+
+function buildPostSignupPath(wantsAuthenticator: boolean, nextPath: string) {
+  const encodedNext = encodeURIComponent(nextPath);
+  return wantsAuthenticator
+    ? `/mfa/setup?next=${encodedNext}`
+    : `/onboarding?next=${encodedNext}`;
 }
 
 function PasswordStrengthPanel({
