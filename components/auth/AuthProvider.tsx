@@ -1,6 +1,14 @@
 "use client";
 
-import { createContext, startTransition, useContext, useEffect, useRef, useState } from "react";
+import {
+  createContext,
+  startTransition,
+  useContext,
+  useEffect,
+  useEffectEvent,
+  useRef,
+  useState,
+} from "react";
 import type { User } from "@supabase/supabase-js";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -31,6 +39,8 @@ type AuthProviderProps = {
   initialProfile: AuthProfile | null;
 };
 
+const AUTH_USER_VALIDATION_INTERVAL_MS = 10_000;
+
 export function AuthProvider({
   children,
   initialMfaGateState,
@@ -50,6 +60,7 @@ export function AuthProvider({
     initialUser && initialMfaGateState !== "checking" ? initialUser.id : null,
   );
   const mfaGateStateRef = useRef(mfaGateState);
+  const authValidationInFlightRef = useRef(false);
 
   useEffect(() => {
     mfaGateStateRef.current = mfaGateState;
@@ -73,6 +84,20 @@ export function AuthProvider({
       lastMfaCheckedUserIdRef.current = null;
     }
   }, [initialMfaGateState, initialUser, pathname]);
+
+  const clearLocalDeletedUserSession = useEffectEvent(async () => {
+    await supabase.auth.signOut({ scope: "local" });
+
+    lastMfaCheckedUserIdRef.current = null;
+
+    startTransition(() => {
+      setUser(null);
+      setProfile(null);
+      setMfaGateState("clear");
+    });
+
+    router.refresh();
+  });
 
   useEffect(() => {
     let isActive = true;
@@ -123,6 +148,62 @@ export function AuthProvider({
       subscription.unsubscribe();
     };
   }, [supabase]);
+
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
+
+    let isActive = true;
+    const validatingUserId = user.id;
+
+    async function validateServerUser() {
+      if (authValidationInFlightRef.current) {
+        return;
+      }
+
+      authValidationInFlightRef.current = true;
+
+      try {
+        const {
+          data: { user: serverUser },
+          error,
+        } = await supabase.auth.getUser();
+
+        if (!isActive) {
+          return;
+        }
+
+        if (error || !serverUser || serverUser.id !== validatingUserId) {
+          await clearLocalDeletedUserSession();
+        }
+      } finally {
+        authValidationInFlightRef.current = false;
+      }
+    }
+
+    function validateWhenVisible() {
+      if (document.visibilityState === "visible") {
+        void validateServerUser();
+      }
+    }
+
+    const intervalId = window.setInterval(
+      () => void validateServerUser(),
+      AUTH_USER_VALIDATION_INTERVAL_MS,
+    );
+
+    window.addEventListener("focus", validateWhenVisible);
+    document.addEventListener("visibilitychange", validateWhenVisible);
+    void validateServerUser();
+
+    return () => {
+      isActive = false;
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", validateWhenVisible);
+      document.removeEventListener("visibilitychange", validateWhenVisible);
+    };
+  }, [router, supabase, user]);
 
   useEffect(() => {
     let isActive = true;
