@@ -39,6 +39,14 @@ const ALLOWED_MATCH_PHASE = new Set<MatchPhase>([
   "penalties",
 ]);
 
+function isMinuteLockedPhase(phase: MatchPhase | null) {
+  return phase === "halftime" || phase === "penalties";
+}
+
+function isExtraTimePhase(phase: MatchPhase | null) {
+  return phase === "extra_time" || phase === "penalties";
+}
+
 function normalizeInt(value: unknown, min: number, max: number) {
   if (value === undefined) return undefined;
   if (value === null) return null;
@@ -51,6 +59,7 @@ function normalizeInt(value: unknown, min: number, max: number) {
 export function buildDevMatchUpdate(existing: EditableMatchState, patch: DevMatchPatchInput) {
   const update: Record<string, unknown> = {};
   const next: EditableMatchState = { ...existing };
+  const startsAsKnockout = isKnockoutStage(existing.stage);
 
   if (patch.status !== undefined) {
     if (!ALLOWED_STATUS.has(patch.status)) {
@@ -64,6 +73,10 @@ export function buildDevMatchUpdate(existing: EditableMatchState, patch: DevMatc
   if (patch.match_phase !== undefined) {
     if (patch.match_phase !== null && !ALLOWED_MATCH_PHASE.has(patch.match_phase)) {
       return { error: "invalid match_phase" as const };
+    }
+
+    if (!startsAsKnockout && isExtraTimePhase(patch.match_phase)) {
+      return { error: "extra time is only allowed for knockout matches" as const };
     }
 
     next.match_phase = patch.match_phase;
@@ -147,10 +160,24 @@ export function buildDevMatchUpdate(existing: EditableMatchState, patch: DevMatc
 
   if (next.status === "finished") {
     next.match_phase = null;
+    next.minute = null;
     update.match_phase = null;
-  } else if (next.status === "live" && next.match_phase === null && next.minute !== null) {
-    next.match_phase = next.minute <= 45 ? "first_half" : "second_half";
-    update.match_phase = next.match_phase;
+    update.minute = null;
+  } else if (next.status === "live") {
+    if (next.match_phase === null && next.minute !== null) {
+      next.match_phase = next.minute <= 45 ? "first_half" : "second_half";
+      update.match_phase = next.match_phase;
+    }
+
+    if (isMinuteLockedPhase(next.match_phase)) {
+      next.minute = null;
+      update.minute = null;
+    }
+
+    if (next.match_phase !== null) {
+      next.is_extra_time = isExtraTimePhase(next.match_phase);
+      update.is_extra_time = next.is_extra_time;
+    }
   } else if (next.status !== "live") {
     next.match_phase = null;
     update.match_phase = null;

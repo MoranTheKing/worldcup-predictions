@@ -473,6 +473,8 @@ Security and correctness follow-up:
 - live match display no longer infers halftime from minute 45; `matches.match_phase` now represents `first_half`, `halftime`, `second_half`, `extra_time` and `penalties`, so stoppage-time states such as `45+2` and `90+3` can be represented without ambiguous minute-only logic
 - Dev Tools `LIVE`, `FINISH` and `RESET` status buttons now persist immediately through the guarded dev APIs and run the existing tournament sync pipeline, reducing the chance that an operator thinks a state was applied while it only exists locally in the browser
 - `20260425000022_add_match_phase.sql` adds the DB constraint for allowed `match_phase` values and extends the public tournament projection without exposing user prediction rows
+- the same migration now also constrains `match_phase` to live matches, clears minute for halftime/penalties, and prevents extra-time/penalty phases before knockout matches
+- `/mfa/setup` is server-gated so a fully onboarded user cannot manually open the enrollment page and accidentally create a new Authenticator factor; verified users or completed users without pending setup are redirected onward
 
 Migration required:
 

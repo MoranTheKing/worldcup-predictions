@@ -46,9 +46,18 @@ function randomPenaltyPair() {
   return { home, away };
 }
 
+function isMinuteLockedPhase(phase: MatchPhase | null) {
+  return phase === "halftime" || phase === "penalties";
+}
+
+function isExtraTimePhase(phase: MatchPhase | null) {
+  return phase === "extra_time" || phase === "penalties";
+}
+
 function normalizeDraft(match: DevMatchRow): DevMatchRow {
   const knockout = isKnockoutMatch(match.match_number);
   const regularDraw = isRegularDraw(match);
+  const matchPhase = match.status === "live" ? match.match_phase : null;
 
   if (match.status === "scheduled") {
     return {
@@ -64,7 +73,8 @@ function normalizeDraft(match: DevMatchRow): DevMatchRow {
   if (!knockout || !regularDraw) {
     return {
       ...match,
-      match_phase: match.status === "live" ? match.match_phase : null,
+      match_phase: matchPhase,
+      minute: isMinuteLockedPhase(matchPhase) ? null : match.minute,
       is_extra_time: knockout ? Boolean(match.is_extra_time) : false,
       home_penalty_score: null,
       away_penalty_score: null,
@@ -73,7 +83,8 @@ function normalizeDraft(match: DevMatchRow): DevMatchRow {
 
   return {
     ...match,
-    match_phase: match.status === "live" ? match.match_phase : null,
+    match_phase: matchPhase,
+    minute: isMinuteLockedPhase(matchPhase) ? null : match.minute,
     is_extra_time: Boolean(match.is_extra_time),
   };
 }
@@ -485,7 +496,7 @@ function DevToolsClientInner({ matches, error }: Props) {
         </div>
 
         <div className="overflow-x-auto rounded-[1.5rem] wc-card">
-          <table className="w-full min-w-[1320px] text-sm">
+          <table className="w-full min-w-[1440px] text-sm">
             <thead>
               <tr className="border-b border-white/10 text-xs text-wc-fg3">
                 <th className="px-3 py-3 text-start">#</th>
@@ -498,7 +509,9 @@ function DevToolsClientInner({ matches, error }: Props) {
                 <th className="px-3 py-3 text-center">סטטוס</th>
                 <th className="px-3 py-3 text-center">מצב</th>
                 <th className="px-3 py-3 text-center">דקה</th>
-                <th className="px-3 py-3 text-center">פעולות</th>
+                <th className="sticky left-0 z-20 bg-[color:var(--wc-panel)] px-4 py-3 text-center shadow-[-18px_0_30px_rgba(4,3,11,0.45)]">
+                  פעולות
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -551,6 +564,7 @@ function DevMatchRowEditor({
   const awayName = getTeamDisplayName(match.awayTeam, match.away_placeholder);
   const knockout = isKnockoutMatch(match.match_number);
   const regularDraw = isRegularDraw(match);
+  const isMinuteLocked = isMinuteLockedPhase(match.match_phase);
 
   const statusClass =
     match.status === "live"
@@ -598,7 +612,7 @@ function DevMatchRowEditor({
         status === "live"
           ? current.match_phase ?? (current.minute !== null && current.minute > 45 ? "second_half" : "first_half")
           : null,
-      minute: status === "finished" ? null : current.minute,
+      minute: status === "finished" || isMinuteLockedPhase(current.match_phase) ? null : current.minute,
     };
   }
 
@@ -755,18 +769,19 @@ function DevMatchRowEditor({
           value={match.match_phase ?? ""}
           onChange={(event) => {
             const value = event.target.value as MatchPhase | "";
+            const nextPhase = value || null;
             update((current) => ({
               ...current,
               status: value ? "live" : current.status,
-              match_phase: value || null,
+              match_phase: nextPhase,
               minute:
-                value === "halftime"
+                isMinuteLockedPhase(nextPhase)
                   ? null
                   : value === "extra_time" && (current.minute === null || current.minute < 90)
                     ? 91
                     : current.minute,
               is_extra_time:
-                value === "extra_time" || value === "penalties"
+                isExtraTimePhase(nextPhase)
                   ? true
                   : value
                     ? false
@@ -778,7 +793,11 @@ function DevMatchRowEditor({
           aria-label={`Match phase for match ${match.match_number}`}
         >
           {MATCH_PHASE_OPTIONS.map((option) => (
-            <option key={option.value || "none"} value={option.value}>
+            <option
+              key={option.value || "none"}
+              value={option.value}
+              disabled={!knockout && isExtraTimePhase(option.value || null)}
+            >
               {option.label}
             </option>
           ))}
@@ -802,11 +821,11 @@ function DevMatchRowEditor({
                 (value === "" ? null : Number(value) <= 45 ? "first_half" : "second_half"),
             }));
           }}
-          disabled={busy || match.status === "scheduled" || match.status === "finished"}
+          disabled={busy || match.status === "scheduled" || match.status === "finished" || isMinuteLocked}
           className="w-16 rounded-lg border border-white/10 bg-black/30 px-2 py-1 text-center text-xs text-wc-fg1 outline-none focus:border-wc-neon disabled:opacity-40"
         />
       </td>
-      <td className="px-3 py-3 text-center">
+      <td className="sticky left-0 z-10 bg-[color:var(--wc-panel)] px-4 py-3 text-center shadow-[-18px_0_30px_rgba(4,3,11,0.42)]">
         <button
           onClick={() => onSave(match.match_number)}
           disabled={busy}
