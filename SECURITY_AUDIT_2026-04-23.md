@@ -445,6 +445,15 @@ Additional 2026-04-24 remediation after PRs `#18` and `#19`:
 - optional Supabase TOTP MFA was added for users who choose Authenticator during signup
 - TOTP is enforced only after a verified factor exists, so Google and regular email users are not surprised by an unavailable extra step
 
+## 2026-04-25 auth follow-up
+
+Security-relevant follow-up:
+
+- the signup Authenticator choice now appears before both Google and email/password, so the extra TOTP setup can apply to either signup path
+- signup redirects now preserve the intended flow as `/mfa/setup?next=/onboarding?...`, preventing MFA setup from skipping the required profile onboarding step
+- Google OAuth started from `/login` is marked as a login flow; if the account has not yet started app registration, the session is signed out and the user is redirected to `/signup` with a clear registration message
+- existing Google users who already completed app registration continue through login normally, while first-time Google users do not silently land inside the app
+
 ## Post-audit hardening landed later on 2026-04-23
 
 Not tied to a specific open PR, but implemented as a direct follow-up:

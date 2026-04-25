@@ -51,7 +51,7 @@ export default function LoginPage() {
     const { error: authError } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`,
+        redirectTo: `${window.location.origin}/auth/callback?flow=login&next=${encodeURIComponent(nextPath)}`,
       },
     });
 
@@ -83,6 +83,7 @@ export default function LoginPage() {
           </div>
 
           <button
+            type="button"
             onClick={handleGoogleLogin}
             disabled={loading}
             className="wc-button-secondary flex w-full items-center justify-center gap-3 rounded-2xl px-4 py-3.5 text-sm disabled:opacity-50"
@@ -90,6 +91,9 @@ export default function LoginPage() {
             <GoogleIcon />
             המשך עם Google
           </button>
+          <p className="mt-3 rounded-[1.2rem] border border-white/10 bg-white/[0.04] px-4 py-3 text-xs leading-5 text-wc-fg3">
+            זו כניסה לחשבון שכבר נרשם. אם זו הפעם הראשונה שלך עם Google, נעביר אותך למסך הרשמה ונבקש להשלים פרופיל.
+          </p>
 
           <div className="my-5 flex items-center gap-3">
             <div className="h-px flex-1 bg-white/10" />

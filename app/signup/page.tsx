@@ -23,6 +23,7 @@ export default function SignupPage() {
   const searchParams = useSearchParams();
   const supabase = createClient();
   const nextPath = getSafeRedirectPath(searchParams.get("next"));
+  const signupNotice = getSignupNotice(searchParams.get("notice"));
   const loginHref =
     nextPath === "/dashboard" ? "/login" : `/login?next=${encodeURIComponent(nextPath)}`;
 
@@ -33,7 +34,7 @@ export default function SignupPage() {
   const [verificationCode, setVerificationCode] = useState("");
   const [pendingEmail, setPendingEmail] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(signupNotice);
   const [loading, setLoading] = useState(false);
   const passwordPolicy = evaluatePasswordPolicy(password, email.trim().toLowerCase());
   const hasPasswordConfirmation = passwordConfirmation.length > 0;
@@ -64,7 +65,7 @@ export default function SignupPage() {
       email: normalizedEmail,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`,
+        emailRedirectTo: `${window.location.origin}/auth/callback?flow=signup&next=${encodeURIComponent(buildPostSignupPath(wantsAuthenticator, nextPath))}`,
       },
     });
 
@@ -124,7 +125,7 @@ export default function SignupPage() {
       type: "signup",
       email: pendingEmail,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`,
+        emailRedirectTo: `${window.location.origin}/auth/callback?flow=signup&next=${encodeURIComponent(buildPostSignupPath(wantsAuthenticator, nextPath))}`,
       },
     });
 
@@ -145,7 +146,7 @@ export default function SignupPage() {
     const { error: authError } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`,
+        redirectTo: `${window.location.origin}/auth/callback?flow=signup&next=${encodeURIComponent(buildPostSignupPath(wantsAuthenticator, nextPath))}`,
       },
     });
 
@@ -272,10 +273,22 @@ export default function SignupPage() {
         </div>
 
         <div className="wc-glass rounded-[2rem] p-6 sm:p-8">
+          {notice && (
+            <p className="mb-4 rounded-2xl border border-wc-neon/25 bg-wc-neon/10 px-4 py-3 text-center text-sm leading-6 text-wc-neon">
+              {notice}
+            </p>
+          )}
+
+          <AuthenticatorSignupOption
+            checked={wantsAuthenticator}
+            onChange={setWantsAuthenticator}
+          />
+
           <button
+            type="button"
             onClick={handleGoogleLogin}
             disabled={loading}
-            className="wc-button-secondary flex w-full items-center justify-center gap-3 rounded-2xl px-4 py-3.5 text-sm disabled:opacity-50"
+            className="wc-button-secondary mt-4 flex w-full items-center justify-center gap-3 rounded-2xl px-4 py-3.5 text-sm disabled:opacity-50"
           >
             <GoogleIcon />
             המשך עם Google
@@ -331,24 +344,6 @@ export default function SignupPage() {
               </p>
             )}
             <PasswordStrengthPanel policy={passwordPolicy} password={password} />
-
-            <label className="group flex cursor-pointer gap-3 rounded-[1.4rem] border border-white/10 bg-white/[0.045] p-4 text-start transition hover:border-wc-neon/30 hover:bg-wc-neon/5">
-              <input
-                type="checkbox"
-                checked={wantsAuthenticator}
-                onChange={(event) => setWantsAuthenticator(event.target.checked)}
-                className="mt-1 h-4 w-4 accent-[var(--wc-neon)]"
-              />
-              <span>
-                <span className="block text-sm font-black text-wc-fg1">
-                  להוסיף Authenticator אחרי אימות המייל
-                </span>
-                <span className="mt-1 block text-xs leading-5 text-wc-fg3">
-                  מי שמפעיל את זה יחבר אפליקציית אימות, ובכל כניסה עתידית נבקש קוד
-                  בן 6 ספרות אחרי הסיסמה. בלי הבחירה הזאת לא יופיע מסך הקוד.
-                </span>
-              </span>
-            </label>
 
             {error && (
               <p className="rounded-2xl bg-[color:var(--wc-danger-bg)] px-4 py-3 text-center text-sm text-wc-danger">
@@ -416,6 +411,14 @@ function getSignupErrorMessage(error: SignupError) {
   return "לא הצלחנו לפתוח חשבון כרגע. בדוק את הפרטים ונסה שוב.";
 }
 
+function getSignupNotice(notice: string | null) {
+  if (notice === "google_signup_required") {
+    return "כדי להמשיך עם Google צריך להירשם קודם. בחר Google כאן במסך ההרשמה, ואז נשלים פרופיל בצורה מסודרת.";
+  }
+
+  return null;
+}
+
 function isExistingAccountSignupResponse(error: SignupError) {
   const message = (error.message ?? "").toLowerCase();
 
@@ -428,11 +431,44 @@ function isExistingAccountSignupResponse(error: SignupError) {
   );
 }
 
+function buildOnboardingPath(nextPath: string) {
+  return `/onboarding?next=${encodeURIComponent(nextPath)}`;
+}
+
 function buildPostSignupPath(wantsAuthenticator: boolean, nextPath: string) {
-  const encodedNext = encodeURIComponent(nextPath);
+  const onboardingPath = buildOnboardingPath(nextPath);
+
   return wantsAuthenticator
-    ? `/mfa/setup?next=${encodedNext}`
-    : `/onboarding?next=${encodedNext}`;
+    ? `/mfa/setup?next=${encodeURIComponent(onboardingPath)}`
+    : onboardingPath;
+}
+
+function AuthenticatorSignupOption({
+  checked,
+  onChange,
+}: {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <label className="group flex cursor-pointer gap-3 rounded-[1.4rem] border border-wc-neon/20 bg-wc-neon/[0.06] p-4 text-start shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition hover:border-wc-neon/45 hover:bg-wc-neon/10">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(event) => onChange(event.target.checked)}
+        className="mt-1 h-4 w-4 accent-[var(--wc-neon)]"
+      />
+      <span>
+        <span className="block text-sm font-black text-wc-fg1">
+          הגנה נוספת עם אפליקציית אימות
+        </span>
+        <span className="mt-1 block text-xs leading-5 text-wc-fg3">
+          מומלץ אבטחתית: אחרי ההרשמה נחבר אפליקציית אימות, ובכניסות הבאות נבקש גם
+          סיסמה וגם קוד חד-פעמי בן 6 ספרות. הבחירה חלה גם על Google וגם על מייל וסיסמה.
+        </span>
+      </span>
+    </label>
+  );
 }
 
 function PasswordStrengthPanel({
