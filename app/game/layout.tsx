@@ -25,6 +25,21 @@ export default async function GameLayout({
     redirect("/login?next=/game");
   }
 
+  const { data: assuranceData, error: assuranceError } =
+    await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+
+  if (assuranceError) {
+    console.error("[GameLayout] MFA assurance check failed:", assuranceError.message);
+    redirect("/?next=/game");
+  }
+
+  if (
+    assuranceData?.nextLevel === "aal2" &&
+    assuranceData.currentLevel !== assuranceData.nextLevel
+  ) {
+    redirect("/?next=/game");
+  }
+
   const admin = createAdminClient();
 
   const [profile, jokerUsage, gameStats] = await Promise.all([
