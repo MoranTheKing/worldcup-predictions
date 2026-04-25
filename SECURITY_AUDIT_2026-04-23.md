@@ -463,6 +463,7 @@ Security-relevant follow-up:
 - first-time Google OAuth attempts started from `/login` now delete the unused Google-only Auth user before redirecting to `/signup`, preventing a ghost Supabase user from blocking email/password signup with the same email
 - the client AuthProvider now validates the current Supabase user on focus, visibility return and a short interval; if an admin deleted the user while the browser still holds a stale session, the local session/profile are cleared and the UI stops showing authenticated controls
 - TOTP enrollment preparation is now deduplicated per browser tab, preventing duplicate React dev effects from creating and deleting competing unverified factors; `Factor not found` during setup triggers a fresh QR instead of a dead-end error
+- existing real Google accounts are no longer treated like a dead-end signup collision: when a user tries to add email/password with the same address, signup now sends a real `signInWithOtp` code with `shouldCreateUser: false`, verifies ownership, and only then links the chosen password through `updateUser`
 
 ## Post-audit hardening landed later on 2026-04-23
 

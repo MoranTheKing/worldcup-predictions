@@ -25,6 +25,15 @@ type EmailCodeCooldown = {
   seconds: number;
 };
 
+type PendingEmailFlow = "new_signup" | "existing_account_password";
+
+type SignupAuthData = {
+  session?: unknown | null;
+  user?: {
+    identities?: unknown[] | null;
+  } | null;
+};
+
 export default function SignupPage() {
   const searchParams = useSearchParams();
   const supabase = createClient();
@@ -39,6 +48,8 @@ export default function SignupPage() {
   const [wantsAuthenticator, setWantsAuthenticator] = useState(false);
   const [verificationCode, setVerificationCode] = useState("");
   const [pendingEmail, setPendingEmail] = useState<string | null>(null);
+  const [pendingEmailFlow, setPendingEmailFlow] = useState<PendingEmailFlow>("new_signup");
+  const [pendingPassword, setPendingPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(signupNotice);
   const [loading, setLoading] = useState(false);
@@ -113,20 +124,21 @@ export default function SignupPage() {
     });
 
     if (authError && isExistingAccountSignupResponse(authError)) {
-      setPendingEmail(normalizedEmail);
-      setVerificationCode("");
-      setNotice("אם אפשר להמשיך עם הרשמה לכתובת הזו, שלחנו קוד אימות בן 6 ספרות לאימייל.");
-      startEmailCodeCooldown(normalizedEmail);
+      await startExistingAccountPasswordFlow(normalizedEmail, password);
     } else if (authError) {
       if (isEmailSendCooldownError(authError)) {
         startEmailCodeCooldown(normalizedEmail);
       }
 
       setError(getSignupErrorMessage(authError));
+    } else if (isExistingAccountSignupData(data)) {
+      await startExistingAccountPasswordFlow(normalizedEmail, password);
     } else if (data.session) {
       window.location.assign(buildPostSignupPath(wantsAuthenticator, nextPath));
     } else {
       setPendingEmail(normalizedEmail);
+      setPendingEmailFlow("new_signup");
+      setPendingPassword("");
       setVerificationCode("");
       setNotice("אם אפשר להמשיך עם הרשמה לכתובת הזו, שלחנו קוד אימות בן 6 ספרות לאימייל.");
       startEmailCodeCooldown(normalizedEmail);
@@ -158,6 +170,26 @@ export default function SignupPage() {
       return;
     }
 
+    if (pendingEmailFlow === "existing_account_password") {
+      const passwordPolicyError = getPasswordPolicyError(pendingPassword, pendingEmail);
+
+      if (passwordPolicyError) {
+        setError(passwordPolicyError);
+        setLoading(false);
+        return;
+      }
+
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: pendingPassword,
+      });
+
+      if (updateError) {
+        setError(getPasswordLinkErrorMessage(updateError));
+        setLoading(false);
+        return;
+      }
+    }
+
     window.location.assign(buildPostSignupPath(wantsAuthenticator, nextPath));
   }
 
@@ -175,6 +207,18 @@ export default function SignupPage() {
     setLoading(true);
     setError(null);
     setNotice(null);
+
+    if (pendingEmailFlow === "existing_account_password") {
+      const otpSent = await sendExistingAccountOtp(pendingEmail, pendingPassword);
+
+      if (otpSent) {
+        setNotice("שלחנו קוד חדש למייל. אחרי האימות נמשיך עם הכתובת הזו בצורה מאובטחת.");
+        startEmailCodeCooldown(pendingEmail);
+      }
+
+      setLoading(false);
+      return;
+    }
 
     const { error: authError } = await supabase.auth.resend({
       type: "signup",
@@ -229,7 +273,57 @@ export default function SignupPage() {
     });
   }
 
+  async function startExistingAccountPasswordFlow(normalizedEmail: string, nextPassword: string) {
+    const otpSent = await sendExistingAccountOtp(normalizedEmail, nextPassword);
+
+    if (!otpSent) {
+      return;
+    }
+
+    setPendingEmail(normalizedEmail);
+    setPendingEmailFlow("existing_account_password");
+    setPendingPassword(nextPassword);
+    setVerificationCode("");
+    setNotice(
+      "שלחנו קוד אימות למייל. אחרי הקוד נמשיך עם הכתובת הזו בצורה מאובטחת.",
+    );
+    startEmailCodeCooldown(normalizedEmail);
+  }
+
+  async function sendExistingAccountOtp(normalizedEmail: string, nextPassword: string) {
+    const passwordPolicyError = getPasswordPolicyError(nextPassword, normalizedEmail);
+
+    if (passwordPolicyError) {
+      setError(passwordPolicyError);
+      return false;
+    }
+
+    const { error: otpError } = await supabase.auth.signInWithOtp({
+      email: normalizedEmail,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback?flow=signup&next=${encodeURIComponent(buildPostSignupPath(wantsAuthenticator, nextPath))}`,
+        shouldCreateUser: false,
+      },
+    });
+
+    if (otpError) {
+      if (isEmailSendCooldownError(otpError)) {
+        startEmailCodeCooldown(normalizedEmail);
+      }
+
+      setError(getSignupErrorMessage(otpError));
+      return false;
+    }
+
+    return true;
+  }
+
   if (pendingEmail) {
+    const pendingEmailCopy =
+      pendingEmailFlow === "existing_account_password"
+        ? "קוד בן 6 ספרות מחכה באימייל. אחרי האימות נחבר את הסיסמה שבחרת ונמשיך לחשבון שלך."
+        : "קוד בן 6 ספרות מחכה באימייל. אם כבר יש לך חשבון, אפשר להתחבר מיד בלי לחכות לקוד חדש.";
+
     return (
       <main className="wc-page flex min-h-screen items-center justify-center px-4 py-10">
         <div className="w-full max-w-md">
@@ -242,7 +336,8 @@ export default function SignupPage() {
             <h1 className="wc-display mt-4 text-5xl text-wc-fg1">בדיקת אימייל</h1>
             <p className="mt-3 text-sm leading-7 text-wc-fg2">
               אם אפשר להמשיך בהרשמה ל־<span dir="ltr" className="font-semibold text-wc-fg1">{pendingEmail}</span>,
-              קוד בן 6 ספרות מחכה באימייל. אם כבר יש לך חשבון, אפשר להתחבר מיד בלי לחכות לקוד חדש.
+              {" "}
+              {pendingEmailCopy}
             </p>
           </div>
 
@@ -321,6 +416,8 @@ export default function SignupPage() {
                 type="button"
                 onClick={() => {
                   setPendingEmail(null);
+                  setPendingEmailFlow("new_signup");
+                  setPendingPassword("");
                   setVerificationCode("");
                   setError(null);
                   setNotice(null);
@@ -503,6 +600,29 @@ function getSignupErrorMessage(error: SignupError) {
   return "לא הצלחנו לפתוח חשבון כרגע. בדוק את הפרטים ונסה שוב.";
 }
 
+function getPasswordLinkErrorMessage(error: SignupError) {
+  const message = (error.message ?? "").toLowerCase();
+
+  if (
+    error.code === "weak_password" ||
+    message.includes("weak password") ||
+    message.includes("password")
+  ) {
+    return "אימתנו את המייל, אבל הסיסמה עדיין לא עומדת בדרישות האבטחה. בחר סיסמה חזקה יותר ונסה שוב.";
+  }
+
+  if (
+    message.includes("mfa") ||
+    message.includes("aal2") ||
+    message.includes("assurance") ||
+    message.includes("authenticator")
+  ) {
+    return "אימתנו את המייל, אבל החשבון מוגן ב-Authenticator ולכן צריך להתחבר לחשבון הקיים ולהשלים את קוד האימות לפני עדכון הסיסמה.";
+  }
+
+  return "אימתנו את המייל, אבל לא הצלחנו לחבר את הסיסמה לחשבון הזה. נסה להתחבר לחשבון הקיים או לבחור סיסמה אחרת.";
+}
+
 function isEmailSendCooldownError(error: SignupError) {
   const message = (error.message ?? "").toLowerCase();
 
@@ -587,6 +707,14 @@ function isExistingAccountSignupResponse(error: SignupError) {
     message.includes("user already registered") ||
     message.includes("already registered") ||
     message.includes("already been registered")
+  );
+}
+
+function isExistingAccountSignupData(data: SignupAuthData | null) {
+  return (
+    !data?.session &&
+    Array.isArray(data?.user?.identities) &&
+    data.user.identities.length === 0
   );
 }
 
