@@ -7,6 +7,7 @@ import { notifyDevLiveRefresh } from "@/lib/dev/live-refresh";
 import {
   getStageLabelHe,
   getTeamDisplayName,
+  type MatchPhase,
   type MatchStatus,
   type MatchWithTeams,
 } from "@/lib/tournament/matches";
@@ -16,6 +17,15 @@ export type DevMatchRow = MatchWithTeams;
 type Props = { matches: DevMatchRow[]; error: string | null };
 
 type Filter = "all" | "scheduled" | "live" | "finished";
+
+const MATCH_PHASE_OPTIONS: Array<{ value: MatchPhase | ""; label: string }> = [
+  { value: "", label: "רגיל" },
+  { value: "first_half", label: "מחצית 1" },
+  { value: "halftime", label: "מחצית" },
+  { value: "second_half", label: "מחצית 2" },
+  { value: "extra_time", label: "הארכה" },
+  { value: "penalties", label: "פנדלים" },
+];
 
 function isKnockoutMatch(matchNumber: number) {
   return matchNumber >= 73;
@@ -43,6 +53,7 @@ function normalizeDraft(match: DevMatchRow): DevMatchRow {
   if (match.status === "scheduled") {
     return {
       ...match,
+      match_phase: null,
       minute: null,
       is_extra_time: false,
       home_penalty_score: null,
@@ -53,6 +64,7 @@ function normalizeDraft(match: DevMatchRow): DevMatchRow {
   if (!knockout || !regularDraw) {
     return {
       ...match,
+      match_phase: match.status === "live" ? match.match_phase : null,
       is_extra_time: knockout ? Boolean(match.is_extra_time) : false,
       home_penalty_score: null,
       away_penalty_score: null,
@@ -61,6 +73,7 @@ function normalizeDraft(match: DevMatchRow): DevMatchRow {
 
   return {
     ...match,
+    match_phase: match.status === "live" ? match.match_phase : null,
     is_extra_time: Boolean(match.is_extra_time),
   };
 }
@@ -91,6 +104,7 @@ function toPayload(match: DevMatchRow) {
   return {
     match_number: match.match_number,
     status: match.status as MatchStatus,
+    match_phase: match.match_phase,
     home_score: match.home_score,
     away_score: match.away_score,
     minute: match.minute,
@@ -104,6 +118,7 @@ function buildScheduledReset(match: DevMatchRow) {
   return normalizeDraft({
     ...match,
     status: "scheduled",
+    match_phase: null,
     home_score: 0,
     away_score: 0,
     minute: null,
@@ -119,7 +134,7 @@ export default function DevToolsClient({ matches, error }: Props) {
       matches
         .map(
           (match) =>
-            `${match.match_number}:${match.status}:${match.home_score}:${match.away_score}:${match.home_team_id}:${match.away_team_id}`,
+            `${match.match_number}:${match.status}:${match.match_phase}:${match.minute}:${match.home_score}:${match.away_score}:${match.home_team_id}:${match.away_team_id}`,
         )
         .join("|"),
     [matches],
@@ -196,14 +211,29 @@ function DevToolsClientInner({ matches, error }: Props) {
     const draft = drafts.find((match) => match.match_number === matchNumber);
     if (!draft) return;
 
+    await persistSingleMatch(
+      matchNumber,
+      draft,
+      `משחק ${matchNumber} נשמר. הטבלאות, לוח המשחקים והנוקאאוט סונכרנו מחדש.`,
+    );
+  }
+
+  async function persistSingleMatch(
+    matchNumber: number,
+    nextDraft: DevMatchRow,
+    successMessage: string,
+  ) {
     setBusyId(matchNumber);
     setMessage(null);
+    setDrafts((existing) =>
+      existing.map((match) => (match.match_number === matchNumber ? normalizeDraft(nextDraft) : match)),
+    );
 
     try {
       const res = await fetch(`/api/dev/matches/${matchNumber}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(toPayload(ensureFinishedWinner(draft))),
+        body: JSON.stringify(toPayload(ensureFinishedWinner(nextDraft))),
       });
 
       if (!res.ok) {
@@ -212,12 +242,21 @@ function DevToolsClientInner({ matches, error }: Props) {
         return;
       }
 
-      refreshWithMessage(
-        `משחק ${matchNumber} נשמר. הטבלאות, לוח המשחקים והנוקאאוט סונכרנו מחדש.`,
-      );
+      refreshWithMessage(successMessage);
     } finally {
       setBusyId(null);
     }
+  }
+
+  async function updateMatchAndSave(
+    matchNumber: number,
+    recipe: (match: DevMatchRow) => DevMatchRow,
+    successMessage: string,
+  ) {
+    const current = drafts.find((match) => match.match_number === matchNumber);
+    if (!current) return;
+
+    await persistSingleMatch(matchNumber, normalizeDraft(recipe(current)), successMessage);
   }
 
   async function saveAll() {
@@ -446,7 +485,7 @@ function DevToolsClientInner({ matches, error }: Props) {
         </div>
 
         <div className="overflow-x-auto rounded-[1.5rem] wc-card">
-          <table className="w-full min-w-[1200px] text-sm">
+          <table className="w-full min-w-[1320px] text-sm">
             <thead>
               <tr className="border-b border-white/10 text-xs text-wc-fg3">
                 <th className="px-3 py-3 text-start">#</th>
@@ -457,6 +496,7 @@ function DevToolsClientInner({ matches, error }: Props) {
                 <th className="px-3 py-3 text-center">ET</th>
                 <th className="px-3 py-3 text-center">פנדלים</th>
                 <th className="px-3 py-3 text-center">סטטוס</th>
+                <th className="px-3 py-3 text-center">מצב</th>
                 <th className="px-3 py-3 text-center">דקה</th>
                 <th className="px-3 py-3 text-center">פעולות</th>
               </tr>
@@ -469,12 +509,13 @@ function DevToolsClientInner({ matches, error }: Props) {
                   busy={busyId === match.match_number || pending}
                   onChange={updateDraft}
                   onSave={saveMatch}
+                  onQuickSave={updateMatchAndSave}
                   onReset={resetMatch}
                 />
               ))}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={10} className="px-3 py-8 text-center text-wc-fg3">
+                  <td colSpan={11} className="px-3 py-8 text-center text-wc-fg3">
                     אין משחקים בקטגוריה הזו
                   </td>
                 </tr>
@@ -492,12 +533,18 @@ function DevMatchRowEditor({
   busy,
   onChange,
   onSave,
+  onQuickSave,
   onReset,
 }: {
   match: DevMatchRow;
   busy: boolean;
   onChange: (matchNumber: number, recipe: (match: DevMatchRow) => DevMatchRow) => void;
   onSave: (matchNumber: number) => Promise<void>;
+  onQuickSave: (
+    matchNumber: number,
+    recipe: (match: DevMatchRow) => DevMatchRow,
+    successMessage: string,
+  ) => Promise<void>;
   onReset: (matchNumber: number) => Promise<void>;
 }) {
   const homeName = getTeamDisplayName(match.homeTeam, match.home_placeholder);
@@ -516,40 +563,51 @@ function DevMatchRowEditor({
     onChange(match.match_number, recipe);
   }
 
-  function updateStatus(status: MatchStatus) {
-    update((current) => {
-      if (status === "scheduled") {
-        return buildScheduledReset(current);
-      }
+  function buildStatusUpdate(current: DevMatchRow, status: MatchStatus) {
+    if (status === "scheduled") {
+      return buildScheduledReset(current);
+    }
 
-      if (status === "finished" && knockout && isRegularDraw(current)) {
-        const penalties = randomPenaltyPair();
-        return {
-          ...current,
-          status,
-          minute: null,
-          is_extra_time: true,
-          home_penalty_score:
-            current.home_penalty_score !== null &&
-            current.away_penalty_score !== null &&
-            current.home_penalty_score !== current.away_penalty_score
-              ? current.home_penalty_score
-              : penalties.home,
-          away_penalty_score:
-            current.home_penalty_score !== null &&
-            current.away_penalty_score !== null &&
-            current.home_penalty_score !== current.away_penalty_score
-              ? current.away_penalty_score
-              : penalties.away,
-        };
-      }
-
+    if (status === "finished" && knockout && isRegularDraw(current)) {
+      const penalties = randomPenaltyPair();
       return {
         ...current,
         status,
-        minute: status === "finished" ? null : current.minute,
+        minute: null,
+        is_extra_time: true,
+        home_penalty_score:
+          current.home_penalty_score !== null &&
+          current.away_penalty_score !== null &&
+          current.home_penalty_score !== current.away_penalty_score
+            ? current.home_penalty_score
+            : penalties.home,
+        away_penalty_score:
+          current.home_penalty_score !== null &&
+          current.away_penalty_score !== null &&
+          current.home_penalty_score !== current.away_penalty_score
+            ? current.away_penalty_score
+            : penalties.away,
+        match_phase: null,
       };
-    });
+    }
+
+    return {
+      ...current,
+      status,
+      match_phase:
+        status === "live"
+          ? current.match_phase ?? (current.minute !== null && current.minute > 45 ? "second_half" : "first_half")
+          : null,
+      minute: status === "finished" ? null : current.minute,
+    };
+  }
+
+  function updateStatus(status: MatchStatus) {
+    void onQuickSave(
+      match.match_number,
+      (current) => buildStatusUpdate(current, status),
+      `משחק ${match.match_number} עודכן ל-${status} וסונכרן מיד לדייטבייס.`,
+    );
   }
 
   return (
@@ -693,6 +751,40 @@ function DevMatchRowEditor({
         </div>
       </td>
       <td className="px-3 py-3 text-center">
+        <select
+          value={match.match_phase ?? ""}
+          onChange={(event) => {
+            const value = event.target.value as MatchPhase | "";
+            update((current) => ({
+              ...current,
+              status: value ? "live" : current.status,
+              match_phase: value || null,
+              minute:
+                value === "halftime"
+                  ? null
+                  : value === "extra_time" && (current.minute === null || current.minute < 90)
+                    ? 91
+                    : current.minute,
+              is_extra_time:
+                value === "extra_time" || value === "penalties"
+                  ? true
+                  : value
+                    ? false
+                    : current.is_extra_time,
+            }));
+          }}
+          disabled={busy || match.status === "scheduled" || match.status === "finished"}
+          className="w-28 rounded-lg border border-white/10 bg-black/30 px-2 py-1 text-center text-xs text-wc-fg1 outline-none focus:border-wc-neon disabled:opacity-40"
+          aria-label={`Match phase for match ${match.match_number}`}
+        >
+          {MATCH_PHASE_OPTIONS.map((option) => (
+            <option key={option.value || "none"} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </td>
+      <td className="px-3 py-3 text-center">
         <input
           dir="ltr"
           type="number"
@@ -705,6 +797,9 @@ function DevMatchRowEditor({
             update((current) => ({
               ...current,
               minute: value === "" ? null : Number(value),
+              match_phase:
+                current.match_phase ??
+                (value === "" ? null : Number(value) <= 45 ? "first_half" : "second_half"),
             }));
           }}
           disabled={busy || match.status === "scheduled" || match.status === "finished"}

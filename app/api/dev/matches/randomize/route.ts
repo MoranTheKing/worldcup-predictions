@@ -45,6 +45,7 @@ export async function POST(request: Request) {
       .from("matches")
       .update({
         status: "finished",
+        match_phase: null,
         home_score: homeScore,
         away_score: awayScore,
         minute: null,

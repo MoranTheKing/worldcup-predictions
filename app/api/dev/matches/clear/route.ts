@@ -25,6 +25,7 @@ export async function POST(request: Request) {
     .update(
       {
         status: "scheduled",
+        match_phase: null,
         home_score: 0,
         away_score: 0,
         minute: null,

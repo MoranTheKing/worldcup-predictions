@@ -69,6 +69,7 @@ export async function syncTournamentState(supabase: SupabaseClient) {
           match_number,
           stage,
           status,
+          match_phase,
           date_time,
           minute,
           home_team_id,

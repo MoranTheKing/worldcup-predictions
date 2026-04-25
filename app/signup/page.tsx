@@ -49,7 +49,6 @@ export default function SignupPage() {
   const [verificationCode, setVerificationCode] = useState("");
   const [pendingEmail, setPendingEmail] = useState<string | null>(null);
   const [pendingEmailFlow, setPendingEmailFlow] = useState<PendingEmailFlow>("new_signup");
-  const [pendingPassword, setPendingPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(signupNotice);
   const [loading, setLoading] = useState(false);
@@ -124,7 +123,7 @@ export default function SignupPage() {
     });
 
     if (authError && isExistingAccountSignupResponse(authError)) {
-      await startExistingAccountPasswordFlow(normalizedEmail, password);
+      await startExistingAccountPasswordFlow(normalizedEmail);
     } else if (authError) {
       if (isEmailSendCooldownError(authError)) {
         startEmailCodeCooldown(normalizedEmail);
@@ -132,13 +131,12 @@ export default function SignupPage() {
 
       setError(getSignupErrorMessage(authError));
     } else if (isExistingAccountSignupData(data)) {
-      await startExistingAccountPasswordFlow(normalizedEmail, password);
+      await startExistingAccountPasswordFlow(normalizedEmail);
     } else if (data.session) {
       window.location.assign(buildPostSignupPath(wantsAuthenticator, nextPath));
     } else {
       setPendingEmail(normalizedEmail);
       setPendingEmailFlow("new_signup");
-      setPendingPassword("");
       setVerificationCode("");
       setNotice("אם אפשר להמשיך עם הרשמה לכתובת הזו, שלחנו קוד אימות בן 6 ספרות לאימייל.");
       startEmailCodeCooldown(normalizedEmail);
@@ -158,6 +156,22 @@ export default function SignupPage() {
     setError(null);
     setNotice(null);
 
+    if (pendingEmailFlow === "existing_account_password") {
+      const passwordPolicyError = getPasswordPolicyError(password, pendingEmail);
+
+      if (!passwordConfirmationMatches) {
+        setError("אימות הסיסמה לא תואם לסיסמה שבחרת. כתוב את אותה סיסמה בשני השדות.");
+        setLoading(false);
+        return;
+      }
+
+      if (passwordPolicyError) {
+        setError(passwordPolicyError);
+        setLoading(false);
+        return;
+      }
+    }
+
     const { error: authError } = await supabase.auth.verifyOtp({
       email: pendingEmail,
       token: verificationCode,
@@ -171,16 +185,8 @@ export default function SignupPage() {
     }
 
     if (pendingEmailFlow === "existing_account_password") {
-      const passwordPolicyError = getPasswordPolicyError(pendingPassword, pendingEmail);
-
-      if (passwordPolicyError) {
-        setError(passwordPolicyError);
-        setLoading(false);
-        return;
-      }
-
       const { error: updateError } = await supabase.auth.updateUser({
-        password: pendingPassword,
+        password,
       });
 
       if (updateError) {
@@ -209,7 +215,7 @@ export default function SignupPage() {
     setNotice(null);
 
     if (pendingEmailFlow === "existing_account_password") {
-      const otpSent = await sendExistingAccountOtp(pendingEmail, pendingPassword);
+      const otpSent = await sendExistingAccountOtp(pendingEmail);
 
       if (otpSent) {
         setNotice("שלחנו קוד חדש למייל. אחרי האימות נמשיך עם הכתובת הזו בצורה מאובטחת.");
@@ -273,8 +279,8 @@ export default function SignupPage() {
     });
   }
 
-  async function startExistingAccountPasswordFlow(normalizedEmail: string, nextPassword: string) {
-    const otpSent = await sendExistingAccountOtp(normalizedEmail, nextPassword);
+  async function startExistingAccountPasswordFlow(normalizedEmail: string) {
+    const otpSent = await sendExistingAccountOtp(normalizedEmail);
 
     if (!otpSent) {
       return;
@@ -282,7 +288,8 @@ export default function SignupPage() {
 
     setPendingEmail(normalizedEmail);
     setPendingEmailFlow("existing_account_password");
-    setPendingPassword(nextPassword);
+    setPassword("");
+    setPasswordConfirmation("");
     setVerificationCode("");
     setNotice(
       "שלחנו קוד אימות למייל. אחרי הקוד נמשיך עם הכתובת הזו בצורה מאובטחת.",
@@ -290,14 +297,7 @@ export default function SignupPage() {
     startEmailCodeCooldown(normalizedEmail);
   }
 
-  async function sendExistingAccountOtp(normalizedEmail: string, nextPassword: string) {
-    const passwordPolicyError = getPasswordPolicyError(nextPassword, normalizedEmail);
-
-    if (passwordPolicyError) {
-      setError(passwordPolicyError);
-      return false;
-    }
-
+  async function sendExistingAccountOtp(normalizedEmail: string) {
     const { error: otpError } = await supabase.auth.signInWithOtp({
       email: normalizedEmail,
       options: {
@@ -375,6 +375,52 @@ export default function SignupPage() {
                 required
               />
 
+              {pendingEmailFlow === "existing_account_password" && (
+                <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.045] p-4 text-start">
+                  <p className="text-sm font-black text-wc-fg1">חיבור סיסמה לחשבון הקיים</p>
+                  <p className="mt-1 text-xs leading-5 text-wc-fg3">
+                    אחרי שהקוד יאומת, נחבר את הסיסמה החדשה לחשבון שכבר קיים על האימייל הזה. מטעמי אבטחה אנחנו מבקשים להקליד אותה שוב כאן ולא שומרים אותה בזמן ההמתנה לקוד.
+                  </p>
+                  <div className="mt-4 flex flex-col gap-3">
+                    <input
+                      type="password"
+                      placeholder={`סיסמה חזקה (${PASSWORD_MIN_LENGTH}+ תווים)`}
+                      value={password}
+                      onChange={(event) => setPassword(event.target.value)}
+                      required
+                      minLength={PASSWORD_MIN_LENGTH}
+                      autoComplete="new-password"
+                      className="wc-input text-start"
+                    />
+                    <input
+                      type="password"
+                      placeholder="אימות סיסמה"
+                      value={passwordConfirmation}
+                      onChange={(event) => setPasswordConfirmation(event.target.value)}
+                      required
+                      minLength={PASSWORD_MIN_LENGTH}
+                      autoComplete="new-password"
+                      className="wc-input text-start"
+                    />
+                    {hasPasswordConfirmation && (
+                      <p
+                        className={[
+                          "rounded-2xl px-4 py-2 text-sm font-semibold",
+                          passwordConfirmationMatches
+                            ? "border border-wc-neon/25 bg-wc-neon/10 text-wc-neon"
+                            : "bg-[color:var(--wc-danger-bg)] text-wc-danger",
+                        ].join(" ")}
+                      >
+                        {passwordConfirmationMatches
+                          ? "הסיסמאות תואמות"
+                          : "הסיסמאות לא תואמות עדיין"}
+                      </p>
+                    )}
+                    <PasswordStrengthPanel policy={passwordPolicy} password={password} />
+                  </div>
+                </div>
+              )}
+
               {notice && (
                 <p className="rounded-2xl border border-wc-neon/25 bg-wc-neon/10 px-4 py-3 text-center text-sm text-wc-neon">
                   {notice}
@@ -393,7 +439,12 @@ export default function SignupPage() {
 
               <button
                 type="submit"
-                disabled={loading || verificationCode.length !== CODE_LENGTH}
+                disabled={
+                  loading ||
+                  verificationCode.length !== CODE_LENGTH ||
+                  (pendingEmailFlow === "existing_account_password" &&
+                    (!passwordPolicy.passed || !passwordConfirmationMatches))
+                }
                 className="wc-button-primary mt-1 w-full px-4 py-3.5 text-sm disabled:opacity-50"
               >
                 {loading ? "בודק את הקוד..." : "אמת קוד והמשך"}
@@ -417,7 +468,8 @@ export default function SignupPage() {
                 onClick={() => {
                   setPendingEmail(null);
                   setPendingEmailFlow("new_signup");
-                  setPendingPassword("");
+                  setPassword("");
+                  setPasswordConfirmation("");
                   setVerificationCode("");
                   setError(null);
                   setNotice(null);

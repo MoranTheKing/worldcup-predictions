@@ -30,7 +30,7 @@ export default async function TournamentPage({
 
   const { data: matchesData } = await supabase
     .from("public_tournament_matches")
-    .select("match_number, stage, home_team_id, away_team_id, home_placeholder, away_placeholder, home_score, away_score, status, minute, date_time, is_extra_time, home_penalty_score, away_penalty_score")
+    .select("match_number, stage, home_team_id, away_team_id, home_placeholder, away_placeholder, home_score, away_score, status, match_phase, minute, date_time, is_extra_time, home_penalty_score, away_penalty_score")
     .order("date_time", { ascending: true });
 
   const allMatches = (matchesData ?? []) as TournamentMatch[];

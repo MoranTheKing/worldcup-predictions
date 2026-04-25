@@ -19,6 +19,7 @@ export default async function DevToolsPage() {
         match_number,
         stage,
         status,
+        match_phase,
         date_time,
         home_team_id,
         away_team_id,

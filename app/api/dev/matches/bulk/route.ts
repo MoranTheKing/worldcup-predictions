@@ -29,6 +29,7 @@ export async function PATCH(request: Request) {
       match_number,
       stage,
       status,
+      match_phase,
       home_score,
       away_score,
       minute,

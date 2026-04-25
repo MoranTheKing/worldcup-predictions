@@ -28,6 +28,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       match_number,
       stage,
       status,
+      match_phase,
       home_score,
       away_score,
       minute,
@@ -55,7 +56,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     .from("matches")
     .update(validation.update)
     .eq("match_number", matchId)
-    .select("match_number, status, home_score, away_score, minute, is_extra_time, home_penalty_score, away_penalty_score")
+    .select("match_number, status, match_phase, home_score, away_score, minute, is_extra_time, home_penalty_score, away_penalty_score")
     .single();
 
   if (error) {

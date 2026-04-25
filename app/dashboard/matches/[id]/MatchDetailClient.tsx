@@ -71,7 +71,7 @@ export default function MatchDetailClient({ match }: { match: MatchDetailRow }) 
             )}
             <p className="mt-2 text-xs font-bold text-wc-fg3">
               {match.status === "live"
-                ? getLiveMatchStatusLabel(match.minute)
+                ? getLiveMatchStatusLabel(match.minute, match.match_phase)
                 : match.status === "finished"
                   ? "הסתיים"
                   : `${formatMatchTimeLabel(match.date_time)} IDT`}

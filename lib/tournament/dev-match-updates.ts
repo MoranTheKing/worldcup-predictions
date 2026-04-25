@@ -1,10 +1,16 @@
-import { isKnockoutStage, type MatchStatus, type TournamentMatchRecord } from "@/lib/tournament/matches";
+import {
+  isKnockoutStage,
+  type MatchPhase,
+  type MatchStatus,
+  type TournamentMatchRecord,
+} from "@/lib/tournament/matches";
 
 export type EditableMatchState = Pick<
   TournamentMatchRecord,
   | "match_number"
   | "stage"
   | "status"
+  | "match_phase"
   | "home_score"
   | "away_score"
   | "minute"
@@ -15,6 +21,7 @@ export type EditableMatchState = Pick<
 
 export type DevMatchPatchInput = {
   status?: MatchStatus;
+  match_phase?: MatchPhase | null;
   home_score?: number | null;
   away_score?: number | null;
   minute?: number | null;
@@ -24,6 +31,13 @@ export type DevMatchPatchInput = {
 };
 
 const ALLOWED_STATUS = new Set<MatchStatus>(["scheduled", "live", "finished"]);
+const ALLOWED_MATCH_PHASE = new Set<MatchPhase>([
+  "first_half",
+  "halftime",
+  "second_half",
+  "extra_time",
+  "penalties",
+]);
 
 function normalizeInt(value: unknown, min: number, max: number) {
   if (value === undefined) return undefined;
@@ -45,6 +59,15 @@ export function buildDevMatchUpdate(existing: EditableMatchState, patch: DevMatc
 
     next.status = patch.status;
     update.status = patch.status;
+  }
+
+  if (patch.match_phase !== undefined) {
+    if (patch.match_phase !== null && !ALLOWED_MATCH_PHASE.has(patch.match_phase)) {
+      return { error: "invalid match_phase" as const };
+    }
+
+    next.match_phase = patch.match_phase;
+    update.match_phase = patch.match_phase;
   }
 
   const homeScore = normalizeInt(patch.home_score, 0, 99);
@@ -104,12 +127,14 @@ export function buildDevMatchUpdate(existing: EditableMatchState, patch: DevMatc
     next.home_score = 0;
     next.away_score = 0;
     next.minute = null;
+    next.match_phase = null;
     next.is_extra_time = false;
     next.home_penalty_score = null;
     next.away_penalty_score = null;
     update.home_score = 0;
     update.away_score = 0;
     update.minute = null;
+    update.match_phase = null;
     update.is_extra_time = false;
     update.home_penalty_score = null;
     update.away_penalty_score = null;
@@ -118,6 +143,17 @@ export function buildDevMatchUpdate(existing: EditableMatchState, patch: DevMatc
     next.away_penalty_score = null;
     update.home_penalty_score = null;
     update.away_penalty_score = null;
+  }
+
+  if (next.status === "finished") {
+    next.match_phase = null;
+    update.match_phase = null;
+  } else if (next.status === "live" && next.match_phase === null && next.minute !== null) {
+    next.match_phase = next.minute <= 45 ? "first_half" : "second_half";
+    update.match_phase = next.match_phase;
+  } else if (next.status !== "live") {
+    next.match_phase = null;
+    update.match_phase = null;
   }
 
   if (next.status === "finished" && knockout && regularDraw) {

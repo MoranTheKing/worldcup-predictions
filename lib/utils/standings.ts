@@ -32,6 +32,7 @@ export type TournamentMatch = {
   home_placeholder?: string | null;
   away_placeholder?: string | null;
   status?: string | null;
+  match_phase?: string | null;
   minute?: number | null;
 };
 

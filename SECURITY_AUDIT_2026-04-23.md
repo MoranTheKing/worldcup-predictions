@@ -465,6 +465,19 @@ Security-relevant follow-up:
 - TOTP enrollment preparation is now deduplicated per browser tab, preventing duplicate React dev effects from creating and deleting competing unverified factors; `Factor not found` during setup triggers a fresh QR instead of a dead-end error
 - existing real Google accounts are no longer treated like a dead-end signup collision: when a user tries to add email/password with the same address, signup now sends a real `signInWithOtp` code with `shouldCreateUser: false`, verifies ownership, and only then links the chosen password through `updateUser`
 
+## 2026-04-25 match-state and signup hardening follow-up
+
+Security and correctness follow-up:
+
+- the same-email Google-account password-link flow no longer keeps the chosen password in React state while waiting for the email OTP; the user re-enters the password and confirmation, and the password policy is validated before OTP verification starts, reducing both sensitive client state and partial-auth edge cases
+- live match display no longer infers halftime from minute 45; `matches.match_phase` now represents `first_half`, `halftime`, `second_half`, `extra_time` and `penalties`, so stoppage-time states such as `45+2` and `90+3` can be represented without ambiguous minute-only logic
+- Dev Tools `LIVE`, `FINISH` and `RESET` status buttons now persist immediately through the guarded dev APIs and run the existing tournament sync pipeline, reducing the chance that an operator thinks a state was applied while it only exists locally in the browser
+- `20260425000022_add_match_phase.sql` adds the DB constraint for allowed `match_phase` values and extends the public tournament projection without exposing user prediction rows
+
+Migration required:
+
+- `20260425000022_add_match_phase.sql`
+
 ## Post-audit hardening landed later on 2026-04-23
 
 Not tied to a specific open PR, but implemented as a direct follow-up:

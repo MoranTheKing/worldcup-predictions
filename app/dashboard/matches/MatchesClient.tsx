@@ -12,6 +12,7 @@ import {
   getTeamDisplayLogo,
   getTeamDisplayName,
   isMatchScoreVisible,
+  type MatchPhase,
   type MatchWithTeams,
 } from "@/lib/tournament/matches";
 import Image from "next/image";
@@ -59,10 +60,10 @@ const TEXT: Record<Filter, { label: string; empty: string }> = {
   },
 };
 
-function getStatusMeta(status: string, minute: number | null) {
+function getStatusMeta(status: string, minute: number | null, phase: MatchPhase | null) {
   if (status === "live") {
     return {
-      label: getLiveMatchStatusLabel(minute),
+      label: getLiveMatchStatusLabel(minute, phase),
       pillClassName: "bg-[rgba(255,92,130,0.18)] text-wc-danger border border-[rgba(255,92,130,0.35)]",
       cardClassName: "border-[rgba(255,92,130,0.28)] shadow-[0_0_28px_rgba(255,92,130,0.08)]",
     };
@@ -235,7 +236,7 @@ function compareMatches(
 function MatchCard({ match }: { match: MatchListRow }) {
   const scoreVisible = isMatchScoreVisible(match);
   const scoreSummary = scoreVisible ? getMatchScoreSummary(match) : null;
-  const statusMeta = getStatusMeta(match.status, match.minute);
+  const statusMeta = getStatusMeta(match.status, match.minute, match.match_phase);
   const homeName = getTeamDisplayName(match.homeTeam, match.home_placeholder);
   const awayName = getTeamDisplayName(match.awayTeam, match.away_placeholder);
   const homeLogo = getTeamDisplayLogo(match.homeTeam);

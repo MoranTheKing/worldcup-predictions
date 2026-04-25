@@ -1,5 +1,12 @@
 export type MatchStatus = "scheduled" | "live" | "finished";
 
+export type MatchPhase =
+  | "first_half"
+  | "halftime"
+  | "second_half"
+  | "extra_time"
+  | "penalties";
+
 export type MatchStageKind =
   | "group"
   | "round_of_32"
@@ -29,6 +36,7 @@ export type TournamentMatchRecord = {
   match_number: number;
   stage: string;
   status: MatchStatus | string;
+  match_phase: MatchPhase | null;
   date_time: string;
   minute: number | null;
   home_team_id: string | null;
@@ -196,9 +204,24 @@ export function isMatchScoreVisible(match: Pick<TournamentMatchRecord, "status">
   return match.status === "live" || match.status === "finished";
 }
 
-export function getLiveMatchStatusLabel(minute: number | null) {
-  if (minute === 45) return "מחצית";
-  return minute !== null ? `${minute}' LIVE` : "LIVE";
+export function getLiveMatchStatusLabel(minute: number | null, phase?: MatchPhase | null) {
+  if (phase === "halftime") return "מחצית";
+  if (phase === "penalties") return "פנדלים";
+  if (phase === "extra_time") {
+    return minute !== null ? `${minute}' הארכה` : "הארכה";
+  }
+
+  if (minute === null) return "LIVE";
+
+  if (phase === "first_half" && minute > 45) {
+    return `45+${minute - 45}' LIVE`;
+  }
+
+  if (phase === "second_half" && minute > 90) {
+    return `90+${minute - 90}' LIVE`;
+  }
+
+  return `${minute}' LIVE`;
 }
 
 export function getMatchScoreSummary(match: {
