@@ -783,4 +783,5 @@ raw_error
 - The current scoring formula is `odds base points + stage direction bonus + stage exact-score bonus`, then Joker x2 if active. Direction hits receive only the direction bonus; exact hits receive both the direction bonus and the separate exact-score bonus from the knockout matrix.
 - The current UI now consumes those odds: `/game/predictions` shows direction/exact reward totals for home/draw/away, and `/game/leagues/[id]` shows projected live `+N` values without persisting them until `status = finished`.
 - Dev Tools can edit the three odds columns locally, seed random 1/X/2 odds for every match, and seed random future predictions for the logged-in dev user only.
+- Dev Tools `Clear All Match Data` is a local full reset: matches return to scheduled 0-0, odds become null, prediction/tournament/legacy bet rows are deleted, and profile totals are reset to zero so league scoreboards clear without deleting league memberships.
 - Scoring persistence treats `null` and `0` differently: a finished miss is written as `points_earned = 0`, which keeps profile totals and leaderboard state deterministic.

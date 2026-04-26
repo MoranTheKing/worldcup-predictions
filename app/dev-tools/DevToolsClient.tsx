@@ -379,7 +379,13 @@ function DevToolsClientInner({ matches, error }: Props) {
   }
 
   async function clearAll() {
-    if (!confirm("לאפס את כל המשחקים ל-scheduled ו-0:0? הפעולה אינה הפיכה.")) return;
+    if (
+      !confirm(
+        "לאפס הכל? הפעולה תנקה תוצאות משחקים, יחסים, ניחושים, ג׳וקרים, ניקוד משתמשים וטבלאות ניקוד בליגות. הפעולה אינה הפיכה.",
+      )
+    ) {
+      return;
+    }
 
     setBulkSaving(true);
     setMessage(null);
@@ -394,7 +400,7 @@ function DevToolsClientInner({ matches, error }: Props) {
 
       const body = await res.json();
       refreshWithMessage(
-        `אופסו ${body.reset ?? 0} משחקים, וכל שלב הנוקאאוט נוקה ונבנה מחדש מהטבלאות העדכניות.`,
+        `אופסו ${body.reset ?? 0} משחקים, נמחקו ${body.predictionsReset ?? 0} ניחושים, ונוקו יחסים, ניקוד משתמשים וטבלאות ליגה.`,
       );
     } finally {
       setBulkSaving(false);
