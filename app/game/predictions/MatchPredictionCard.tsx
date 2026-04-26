@@ -438,7 +438,7 @@ type AvailableReward = {
   key: "home" | "draw" | "away";
   label: string;
   directionPoints: number;
-  exactPoints: number;
+  exactBonusPoints: number;
 };
 
 function AvailableRewardsStrip({ rewards }: { rewards: AvailableReward[] }) {
@@ -457,7 +457,7 @@ function AvailableRewardsStrip({ rewards }: { rewards: AvailableReward[] }) {
           </div>
           <div className="mt-1 flex items-center justify-between gap-2 text-[10px] font-semibold text-wc-fg3">
             <span>בול</span>
-            <span dir="ltr">+{reward.exactPoints}</span>
+            <span dir="ltr">+{reward.exactBonusPoints}</span>
           </div>
         </div>
       ))}
@@ -476,19 +476,25 @@ function buildAvailableRewards(
       key: "home",
       label: homeTeamName,
       directionPoints: calculateRewardPoints(match, 1, 0, 2, 0, isJoker),
-      exactPoints: calculateRewardPoints(match, 1, 0, 1, 0, isJoker),
+      exactBonusPoints:
+        calculateRewardPoints(match, 1, 0, 1, 0, isJoker) -
+        calculateRewardPoints(match, 1, 0, 2, 0, isJoker),
     },
     {
       key: "draw",
       label: "תיקו",
       directionPoints: calculateRewardPoints(match, 1, 1, 2, 2, isJoker),
-      exactPoints: calculateRewardPoints(match, 1, 1, 1, 1, isJoker),
+      exactBonusPoints:
+        calculateRewardPoints(match, 1, 1, 1, 1, isJoker) -
+        calculateRewardPoints(match, 1, 1, 2, 2, isJoker),
     },
     {
       key: "away",
       label: awayTeamName,
       directionPoints: calculateRewardPoints(match, 0, 1, 0, 2, isJoker),
-      exactPoints: calculateRewardPoints(match, 0, 1, 0, 1, isJoker),
+      exactBonusPoints:
+        calculateRewardPoints(match, 0, 1, 0, 1, isJoker) -
+        calculateRewardPoints(match, 0, 1, 0, 2, isJoker),
     },
   ];
 }
