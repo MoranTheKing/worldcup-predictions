@@ -26,7 +26,7 @@ Key rules to remember:
 - In group live standings, the inline live score is row-team-perspective: the row team's goal count should appear on the visual right side.
 - `/game/leaderboard` is the global league and should share the private league leaderboard surface: live prediction chips, winner/top-scorer columns, projected live deltas, and profile-total realtime refreshes.
 - Dev Tools match-clock ranges are phase-aware: first half allows 0-60 and displays 45+, second half allows 46-105 and displays 90+, and knockout extra time allows 91-135 with 120+ display for stoppage.
-- Match schedule syncs should update `date_time` only by `match_number`; do not swap home/away sides or placeholders when aligning with the Kan schedule.
+- Match schedule syncs must follow FIFA's official match order. Only update `match_number` and `date_time`, and relink existing prediction/bet references when a fixture's number changes. Do not swap home/away sides, statuses, scores, odds, or placeholders.
 - Dev Tools owns local odds editing, random odds seeding, and current-user-only random prediction filling. Keep these routes localhost-only and never use them for bulk production user prediction generation.
 - Dev Tools `Clear All Match Data` is intentionally destructive in local dev: it resets matches, odds, all prediction tables, legacy bets, and profile totals so league leaderboards return to zero while memberships remain.
 

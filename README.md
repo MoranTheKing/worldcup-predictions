@@ -272,12 +272,13 @@ Brevo Free מוגבל בכמות יומית לכל החשבון, לכן ביום
 - `20260426000024_add_match_odds_columns.sql`
 - `20260426000025_enable_global_leaderboard_realtime.sql`
 - `20260426000026_sync_match_schedule_with_kan.sql`
+- `20260426000027_correct_schedule_from_fifa.sql`
 
 את `20260424000021_public_tournament_projection.sql` צריך להריץ לפני בדיקת `/dashboard/tournament` כמשתמש לא רשום. בלי ה-migration הזה, הדף כבר לא ישתמש ב-service-role, אבל Supabase לא יכיר את ה-views הציבוריים ולכן לא יחזיר נתוני טורניר ל-anon.
 
 את `20260425000022_add_match_phase.sql` צריך להריץ לפני בדיקת מצבי מחצית/תוספת זמן חדשים. ה-migration מוסיף `match_phase` לטבלת `matches`, מרחיב את ה-view הציבורי `public_tournament_matches`, ומוסיף constraints שמונעים `match_phase` במשחק לא חי, דקה בזמן מחצית/פנדלים, והארכה/פנדלים במשחקי בתים. כך Dev Tools ודפי המשחקים מציגים מחצית, `45+`, `90+`, הארכה ופנדלים בלי לנחש לפי מספר הדקה בלבד.
 
-את `20260426000026_sync_match_schedule_with_kan.sql` צריך להריץ כדי לסנכרן את כל 104 זמני הפתיחה ב-`matches.date_time` לפי לוח המשחקים של כאן. ה-migration משנה רק תאריכים ושעות לפי `match_number`, בלי לשנות צד בית/חוץ, סטטוסים, תוצאות, יחסים או placeholders.
+את `20260426000027_correct_schedule_from_fifa.sql` צריך להריץ אחרי מיגרציית הסנכרון הקודמת כדי להתיישר מול לוח המשחקים הרשמי של FIFA. ה-migration משנה רק את `matches.match_number` ואת `matches.date_time`, ומעדכן הפניות קיימות של `predictions.match_id`/`bets.match_id` לאותו משחק אחרי שינוי מספר המשחק. הוא לא משנה צד בית/חוץ, סטטוסים, תוצאות, יחסים או placeholders.
 
 ## הערות חשובות
 
@@ -329,8 +330,9 @@ Brevo Free מוגבל בכמות יומית לכל החשבון, לכן ביום
 
 ## Schedule sync - 2026-04-26
 
-- `matches_data.json`, `matches_data.json.txt`, and migration `20260426000026_sync_match_schedule_with_kan.sql` now store the World Cup schedule according to the Kan schedule page, with Israel-time `+03:00` kickoff values.
-- The sync is intentionally date/time-only by `match_number`; team sides, knockout placeholders, scores, statuses and odds are unchanged.
+- `matches_data.json`, `matches_data.json.txt`, and migration `20260426000027_correct_schedule_from_fifa.sql` now store the World Cup schedule according to FIFA's official match order and kickoff timestamps, with Israel-time `+03:00` kickoff values.
+- The correction changes only `match_number` and `date_time`. Team sides, knockout placeholders, scores, statuses and odds are unchanged.
+- Confirmed reference fixes: Brazil vs Haiti is match #29 at `2026-06-20T03:30:00+03:00`; Turkey vs Paraguay is match #31 at `2026-06-20T06:00:00+03:00`; Norway vs France is match #61.
 - Dev Tools keeps the existing controls but its match table now uses an LTR scroll container with an RTL table and a narrower minimum width so the horizontal overflow behaves predictably.
 
 ## Joker and live table update - 2026-04-26
