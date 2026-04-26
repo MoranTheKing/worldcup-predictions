@@ -22,6 +22,12 @@ export type FinishedMatchScoringResult = {
   updatedProfiles: number;
 };
 
+export type ClearedMatchScoringResult = {
+  clearedMatches: number;
+  clearedPredictions: number;
+  updatedProfiles: number;
+};
+
 export async function scoreFinishedMatchPredictions(
   supabase: SupabaseClient,
   matchNumbers: number | number[],
@@ -110,6 +116,72 @@ export async function scoreFinishedMatchPredictions(
     scoredMatches: finishedMatches.length,
     scoredPredictions: predictions.length,
     updatedPredictions: updatedRows.length,
+    updatedProfiles,
+  };
+}
+
+export async function clearUnfinishedMatchScoring(
+  supabase: SupabaseClient,
+  matchNumbers: number | number[],
+): Promise<ClearedMatchScoringResult> {
+  const normalizedMatchNumbers = normalizeMatchNumbers(matchNumbers);
+  if (normalizedMatchNumbers.length === 0) {
+    return {
+      clearedMatches: 0,
+      clearedPredictions: 0,
+      updatedProfiles: 0,
+    };
+  }
+
+  const { data: predictionsData, error: predictionsError } = await supabase
+    .from("predictions")
+    .select("user_id, match_id, points_earned")
+    .in("match_id", normalizedMatchNumbers);
+
+  if (predictionsError) {
+    throw new Error(predictionsError.message);
+  }
+
+  const predictionsWithFinalScore = (
+    (predictionsData ?? []) as Array<{
+      user_id: string | null;
+      match_id: number | null;
+      points_earned: number | null;
+    }>
+  ).filter(
+    (prediction): prediction is { user_id: string; match_id: number; points_earned: number } =>
+      typeof prediction.user_id === "string" &&
+      typeof prediction.match_id === "number" &&
+      typeof prediction.points_earned === "number" &&
+      prediction.points_earned !== 0,
+  );
+
+  if (predictionsWithFinalScore.length === 0) {
+    return {
+      clearedMatches: normalizedMatchNumbers.length,
+      clearedPredictions: 0,
+      updatedProfiles: 0,
+    };
+  }
+
+  const { error: clearError } = await supabase
+    .from("predictions")
+    .update({ points_earned: 0 })
+    .in("match_id", normalizedMatchNumbers)
+    .neq("points_earned", 0);
+
+  if (clearError) {
+    throw new Error(clearError.message);
+  }
+
+  const updatedProfiles = await refreshProfileTotals(
+    supabase,
+    Array.from(new Set(predictionsWithFinalScore.map((prediction) => prediction.user_id))),
+  );
+
+  return {
+    clearedMatches: normalizedMatchNumbers.length,
+    clearedPredictions: predictionsWithFinalScore.length,
     updatedProfiles,
   };
 }

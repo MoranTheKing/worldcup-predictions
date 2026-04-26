@@ -7,7 +7,10 @@ import {
   type EditableMatchState,
 } from "@/lib/tournament/dev-match-updates";
 import { syncTournamentState } from "@/lib/tournament/knockout-progression";
-import { scoreFinishedMatchPredictions } from "@/lib/game/scoring-sync";
+import {
+  clearUnfinishedMatchScoring,
+  scoreFinishedMatchPredictions,
+} from "@/lib/game/scoring-sync";
 
 type BulkBody = {
   matches?: Array<DevMatchPatchInput & { match_number: number }>;
@@ -51,6 +54,7 @@ export async function PATCH(request: Request) {
     ((existingMatches ?? []) as EditableMatchState[]).map((match) => [match.match_number, match]),
   );
   const finishedMatchNumbers = new Set<number>();
+  const unfinishedMatchNumbers = new Set<number>();
 
   for (const item of body.matches) {
     const existing = existingByNumber.get(item.match_number);
@@ -68,6 +72,8 @@ export async function PATCH(request: Request) {
 
     if (validation.next.status === "finished") {
       finishedMatchNumbers.add(item.match_number);
+    } else {
+      unfinishedMatchNumbers.add(item.match_number);
     }
   }
 
@@ -91,6 +97,10 @@ export async function PATCH(request: Request) {
     finishedMatchNumbers.size > 0
       ? await scoreFinishedMatchPredictions(supabase, Array.from(finishedMatchNumbers))
       : null;
+  const clearedScoring =
+    unfinishedMatchNumbers.size > 0
+      ? await clearUnfinishedMatchScoring(supabase, Array.from(unfinishedMatchNumbers))
+      : null;
 
-  return NextResponse.json({ updated: body.matches.length, sync, scoring });
+  return NextResponse.json({ updated: body.matches.length, sync, scoring, clearedScoring });
 }

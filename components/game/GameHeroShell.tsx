@@ -143,25 +143,16 @@ function MetricCard({
     <div
       className={`rounded-[1.4rem] border bg-[rgba(6,13,26,0.42)] px-5 py-4 text-start shadow-[0_0_20px_rgba(95,255,123,0.08)] ${borderClassName}`}
     >
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-wc-fg3">
-          {title}
-        </p>
-        {shouldShowLiveDelta ? (
-          <span
-            dir="ltr"
-            className={`rounded-full border px-2 py-0.5 text-[10px] font-black ${
-              liveDelta > 0
-                ? "border-wc-neon/30 bg-wc-neon/12 text-wc-neon"
-                : "border-white/10 bg-white/6 text-wc-fg3"
-            }`}
-          >
-            LIVE +{liveDelta}
-          </span>
-        ) : null}
-      </div>
+      <p className="text-xs font-semibold uppercase tracking-[0.24em] text-wc-fg3">{title}</p>
       <p className={`wc-display mt-2 text-5xl ${accentClassName}`}>{value}</p>
       <p className="mt-1 text-xs font-semibold text-wc-fg3">{subtitle}</p>
+      {shouldShowLiveDelta ? (
+        <p className="mt-2 flex items-center justify-end gap-1.5 text-[11px] font-black text-wc-neon">
+          <span className="h-1.5 w-1.5 rounded-full bg-wc-neon shadow-[0_0_8px_rgba(95,255,123,0.65)]" />
+          <span className="text-wc-fg3">Live</span>
+          <span dir="ltr">+{liveDelta}</span>
+        </p>
+      ) : null}
     </div>
   );
 }

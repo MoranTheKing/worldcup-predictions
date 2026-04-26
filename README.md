@@ -324,6 +324,7 @@ Brevo Free מוגבל בכמות יומית לכל החשבון, לכן ביום
 - `public.matches` now stores 1X2 decimal odds in `home_odds`, `draw_odds`, and `away_odds` through `supabase/migrations/20260426000024_add_match_odds_columns.sql`.
 - `lib/game/scoring.ts` contains the pure `calculatePredictionPoints(prediction, match)` engine: miss returns `0`; direction hits use odds base points + stage direction bonus, and exact hits add the stage exact-score bonus before the x2 Joker multiplier.
 - Finished match updates call `scoreFinishedMatchPredictions`, updating `predictions.points_earned` and recalculating affected `profiles.total_score` values for leaderboard consistency.
+- If a dev/admin update moves a match away from `finished`, `clearUnfinishedMatchScoring` resets that match's `points_earned` back to `0` and recalculates affected profile totals so stale final points do not remain during LIVE.
 - `/game/predictions` shows the available direction reward for home/draw/away before saving, and the "exact score" row shows only the extra points added on top of the direction reward.
 - `/game/leagues/[id]` projects live scoring in the leaderboard with `+N` badges per live prediction chip and a live delta next to each member's persisted total.
 - `lib/game/live-score-projection.ts` reuses `calculatePredictionPoints` for the logged-in user's current live matches, and `/api/game/live-score-projection` returns the hero card's persisted totals plus the temporary live score delta.

@@ -55,6 +55,7 @@ Opponent view and league view follow anti-cheat rules:
 ## Live projected scoring
 
 Persisted totals stay final-only: `profiles.total_score` changes only when a match is finished and scoring sync writes `predictions.points_earned`.
+If a match is moved back from `finished` to `live` or `scheduled`, the match's final scoring is reset by writing `points_earned = 0` for that match and recalculating affected profile totals.
 
 During live matches, UI surfaces may show temporary projections as `+N`:
 
