@@ -45,6 +45,16 @@ const ALLOWED_MATCH_PHASE = new Set<MatchPhase>([
   "penalties",
 ]);
 
+const FIRST_HALF_END_MINUTE = 45;
+const SECOND_HALF_END_MINUTE = 90;
+const EXTRA_TIME_START_MINUTE = 91;
+const EXTRA_TIME_AUTO_START_MINUTE = 106;
+const EXTRA_TIME_END_MINUTE = 120;
+const STOPPAGE_TIME_LIMIT_MINUTES = 15;
+const FIRST_HALF_MAX_MINUTE = FIRST_HALF_END_MINUTE + STOPPAGE_TIME_LIMIT_MINUTES;
+const SECOND_HALF_MAX_MINUTE = SECOND_HALF_END_MINUTE + STOPPAGE_TIME_LIMIT_MINUTES;
+const EXTRA_TIME_MAX_MINUTE = EXTRA_TIME_END_MINUTE + STOPPAGE_TIME_LIMIT_MINUTES;
+
 function isMinuteLockedPhase(phase: MatchPhase | null) {
   return phase === "halftime" || phase === "penalties";
 }
@@ -55,18 +65,18 @@ function isExtraTimePhase(phase: MatchPhase | null) {
 
 function getMinuteBounds(phase: MatchPhase | null, knockout: boolean) {
   if (phase === "first_half") {
-    return { min: 0, max: 60 };
+    return { min: 0, max: FIRST_HALF_MAX_MINUTE };
   }
 
   if (phase === "second_half") {
-    return { min: 46, max: knockout ? 90 : 130 };
+    return { min: FIRST_HALF_END_MINUTE + 1, max: SECOND_HALF_MAX_MINUTE };
   }
 
   if (phase === "extra_time") {
-    return { min: 91, max: 130 };
+    return { min: EXTRA_TIME_START_MINUTE, max: EXTRA_TIME_MAX_MINUTE };
   }
 
-  return { min: 0, max: 130 };
+  return { min: 0, max: knockout ? EXTRA_TIME_MAX_MINUTE : SECOND_HALF_MAX_MINUTE };
 }
 
 function isMinuteAllowedForPhase(phase: MatchPhase | null, knockout: boolean, minute: number | null) {
@@ -95,19 +105,15 @@ function getPhaseFromMinute(
     return currentPhase;
   }
 
-  if (knockout && minute >= 91) {
-    return "extra_time";
-  }
-
-  if (currentPhase === "extra_time") {
-    return minute <= 45 ? "first_half" : "second_half";
-  }
-
   if (currentPhase !== null && isMinuteAllowedForPhase(currentPhase, knockout, minute)) {
     return currentPhase;
   }
 
-  return minute <= 45 ? "first_half" : "second_half";
+  if (knockout && minute >= EXTRA_TIME_AUTO_START_MINUTE) {
+    return "extra_time";
+  }
+
+  return minute <= FIRST_HALF_END_MINUTE ? "first_half" : "second_half";
 }
 
 function normalizeInt(value: unknown, min: number, max: number) {
@@ -200,7 +206,7 @@ export function buildDevMatchUpdate(existing: EditableMatchState, patch: DevMatc
     update.away_odds = awayOdds;
   }
 
-  const minute = normalizeInt(patch.minute, 0, 130);
+  const minute = normalizeInt(patch.minute, 0, EXTRA_TIME_MAX_MINUTE);
   if (patch.minute !== undefined && minute === undefined) {
     return { error: "invalid minute" as const };
   }
@@ -299,6 +305,10 @@ export function buildDevMatchUpdate(existing: EditableMatchState, patch: DevMatc
         next.match_phase = phaseFromMinute;
         update.match_phase = next.match_phase;
       }
+    }
+
+    if (!isMinuteAllowedForPhase(next.match_phase, knockout, next.minute)) {
+      return { error: "invalid minute for match_phase" as const };
     }
 
     if (isMinuteLockedPhase(next.match_phase)) {

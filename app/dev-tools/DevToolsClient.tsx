@@ -26,6 +26,16 @@ const MATCH_PHASE_OPTIONS: Array<{ value: MatchPhase; label: string; knockoutOnl
   { value: "penalties", label: "פנדלים", knockoutOnly: true },
 ];
 
+const FIRST_HALF_END_MINUTE = 45;
+const SECOND_HALF_END_MINUTE = 90;
+const EXTRA_TIME_START_MINUTE = 91;
+const EXTRA_TIME_AUTO_START_MINUTE = 106;
+const EXTRA_TIME_END_MINUTE = 120;
+const STOPPAGE_TIME_LIMIT_MINUTES = 15;
+const FIRST_HALF_MAX_MINUTE = FIRST_HALF_END_MINUTE + STOPPAGE_TIME_LIMIT_MINUTES;
+const SECOND_HALF_MAX_MINUTE = SECOND_HALF_END_MINUTE + STOPPAGE_TIME_LIMIT_MINUTES;
+const EXTRA_TIME_MAX_MINUTE = EXTRA_TIME_END_MINUTE + STOPPAGE_TIME_LIMIT_MINUTES;
+
 function isKnockoutMatch(matchNumber: number) {
   return matchNumber >= 73;
 }
@@ -78,18 +88,18 @@ function isExtraTimePhase(phase: MatchPhase | null) {
 
 function getMinuteBounds(phase: MatchPhase | null, knockout: boolean) {
   if (phase === "first_half") {
-    return { min: 0, max: 60 };
+    return { min: 0, max: FIRST_HALF_MAX_MINUTE };
   }
 
   if (phase === "second_half") {
-    return { min: 46, max: knockout ? 90 : 130 };
+    return { min: FIRST_HALF_END_MINUTE + 1, max: SECOND_HALF_MAX_MINUTE };
   }
 
   if (phase === "extra_time") {
-    return { min: 91, max: 130 };
+    return { min: EXTRA_TIME_START_MINUTE, max: EXTRA_TIME_MAX_MINUTE };
   }
 
-  return { min: 0, max: 130 };
+  return { min: 0, max: knockout ? EXTRA_TIME_MAX_MINUTE : SECOND_HALF_MAX_MINUTE };
 }
 
 function isMinuteAllowedForPhase(phase: MatchPhase | null, knockout: boolean, minute: number | null) {
@@ -118,14 +128,6 @@ function getPhaseFromMinute(
     return currentPhase;
   }
 
-  if (isKnockoutMatch(matchNumber) && minute >= 91) {
-    return "extra_time";
-  }
-
-  if (currentPhase === "extra_time") {
-    return minute <= 45 ? "first_half" : "second_half";
-  }
-
   if (
     currentPhase !== null &&
     isMinuteAllowedForPhase(currentPhase, isKnockoutMatch(matchNumber), minute)
@@ -133,7 +135,11 @@ function getPhaseFromMinute(
     return currentPhase;
   }
 
-  return minute <= 45 ? "first_half" : "second_half";
+  if (isKnockoutMatch(matchNumber) && minute >= EXTRA_TIME_AUTO_START_MINUTE) {
+    return "extra_time";
+  }
+
+  return minute <= FIRST_HALF_END_MINUTE ? "first_half" : "second_half";
 }
 
 function normalizeDraft(match: DevMatchRow): DevMatchRow {

@@ -301,7 +301,7 @@ BSD cancelled  -> internal scheduled + bsd_status cancelled
 - אם `current_minute` קיים, לשמור אותו.
 - אם `halftime`, minute יכול להיות `45`.
 - אם `finished`, minute יכול להיות `null` או `90/120` לפי החלטת UI.
-- לא לשבור constraint קיים של `0..130`.
+- לא לשבור constraint קיים של `0..135`; Dev Tools מציג תוספות כ-`45+`, `90+`, ו-`120+` לפי `match_phase`.
 
 ## פנדלים והארכה
 

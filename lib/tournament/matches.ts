@@ -207,21 +207,27 @@ export function isMatchScoreVisible(match: Pick<TournamentMatchRecord, "status">
   return match.status === "live" || match.status === "finished";
 }
 
+const FIRST_HALF_END_MINUTE = 45;
+const SECOND_HALF_END_MINUTE = 90;
+const EXTRA_TIME_END_MINUTE = 120;
+
 export function getLiveMatchStatusLabel(minute: number | null, phase?: MatchPhase | null) {
   if (phase === "halftime") return "מחצית";
   if (phase === "penalties") return "פנדלים";
   if (phase === "extra_time") {
-    return minute !== null ? `${minute}' הארכה` : "הארכה";
+    if (minute === null) return "הארכה";
+    if (minute > EXTRA_TIME_END_MINUTE) return `${EXTRA_TIME_END_MINUTE}+${minute - EXTRA_TIME_END_MINUTE}' הארכה`;
+    return `${minute}' הארכה`;
   }
 
   if (minute === null) return "LIVE";
 
-  if (phase === "first_half" && minute > 45) {
-    return `45+${minute - 45}' LIVE`;
+  if (phase === "first_half" && minute > FIRST_HALF_END_MINUTE) {
+    return `${FIRST_HALF_END_MINUTE}+${minute - FIRST_HALF_END_MINUTE}' LIVE`;
   }
 
-  if (phase === "second_half" && minute > 90) {
-    return `90+${minute - 90}' LIVE`;
+  if (phase === "second_half" && minute > SECOND_HALF_END_MINUTE) {
+    return `${SECOND_HALF_END_MINUTE}+${minute - SECOND_HALF_END_MINUTE}' LIVE`;
   }
 
   return `${minute}' LIVE`;
