@@ -18,6 +18,8 @@ type UseLeagueRealtimeRefreshOptions = {
   debounceMs?: number;
   minRefreshIntervalMs?: number;
   enabled?: boolean;
+  watchLeagueMembers?: boolean;
+  watchProfiles?: boolean;
 };
 
 export function useLeagueRealtimeRefresh({
@@ -27,6 +29,8 @@ export function useLeagueRealtimeRefresh({
   debounceMs = 650,
   minRefreshIntervalMs = 1200,
   enabled = true,
+  watchLeagueMembers = true,
+  watchProfiles = false,
 }: UseLeagueRealtimeRefreshOptions) {
   const supabase = useMemo(() => createClient(), []);
   const liveMatchKey = useMemo(() => buildNumberKey(liveMatchIds), [liveMatchIds]);
@@ -50,8 +54,10 @@ export function useLeagueRealtimeRefresh({
             scheduleRefresh();
           }
         },
-      )
-      .on(
+      );
+
+    if (watchLeagueMembers) {
+      channel.on(
         "postgres_changes",
         {
           event: "*",
@@ -61,6 +67,15 @@ export function useLeagueRealtimeRefresh({
         },
         scheduleRefresh,
       );
+    }
+
+    if (watchProfiles) {
+      channel.on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "profiles" },
+        scheduleRefresh,
+      );
+    }
 
     for (const matchId of liveIds) {
       channel.on(
@@ -93,6 +108,8 @@ export function useLeagueRealtimeRefresh({
     memberKey,
     scheduleRefresh,
     supabase,
+    watchLeagueMembers,
+    watchProfiles,
   ]);
 }
 

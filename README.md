@@ -270,6 +270,7 @@ Brevo Free מוגבל בכמות יומית לכל החשבון, לכן ביום
 - `20260425000022_add_match_phase.sql`
 - `20260426000023_enable_live_leaderboard_realtime.sql`
 - `20260426000024_add_match_odds_columns.sql`
+- `20260426000025_enable_global_leaderboard_realtime.sql`
 
 את `20260424000021_public_tournament_projection.sql` צריך להריץ לפני בדיקת `/dashboard/tournament` כמשתמש לא רשום. בלי ה-migration הזה, הדף כבר לא ישתמש ב-service-role, אבל Supabase לא יכיר את ה-views הציבוריים ולכן לא יחזיר נתוני טורניר ל-anon.
 
@@ -317,7 +318,7 @@ Brevo Free מוגבל בכמות יומית לכל החשבון, לכן ביום
 - Finished match updates call `scoreFinishedMatchPredictions`, updating `predictions.points_earned` and recalculating affected `profiles.total_score` values for leaderboard consistency.
 - `/game/predictions` shows the available direction reward for home/draw/away before saving, and the "exact score" row shows only the extra points added on top of the direction reward.
 - `/game/leagues/[id]` projects live scoring in the leaderboard with `+N` badges per live prediction chip and a live delta next to each member's persisted total.
-- `/game/leaderboard` is a global table of all profiles by `total_score`.
+- `/game/leaderboard` reuses the full league leaderboard UI for all profiles: live prediction chips, projected live `+N`, tournament winner and top-scorer picks, and profile-based realtime total updates.
 - Dev Tools can edit `home_odds`/`draw_odds`/`away_odds` and can generate random future predictions for the currently logged-in dev user only.
 - Dev Tools also includes a random odds button that seeds plausible 1/X/2 odds for every match and persists them through the bulk match API.
 - Dev Tools `Clear All Match Data` is a full reset: it clears match scores/statuses, odds, match predictions, tournament predictions, legacy bets, `profiles.total_score`, and therefore all league leaderboard totals.

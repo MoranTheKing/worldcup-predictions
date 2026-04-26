@@ -55,8 +55,9 @@ export default async function OpponentPredictionsPage({
   const sharedLeagueIds = ((targetMemberships ?? []) as Array<{ league_id?: string | null }>)
     .map((row) => row.league_id)
     .filter((value): value is string => typeof value === "string" && currentLeagueIds.has(value));
+  const isGlobalLeagueView = requestedLeagueId === "global";
 
-  if (user.id !== targetUserId && sharedLeagueIds.length === 0) {
+  if (user.id !== targetUserId && sharedLeagueIds.length === 0 && !isGlobalLeagueView) {
     redirect("/game/leagues");
   }
 
@@ -64,7 +65,11 @@ export default async function OpponentPredictionsPage({
     requestedLeagueId && sharedLeagueIds.includes(requestedLeagueId)
       ? requestedLeagueId
       : sharedLeagueIds[0] ?? null;
-  const backHref = backLeagueId ? `/game/leagues/${backLeagueId}` : "/game/leagues";
+  const backHref = isGlobalLeagueView
+    ? "/game/leaderboard"
+    : backLeagueId
+      ? `/game/leagues/${backLeagueId}`
+      : "/game/leagues";
 
   if (user.id === targetUserId) {
     const selfData = await loadPredictionsHubData(user.id);
@@ -202,6 +207,8 @@ export default async function OpponentPredictionsPage({
           <span className="text-xs text-wc-fg3">
             שיתוף ליגה: {sharedLeagueNames.get(backLeagueId) ?? "League"}
           </span>
+        ) : isGlobalLeagueView ? (
+          <span className="text-xs text-wc-fg3">הליגה הכללית</span>
         ) : null}
       </div>
 

@@ -65,6 +65,7 @@ type LeagueViewProps = {
   currentUserId: string;
   members: LeagueMemberRow[];
   liveMatches: LeagueLiveMatchSummary[];
+  variant?: "private" | "global";
 };
 
 export default function LeagueViewClient({
@@ -72,7 +73,9 @@ export default function LeagueViewClient({
   currentUserId,
   members,
   liveMatches,
+  variant = "private",
 }: LeagueViewProps) {
+  const isGlobal = variant === "global";
   const liveMatchIds = useMemo(
     () => liveMatches.map((match) => match.match_number),
     [liveMatches],
@@ -84,10 +87,13 @@ export default function LeagueViewClient({
     leagueId: league.id,
     liveMatchIds,
     memberIds,
+    watchLeagueMembers: !isGlobal,
+    watchProfiles: isGlobal,
   });
 
-  const isOwner = league.owner_id === currentUserId;
+  const isOwner = !isGlobal && league.owner_id === currentUserId;
   const hasLiveMatches = liveMatches.length > 0;
+  const showMemberActions = !isGlobal;
 
   return (
     <div className="flex flex-col gap-6">
@@ -103,10 +109,16 @@ export default function LeagueViewClient({
       <section className="rounded-[1.75rem] border border-white/10 bg-[rgba(13,27,46,0.82)] p-5">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.24em] text-wc-neon">League Lobby</p>
+            <p className="text-xs font-bold uppercase tracking-[0.24em] text-wc-neon">
+              {isGlobal ? "Global League" : "League Lobby"}
+            </p>
             <h2 className="mt-2 text-3xl font-black text-wc-fg1">{league.name}</h2>
             <div className="mt-3 flex flex-wrap gap-2">
-              {isOwner ? (
+              {isGlobal ? (
+                <span className="rounded-full bg-[rgba(95,255,123,0.12)] px-3 py-1 text-xs font-semibold text-wc-neon">
+                  כל המשתמשים
+                </span>
+              ) : isOwner ? (
                 <span className="rounded-full bg-[rgba(95,255,123,0.12)] px-3 py-1 text-xs font-semibold text-wc-neon">
                   מנהל הליגה
                 </span>
@@ -122,11 +134,20 @@ export default function LeagueViewClient({
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
-            <InviteCard inviteCode={league.invite_code} />
-            {isOwner ? (
-              <DeleteLeagueCard leagueId={league.id} />
+            {isGlobal ? (
+              <>
+                <LeagueStatCard title="משתתפים" value={String(members.length)} />
+                <LeagueStatCard title="משחקי LIVE" value={String(liveMatches.length)} />
+              </>
             ) : (
-              <LeaveLeagueCard leagueId={league.id} currentUserId={currentUserId} />
+              <>
+                <InviteCard inviteCode={league.invite_code} />
+                {isOwner ? (
+                  <DeleteLeagueCard leagueId={league.id} />
+                ) : (
+                  <LeaveLeagueCard leagueId={league.id} currentUserId={currentUserId} />
+                )}
+              </>
             )}
           </div>
         </div>
@@ -146,7 +167,17 @@ export default function LeagueViewClient({
 
         {members.length > 0 ? (
           <div className="overflow-x-auto">
-            <table className={`w-full ${hasLiveMatches ? "min-w-[1160px]" : "min-w-[980px]"}`}>
+            <table
+              className={`w-full ${
+                hasLiveMatches
+                  ? showMemberActions
+                    ? "min-w-[1160px]"
+                    : "min-w-[1060px]"
+                  : showMemberActions
+                    ? "min-w-[980px]"
+                    : "min-w-[860px]"
+              }`}
+            >
               <thead>
                 <tr className="border-b border-white/10 text-right">
                   <th className="px-5 py-3 text-[11px] font-semibold text-wc-fg3">#</th>
@@ -157,7 +188,9 @@ export default function LeagueViewClient({
                   ) : null}
                   <th className="px-4 py-3 text-[11px] font-semibold text-wc-fg3">זוכת טורניר</th>
                   <th className="px-4 py-3 text-[11px] font-semibold text-wc-fg3">מלך השערים</th>
-                  <th className="px-5 py-3 text-[11px] font-semibold text-wc-fg3">פעולות</th>
+                  {showMemberActions ? (
+                    <th className="px-5 py-3 text-[11px] font-semibold text-wc-fg3">פעולות</th>
+                  ) : null}
                 </tr>
               </thead>
               <tbody>
@@ -169,6 +202,8 @@ export default function LeagueViewClient({
                     isOwner={isOwner}
                     isSelf={member.user_id === currentUserId}
                     leagueId={league.id}
+                    isGlobal={isGlobal}
+                    showActions={showMemberActions}
                     liveMatches={liveMatches}
                   />
                 ))}
@@ -179,6 +214,15 @@ export default function LeagueViewClient({
           <div className="p-8 text-center text-sm text-wc-fg3">אין עדיין חברים בליגה.</div>
         )}
       </section>
+    </div>
+  );
+}
+
+function LeagueStatCard({ title, value }: { title: string; value: string }) {
+  return (
+    <div className="rounded-[1.4rem] border border-white/10 bg-white/5 p-4">
+      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-wc-fg3">{title}</p>
+      <p className="mt-3 font-mono text-3xl font-black text-wc-neon">{value}</p>
     </div>
   );
 }
@@ -387,6 +431,8 @@ function LeagueMemberRowView({
   isOwner,
   isSelf,
   leagueId,
+  isGlobal,
+  showActions,
   liveMatches,
 }: {
   member: LeagueMemberRow;
@@ -394,10 +440,14 @@ function LeagueMemberRowView({
   isOwner: boolean;
   isSelf: boolean;
   leagueId: string;
+  isGlobal: boolean;
+  showActions: boolean;
   liveMatches: LeagueLiveMatchSummary[];
 }) {
   const router = useRouter();
-  const href = `/game/users/${member.user_id}?league=${leagueId}`;
+  const href = isGlobal
+    ? `/game/users/${member.user_id}?league=global`
+    : `/game/users/${member.user_id}?league=${leagueId}`;
   const liveProjectedPoints = liveMatches.reduce((sum, match) => {
     const prediction =
       member.live_predictions.find((item) => item.match_number === match.match_number) ?? null;
@@ -434,7 +484,11 @@ function LeagueMemberRowView({
               {isSelf ? <span className="ms-1 text-[10px] text-wc-fg3">(אני)</span> : null}
             </p>
             <p className="text-xs text-wc-fg3">
-              {member.joined_at ? new Date(member.joined_at).toLocaleDateString("he-IL") : "חבר ליגה"}
+              {member.joined_at
+                ? new Date(member.joined_at).toLocaleDateString("he-IL")
+                : isGlobal
+                  ? "הליגה הכללית"
+                  : "חבר ליגה"}
             </p>
           </div>
         </div>
@@ -492,17 +546,19 @@ function LeagueMemberRowView({
           locked
         />
       </td>
-      <td
-        className="px-5 py-3"
-        onClick={(event) => event.stopPropagation()}
-        onKeyDown={(event) => event.stopPropagation()}
-      >
-        {isOwner && !isSelf ? (
-          <RemoveMemberButton leagueId={leagueId} targetUserId={member.user_id} />
-        ) : (
-          <span className="text-xs text-wc-fg3">—</span>
-        )}
-      </td>
+      {showActions ? (
+        <td
+          className="px-5 py-3"
+          onClick={(event) => event.stopPropagation()}
+          onKeyDown={(event) => event.stopPropagation()}
+        >
+          {isOwner && !isSelf ? (
+            <RemoveMemberButton leagueId={leagueId} targetUserId={member.user_id} />
+          ) : (
+            <span className="text-xs text-wc-fg3">—</span>
+          )}
+        </td>
+      ) : null}
     </tr>
   );
 }
