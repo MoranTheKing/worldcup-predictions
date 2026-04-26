@@ -107,7 +107,7 @@ export default async function OpponentPredictionsPage({
     admin
       .from("matches")
       .select(
-        "match_number, stage, status, match_phase, date_time, minute, home_team_id, away_team_id, home_placeholder, away_placeholder, home_score, away_score, is_extra_time, home_penalty_score, away_penalty_score",
+        "match_number, stage, status, match_phase, date_time, minute, home_team_id, away_team_id, home_placeholder, away_placeholder, home_score, away_score, home_odds, draw_odds, away_odds, is_extra_time, home_penalty_score, away_penalty_score",
       )
       .order("date_time", { ascending: true }),
     admin

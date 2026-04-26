@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import OutrightChoiceBadge from "@/components/game/OutrightChoiceBadge";
 import UserAvatar from "@/components/UserAvatar";
 import { useDevLiveRefresh } from "@/lib/dev/live-refresh";
+import { calculatePredictionPoints } from "@/lib/game/scoring";
 import { useLeagueRealtimeRefresh } from "@/lib/live/league-realtime-refresh";
 import { getLiveMatchStatusLabel, type MatchPhase } from "@/lib/tournament/matches";
 import {
@@ -29,6 +30,9 @@ export type LeagueLiveMatchSummary = {
   away_logo_url: string | null;
   home_score: number | null;
   away_score: number | null;
+  home_odds: number | null;
+  draw_odds: number | null;
+  away_odds: number | null;
 };
 
 export type LeagueLivePrediction = {
@@ -224,11 +228,12 @@ function LivePredictionChip({
   const predictedAway =
     typeof prediction?.away_score_guess === "number" ? prediction.away_score_guess : null;
   const hasPrediction = predictedHome !== null && predictedAway !== null;
+  const projectedPoints = getProjectedLivePoints(match, prediction);
 
   return (
     <div
       dir="rtl"
-      className={`inline-flex h-10 min-w-[124px] items-center justify-center gap-2 rounded-xl border px-2.5 text-xs font-black shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] ${getLivePredictionClass(tone)}`}
+      className={`inline-flex h-10 min-w-[146px] items-center justify-center gap-2 rounded-xl border px-2.5 text-xs font-black shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] ${getLivePredictionClass(tone)}`}
       title={`${match.away_name} - ${match.home_name}`}
       aria-label={`${match.away_name} ${hasPrediction ? predictedAway : "?"} - ${
         hasPrediction ? predictedHome : "?"
@@ -241,6 +246,11 @@ function LivePredictionChip({
       <TeamFlag logoUrl={match.away_logo_url} name={match.away_name} />
       {prediction?.is_joker_applied ? (
         <span className="rounded-full border border-current/30 px-1 text-[10px] leading-4">J</span>
+      ) : null}
+      {projectedPoints !== null ? (
+        <span dir="ltr" className="rounded-full bg-black/20 px-1.5 text-[10px] leading-5">
+          +{projectedPoints}
+        </span>
       ) : null}
     </div>
   );
@@ -388,6 +398,11 @@ function LeagueMemberRowView({
 }) {
   const router = useRouter();
   const href = `/game/users/${member.user_id}?league=${leagueId}`;
+  const liveProjectedPoints = liveMatches.reduce((sum, match) => {
+    const prediction =
+      member.live_predictions.find((item) => item.match_number === match.match_number) ?? null;
+    return sum + (getProjectedLivePoints(match, prediction) ?? 0);
+  }, 0);
 
   return (
     <tr
@@ -424,7 +439,23 @@ function LeagueMemberRowView({
           </div>
         </div>
       </td>
-      <td className="px-4 py-3 text-sm font-black text-wc-neon">{member.total_score}</td>
+      <td className="px-4 py-3">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-black text-wc-neon">{member.total_score}</span>
+          {liveMatches.length > 0 ? (
+            <span
+              dir="ltr"
+              className={`rounded-full border px-2 py-0.5 text-[11px] font-black ${
+                liveProjectedPoints > 0
+                  ? "border-[rgba(95,255,123,0.32)] bg-[rgba(95,255,123,0.12)] text-wc-neon"
+                  : "border-white/10 bg-white/5 text-wc-fg3"
+              }`}
+            >
+              +{liveProjectedPoints}
+            </span>
+          ) : null}
+        </div>
+      </td>
       {liveMatches.length > 0 ? (
         <td className="px-4 py-3">
           <div className="flex min-w-[260px] flex-wrap items-center gap-2">
@@ -562,6 +593,30 @@ function resolveLivePredictionTone(
   }
 
   return "miss";
+}
+
+function getProjectedLivePoints(
+  match: LeagueLiveMatchSummary,
+  prediction: LeagueLivePrediction | null,
+) {
+  if (
+    !prediction ||
+    typeof prediction.home_score_guess !== "number" ||
+    typeof prediction.away_score_guess !== "number" ||
+    match.home_score === null ||
+    match.away_score === null
+  ) {
+    return null;
+  }
+
+  return calculatePredictionPoints(
+    {
+      home_score_guess: prediction.home_score_guess,
+      away_score_guess: prediction.away_score_guess,
+      is_joker_applied: prediction.is_joker_applied,
+    },
+    match,
+  );
 }
 
 function getLivePredictionClass(tone: LivePredictionTone) {

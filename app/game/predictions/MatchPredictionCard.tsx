@@ -14,6 +14,7 @@ import {
   type MatchPhase,
   type MatchWithTeams,
 } from "@/lib/tournament/matches";
+import { calculatePredictionPoints } from "@/lib/game/scoring";
 
 type PredictionTone =
   | "scheduled"
@@ -80,6 +81,23 @@ export default function MatchPredictionCard({
   const optimisticIsJoker = state?.success ? isJokerSelected : existingIsJoker;
   const hasPrediction = optimisticHome !== null && optimisticAway !== null;
   const scoreCanBeEvaluated = (isLive || isFinished) && hasPrediction;
+  const availableRewards = buildAvailableRewards(
+    match,
+    isJokerSelected || optimisticIsJoker,
+    homeTeamName,
+    awayTeamName,
+  );
+  const projectedPoints =
+    scoreCanBeEvaluated && match.home_score !== null && match.away_score !== null
+      ? calculatePredictionPoints(
+          {
+            home_score_guess: optimisticHome,
+            away_score_guess: optimisticAway,
+            is_joker_applied: optimisticIsJoker,
+          },
+          match,
+        )
+      : null;
   const currentExactHit =
     scoreCanBeEvaluated &&
     match.home_score === optimisticHome &&
@@ -113,6 +131,17 @@ export default function MatchPredictionCard({
   const unsubmittedTone = !hasPrediction && (isLive || isFinished) ? "miss" : tone;
   const predictionPanelTone = hiddenPredictionForPrivacy ? "scheduled" : hasPrediction ? livePredictionTone : unsubmittedTone;
   const pointsPanelTone = hiddenPredictionForPrivacy ? "scheduled" : isLive ? predictionPanelTone : tone;
+  const pointsLabel = isLive ? "נקודות כרגע" : "נקודות";
+  const displayedPoints =
+    hiddenPredictionForPrivacy
+      ? "🔒"
+      : isLive && projectedPoints !== null
+        ? `+${projectedPoints}`
+        : typeof pointsEarned === "number"
+          ? String(pointsEarned)
+          : isFinished && projectedPoints !== null
+            ? String(projectedPoints)
+            : "0";
 
   return (
     <div className="relative overflow-hidden rounded-[1.6rem]">
@@ -214,6 +243,8 @@ export default function MatchPredictionCard({
 
                 <TeamSide align="left" name={awayTeamName} logoUrl={match.awayTeam?.logo_url ?? null} />
               </div>
+
+              <AvailableRewardsStrip rewards={availableRewards} />
 
               {hasPrediction ? (
                 <div
@@ -325,14 +356,8 @@ export default function MatchPredictionCard({
                   tone={predictionPanelTone}
                 />
                 <ResultPanel
-                  label="נקודות"
-                  value={
-                    hiddenPredictionForPrivacy
-                      ? "🔒"
-                      : typeof pointsEarned === "number"
-                        ? String(pointsEarned)
-                        : "0"
-                  }
+                  label={pointsLabel}
+                  value={displayedPoints}
                   tone={pointsPanelTone}
                   emphasize
                 />
@@ -406,6 +431,87 @@ function TeamSide({
       ) : null}
       <span className="truncate text-sm font-bold text-wc-fg1">{name}</span>
     </div>
+  );
+}
+
+type AvailableReward = {
+  key: "home" | "draw" | "away";
+  label: string;
+  directionPoints: number;
+  exactPoints: number;
+};
+
+function AvailableRewardsStrip({ rewards }: { rewards: AvailableReward[] }) {
+  return (
+    <div className="grid gap-2 sm:grid-cols-3">
+      {rewards.map((reward) => (
+        <div
+          key={reward.key}
+          className="min-w-0 rounded-xl border border-white/10 bg-white/[0.035] px-3 py-2"
+        >
+          <div className="flex min-w-0 items-center justify-between gap-2">
+            <span className="truncate text-[11px] font-bold text-wc-fg2">{reward.label}</span>
+            <span dir="ltr" className="text-sm font-black text-wc-neon">
+              +{reward.directionPoints}
+            </span>
+          </div>
+          <div className="mt-1 flex items-center justify-between gap-2 text-[10px] font-semibold text-wc-fg3">
+            <span>בול</span>
+            <span dir="ltr">+{reward.exactPoints}</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function buildAvailableRewards(
+  match: MatchWithTeams,
+  isJoker: boolean,
+  homeTeamName: string,
+  awayTeamName: string,
+): AvailableReward[] {
+  return [
+    {
+      key: "home",
+      label: homeTeamName,
+      directionPoints: calculateRewardPoints(match, 1, 0, 2, 0, isJoker),
+      exactPoints: calculateRewardPoints(match, 1, 0, 1, 0, isJoker),
+    },
+    {
+      key: "draw",
+      label: "תיקו",
+      directionPoints: calculateRewardPoints(match, 1, 1, 2, 2, isJoker),
+      exactPoints: calculateRewardPoints(match, 1, 1, 1, 1, isJoker),
+    },
+    {
+      key: "away",
+      label: awayTeamName,
+      directionPoints: calculateRewardPoints(match, 0, 1, 0, 2, isJoker),
+      exactPoints: calculateRewardPoints(match, 0, 1, 0, 1, isJoker),
+    },
+  ];
+}
+
+function calculateRewardPoints(
+  match: MatchWithTeams,
+  predictedHome: number,
+  predictedAway: number,
+  actualHome: number,
+  actualAway: number,
+  isJoker: boolean,
+) {
+  return calculatePredictionPoints(
+    {
+      home_score_guess: predictedHome,
+      away_score_guess: predictedAway,
+      is_joker_applied: isJoker,
+    },
+    {
+      ...match,
+      home_score: actualHome,
+      away_score: actualAway,
+    },
   );
 }
 

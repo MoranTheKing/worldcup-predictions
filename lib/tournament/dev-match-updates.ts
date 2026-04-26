@@ -13,6 +13,9 @@ export type EditableMatchState = Pick<
   | "match_phase"
   | "home_score"
   | "away_score"
+  | "home_odds"
+  | "draw_odds"
+  | "away_odds"
   | "minute"
   | "is_extra_time"
   | "home_penalty_score"
@@ -24,6 +27,9 @@ export type DevMatchPatchInput = {
   match_phase?: MatchPhase | null;
   home_score?: number | null;
   away_score?: number | null;
+  home_odds?: number | string | null;
+  draw_odds?: number | string | null;
+  away_odds?: number | string | null;
   minute?: number | null;
   is_extra_time?: boolean | null;
   home_penalty_score?: number | null;
@@ -113,6 +119,15 @@ function normalizeInt(value: unknown, min: number, max: number) {
   return Math.trunc(numeric);
 }
 
+function normalizeOdds(value: unknown) {
+  if (value === undefined) return undefined;
+  if (value === null || value === "") return null;
+
+  const numeric = typeof value === "string" ? Number.parseFloat(value) : Number(value);
+  if (!Number.isFinite(numeric) || numeric < 1 || numeric > 9999.99) return undefined;
+  return Math.round(numeric * 100) / 100;
+}
+
 export function buildDevMatchUpdate(existing: EditableMatchState, patch: DevMatchPatchInput) {
   const update: Record<string, unknown> = {};
   const next: EditableMatchState = { ...existing };
@@ -156,6 +171,33 @@ export function buildDevMatchUpdate(existing: EditableMatchState, patch: DevMatc
   if (awayScore !== undefined) {
     next.away_score = awayScore;
     update.away_score = awayScore;
+  }
+
+  const homeOdds = normalizeOdds(patch.home_odds);
+  if (patch.home_odds !== undefined && homeOdds === undefined) {
+    return { error: "invalid home_odds" as const };
+  }
+  if (homeOdds !== undefined) {
+    next.home_odds = homeOdds;
+    update.home_odds = homeOdds;
+  }
+
+  const drawOdds = normalizeOdds(patch.draw_odds);
+  if (patch.draw_odds !== undefined && drawOdds === undefined) {
+    return { error: "invalid draw_odds" as const };
+  }
+  if (drawOdds !== undefined) {
+    next.draw_odds = drawOdds;
+    update.draw_odds = drawOdds;
+  }
+
+  const awayOdds = normalizeOdds(patch.away_odds);
+  if (patch.away_odds !== undefined && awayOdds === undefined) {
+    return { error: "invalid away_odds" as const };
+  }
+  if (awayOdds !== undefined) {
+    next.away_odds = awayOdds;
+    update.away_odds = awayOdds;
   }
 
   const minute = normalizeInt(patch.minute, 0, 130);

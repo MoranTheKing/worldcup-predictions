@@ -193,6 +193,9 @@ function toPayload(match: DevMatchRow) {
     match_phase: match.match_phase,
     home_score: match.home_score,
     away_score: match.away_score,
+    home_odds: match.home_odds ?? null,
+    draw_odds: match.draw_odds ?? null,
+    away_odds: match.away_odds ?? null,
     minute: match.minute,
     is_extra_time: match.is_extra_time ?? false,
     home_penalty_score: match.home_penalty_score,
@@ -220,7 +223,7 @@ export default function DevToolsClient({ matches, error }: Props) {
       matches
         .map(
           (match) =>
-            `${match.match_number}:${match.status}:${match.match_phase}:${match.minute}:${match.home_score}:${match.away_score}:${match.home_team_id}:${match.away_team_id}`,
+            `${match.match_number}:${match.status}:${match.match_phase}:${match.minute}:${match.home_score}:${match.away_score}:${match.home_odds}:${match.draw_odds}:${match.away_odds}:${match.home_team_id}:${match.away_team_id}`,
         )
         .join("|"),
     [matches],
@@ -402,6 +405,29 @@ function DevToolsClientInner({ matches, error }: Props) {
     }
   }
 
+  async function randomizeMyPredictions() {
+    if (!confirm("למלא ניחושים אקראיים רק למשתמש המחובר שלך? ניחושים עתידיים קיימים יעודכנו, וג'וקרים קיימים יישמרו.")) {
+      return;
+    }
+
+    setBulkSaving(true);
+    setMessage(null);
+
+    try {
+      const res = await fetch("/api/dev/predictions/randomize-mine", { method: "POST" });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setMessage(`Error: ${body.error ?? res.statusText}`);
+        return;
+      }
+
+      const body = await res.json().catch(() => ({}));
+      refreshWithMessage(`נוצרו ${body.randomized ?? 0} ניחושים אקראיים למשתמש המחובר בלבד.`);
+    } finally {
+      setBulkSaving(false);
+    }
+  }
+
   async function randomizeAll() {
     if (!confirm("למלא את כל המשחקים בתוצאות אקראיות ולסנכרן מיד את כל הטורניר?")) return;
 
@@ -514,6 +540,13 @@ function DevToolsClientInner({ matches, error }: Props) {
               Randomize All Matches
             </button>
             <button
+              onClick={randomizeMyPredictions}
+              disabled={pending}
+              className="rounded-2xl border border-[rgba(34,211,238,0.38)] bg-[rgba(34,211,238,0.1)] px-4 py-3 text-sm font-bold text-cyan-200 transition hover:bg-[rgba(34,211,238,0.18)] disabled:opacity-50"
+            >
+              ניחושים אקראיים שלי
+            </button>
+            <button
               onClick={finishAll}
               disabled={pending}
               className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-bold text-wc-fg1 transition hover:bg-white/10 disabled:opacity-50"
@@ -571,7 +604,7 @@ function DevToolsClientInner({ matches, error }: Props) {
         </div>
 
         <div className="overflow-x-auto rounded-[1.5rem] wc-card">
-          <table className="w-full min-w-[1240px] text-sm">
+          <table className="w-full min-w-[1420px] text-sm">
             <thead>
               <tr className="border-b border-white/10 text-xs text-wc-fg3">
                 <th className="px-3 py-3 text-start">#</th>
@@ -584,6 +617,7 @@ function DevToolsClientInner({ matches, error }: Props) {
                 <th className="px-3 py-3 text-center">פעולות</th>
                 <th className="px-3 py-3 text-start">בית</th>
                 <th className="px-3 py-3 text-center">תוצאה</th>
+                <th className="px-3 py-3 text-center">יחסים</th>
                 <th className="px-3 py-3 text-start">חוץ</th>
               </tr>
             </thead>
@@ -601,7 +635,7 @@ function DevToolsClientInner({ matches, error }: Props) {
               ))}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={11} className="px-3 py-8 text-center text-wc-fg3">
+                  <td colSpan={12} className="px-3 py-8 text-center text-wc-fg3">
                     אין משחקים בקטגוריה הזו
                   </td>
                 </tr>
@@ -977,7 +1011,81 @@ function DevMatchRowEditor({
           />
         </div>
       </td>
+      <td className="px-3 py-3">
+        <div dir="ltr" className="grid w-[192px] grid-cols-3 gap-1">
+          <OddsInput
+            label={`Home odds for ${homeName}`}
+            value={match.home_odds ?? null}
+            shortLabel="1"
+            disabled={busy}
+            onChange={(value) =>
+              update((current) => ({
+                ...current,
+                home_odds: value,
+              }))
+            }
+          />
+          <OddsInput
+            label="Draw odds"
+            value={match.draw_odds ?? null}
+            shortLabel="X"
+            disabled={busy}
+            onChange={(value) =>
+              update((current) => ({
+                ...current,
+                draw_odds: value,
+              }))
+            }
+          />
+          <OddsInput
+            label={`Away odds for ${awayName}`}
+            value={match.away_odds ?? null}
+            shortLabel="2"
+            disabled={busy}
+            onChange={(value) =>
+              update((current) => ({
+                ...current,
+                away_odds: value,
+              }))
+            }
+          />
+        </div>
+      </td>
       <td className="px-3 py-3 text-xs text-wc-fg1">{awayName}</td>
     </tr>
+  );
+}
+
+function OddsInput({
+  label,
+  value,
+  shortLabel,
+  disabled,
+  onChange,
+}: {
+  label: string;
+  value: number | string | null;
+  shortLabel: string;
+  disabled: boolean;
+  onChange: (value: number | null) => void;
+}) {
+  return (
+    <label className="flex min-w-0 flex-col gap-1 text-[10px] font-bold text-wc-fg3">
+      <span className="text-center">{shortLabel}</span>
+      <input
+        type="number"
+        step="0.01"
+        min="1"
+        max="9999.99"
+        value={value ?? ""}
+        aria-label={label}
+        onChange={(event) => {
+          const nextValue = event.target.value;
+          onChange(nextValue === "" ? null : Number(nextValue));
+        }}
+        disabled={disabled}
+        className="w-full rounded-lg border border-white/10 bg-black/30 px-1.5 py-1 text-center text-xs font-bold text-wc-fg1 outline-none focus:border-wc-neon disabled:opacity-40"
+      />
+    </label>
   );
 }

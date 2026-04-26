@@ -78,7 +78,7 @@ export async function scoreFinishedMatchPredictions(
       if (!match) return null;
 
       const nextPoints = calculatePredictionPoints(prediction, match);
-      if ((prediction.points_earned ?? 0) === nextPoints) return null;
+      if (prediction.points_earned === nextPoints) return null;
 
       return {
         user_id: prediction.user_id,

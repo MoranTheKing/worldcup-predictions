@@ -40,6 +40,9 @@ type RawLiveMatchRow = {
   away_placeholder: string | null;
   home_score: number | null;
   away_score: number | null;
+  home_odds: number | string | null;
+  draw_odds: number | string | null;
+  away_odds: number | string | null;
 };
 
 type RawTeamRow = {
@@ -125,7 +128,7 @@ export default async function LeaguePage({
     admin
       .from("matches")
       .select(
-        "match_number, stage, status, match_phase, date_time, minute, home_team_id, away_team_id, home_placeholder, away_placeholder, home_score, away_score",
+        "match_number, stage, status, match_phase, date_time, minute, home_team_id, away_team_id, home_placeholder, away_placeholder, home_score, away_score, home_odds, draw_odds, away_odds",
       )
       .eq("status", "live")
       .order("match_number", { ascending: true })
@@ -211,6 +214,9 @@ export default async function LeaguePage({
       away_logo_url: awayTeam?.logoUrl ?? null,
       home_score: typeof match.home_score === "number" ? match.home_score : null,
       away_score: typeof match.away_score === "number" ? match.away_score : null,
+      home_odds: normalizeOddsValue(match.home_odds),
+      draw_odds: normalizeOddsValue(match.draw_odds),
+      away_odds: normalizeOddsValue(match.away_odds),
     };
   });
   const livePredictionMap = new Map<string, RawLivePredictionRow>();
@@ -370,4 +376,9 @@ function normalizeMatchPhase(value: string | null): LeagueLiveMatchSummary["matc
   }
 
   return null;
+}
+
+function normalizeOddsValue(value: number | string | null) {
+  const numeric = typeof value === "string" ? Number.parseFloat(value) : value;
+  return typeof numeric === "number" && Number.isFinite(numeric) ? numeric : null;
 }

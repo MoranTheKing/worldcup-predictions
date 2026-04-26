@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 const TABS = [
   { href: "/game/predictions", label: "הניחושים שלי", icon: "🎯" },
   { href: "/game/leagues", label: "הליגות שלי", icon: "👥" },
+  { href: "/game/leaderboard", label: "טבלה כללית", icon: "#" },
 ];
 
 export default function GameSubNav() {
