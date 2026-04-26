@@ -20,7 +20,7 @@ Key rules to remember:
 - Cards use glassmorphism: backdrop-blur + rgba surface + subtle border
 - Bottom nav: frosted glass with neon green active glow
 - Production live prediction screens and leaderboards should use scoped Supabase Realtime subscriptions instead of interval polling. Debounce `router.refresh()` and defer refreshes while the browser tab is hidden.
-- Scoring lives in `lib/game/scoring.ts`: odds-tier base points + stage points + stage-specific exact-hit points, then x2 Joker. Direction hit adds 0 hit points. Persist scores through `scoreFinishedMatchPredictions` so `predictions.points_earned` and `profiles.total_score` stay aligned.
+- Scoring lives in `lib/game/scoring.ts`: odds-tier base points + stage direction bonus; exact hits add the separate stage exact-score bonus, then x2 Joker. Persist scores through `scoreFinishedMatchPredictions` so `predictions.points_earned` and `profiles.total_score` stay aligned.
 - Prediction cards should show available odds-based rewards before save; live cards and league rows should show projected `+N` without mutating persisted totals until the match is finished.
 - Dev Tools owns local odds editing, random odds seeding, and current-user-only random prediction filling. Keep these routes localhost-only and never use them for bulk production user prediction generation.
 

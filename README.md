@@ -313,9 +313,9 @@ Brevo Free מוגבל בכמות יומית לכל החשבון, לכן ביום
 ## Odds-based scoring engine - 2026-04-26
 
 - `public.matches` now stores 1X2 decimal odds in `home_odds`, `draw_odds`, and `away_odds` through `supabase/migrations/20260426000024_add_match_odds_columns.sql`.
-- `lib/game/scoring.ts` contains the pure `calculatePredictionPoints(prediction, match)` engine: miss returns `0`; hits use odds base points + stage points + hit points, then the x2 Joker multiplier.
+- `lib/game/scoring.ts` contains the pure `calculatePredictionPoints(prediction, match)` engine: miss returns `0`; direction hits use odds base points + stage direction bonus, and exact hits add the stage exact-score bonus before the x2 Joker multiplier.
 - Finished match updates call `scoreFinishedMatchPredictions`, updating `predictions.points_earned` and recalculating affected `profiles.total_score` values for leaderboard consistency.
-- `/game/predictions` shows the available reward for home/draw/away before saving, including separate direction and exact-score totals. Exact score uses the same odds/stage total plus the stage-specific exact-hit add-on.
+- `/game/predictions` shows the available reward for home/draw/away before saving, including separate direction and exact-score totals from the knockout matrix.
 - `/game/leagues/[id]` projects live scoring in the leaderboard with `+N` badges per live prediction chip and a live delta next to each member's persisted total.
 - `/game/leaderboard` is a global table of all profiles by `total_score`.
 - Dev Tools can edit `home_odds`/`draw_odds`/`away_odds` and can generate random future predictions for the currently logged-in dev user only.

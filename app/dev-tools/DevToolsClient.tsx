@@ -1057,14 +1057,14 @@ function DevMatchRowEditor({
       <td className="px-3 py-3">
         <div dir="ltr" className="grid w-[192px] grid-cols-3 gap-1">
           <OddsInput
-            label={`Home odds for ${homeName}`}
-            value={match.home_odds ?? null}
+            label={`Away odds for ${awayName}`}
+            value={match.away_odds ?? null}
             shortLabel="2"
             disabled={busy}
             onChange={(value) =>
               update((current) => ({
                 ...current,
-                home_odds: value,
+                away_odds: value,
               }))
             }
           />
@@ -1081,14 +1081,14 @@ function DevMatchRowEditor({
             }
           />
           <OddsInput
-            label={`Away odds for ${awayName}`}
-            value={match.away_odds ?? null}
+            label={`Home odds for ${homeName}`}
+            value={match.home_odds ?? null}
             shortLabel="1"
             disabled={busy}
             onChange={(value) =>
               update((current) => ({
                 ...current,
-                away_odds: value,
+                home_odds: value,
               }))
             }
           />

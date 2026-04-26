@@ -19,7 +19,7 @@ export type ScoringMatch = {
   away_odds?: number | string | null;
 };
 
-const STAGE_POINTS_BY_KIND: Record<string, number> = {
+const DIRECTION_BONUS_BY_KIND: Record<string, number> = {
   group: 0,
   round_of_32: 1,
   round_of_16: 2,
@@ -30,14 +30,14 @@ const STAGE_POINTS_BY_KIND: Record<string, number> = {
   unknown: 0,
 };
 
-const EXACT_HIT_POINTS_BY_KIND: Record<string, number> = {
+const EXACT_BONUS_BY_KIND: Record<string, number> = {
   group: 2,
-  round_of_32: 1,
-  round_of_16: 1,
-  quarter_final: 1,
-  semi_final: 1,
-  third_place: 1,
-  final: 2,
+  round_of_32: 2,
+  round_of_16: 3,
+  quarter_final: 4,
+  semi_final: 5,
+  third_place: 5,
+  final: 7,
   unknown: 2,
 };
 
@@ -69,11 +69,11 @@ export function calculatePredictionPoints(
   const hitKind: Exclude<PredictionHitKind, "miss"> =
     predictedHome === actualHome && predictedAway === actualAway ? "exact" : "direction";
   const basePoints = getBasePointsForOdds(getOddsForDirection(match, predictedDirection));
-  const stagePoints = getStagePoints(match.stage);
-  const hitPoints = hitKind === "exact" ? getExactHitPoints(match.stage) : 0;
+  const directionBonus = getDirectionBonus(match.stage);
+  const exactBonus = hitKind === "exact" ? getExactBonus(match.stage) : 0;
   const multiplier = prediction.is_joker === true || prediction.is_joker_applied === true ? 2 : 1;
 
-  return (basePoints + stagePoints + hitPoints) * multiplier;
+  return (basePoints + directionBonus + exactBonus) * multiplier;
 }
 
 export function getBasePointsForOdds(odds: number | string | null | undefined) {
@@ -89,14 +89,14 @@ export function getBasePointsForOdds(odds: number | string | null | undefined) {
   return 10;
 }
 
-function getStagePoints(stage: string) {
+function getDirectionBonus(stage: string) {
   const kind = getMatchStageKind(stage);
-  return STAGE_POINTS_BY_KIND[kind] ?? STAGE_POINTS_BY_KIND.unknown;
+  return DIRECTION_BONUS_BY_KIND[kind] ?? DIRECTION_BONUS_BY_KIND.unknown;
 }
 
-function getExactHitPoints(stage: string) {
+function getExactBonus(stage: string) {
   const kind = getMatchStageKind(stage);
-  return EXACT_HIT_POINTS_BY_KIND[kind] ?? EXACT_HIT_POINTS_BY_KIND.unknown;
+  return EXACT_BONUS_BY_KIND[kind] ?? EXACT_BONUS_BY_KIND.unknown;
 }
 
 function getOddsForDirection(match: ScoringMatch, direction: PredictionDirection) {
