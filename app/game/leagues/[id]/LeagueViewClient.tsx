@@ -187,7 +187,7 @@ function LiveMatchesStrip({ liveMatches }: { liveMatches: LeagueLiveMatchSummary
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-cyan-300" />
           <TeamFlag logoUrl={match.home_logo_url} name={match.home_name} />
           <span dir="ltr" className="min-w-10 text-center font-black">
-            {formatScore(match.home_score, match.away_score)}
+            {formatRtlVisualScore(match.home_score, match.away_score)}
           </span>
           <TeamFlag logoUrl={match.away_logo_url} name={match.away_name} />
           <span className="text-[10px] text-cyan-200">
@@ -217,14 +217,14 @@ function LivePredictionChip({
     <div
       dir="rtl"
       className={`inline-flex h-10 min-w-[124px] items-center justify-center gap-2 rounded-xl border px-2.5 text-xs font-black shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] ${getLivePredictionClass(tone)}`}
-      title={`${match.home_name} - ${match.away_name}`}
-      aria-label={`${match.home_name} ${hasPrediction ? predictedHome : "?"} - ${
-        hasPrediction ? predictedAway : "?"
-      } ${match.away_name}`}
+      title={`${match.away_name} - ${match.home_name}`}
+      aria-label={`${match.away_name} ${hasPrediction ? predictedAway : "?"} - ${
+        hasPrediction ? predictedHome : "?"
+      } ${match.home_name}`}
     >
       <TeamFlag logoUrl={match.home_logo_url} name={match.home_name} />
       <span dir="ltr" className="min-w-10 text-center tracking-normal">
-        {hasPrediction ? `${predictedHome} - ${predictedAway}` : "? - ?"}
+        {hasPrediction ? `${predictedAway} - ${predictedHome}` : "? - ?"}
       </span>
       <TeamFlag logoUrl={match.away_logo_url} name={match.away_name} />
       {prediction?.is_joker_applied ? (
@@ -513,6 +513,10 @@ function InlineError({ message }: { message: string }) {
 function formatScore(homeScore: number | null, awayScore: number | null) {
   if (homeScore === null || awayScore === null) return "- -";
   return `${homeScore} - ${awayScore}`;
+}
+
+function formatRtlVisualScore(homeScore: number | null, awayScore: number | null) {
+  return formatScore(awayScore, homeScore);
 }
 
 function resolveLivePredictionTone(
