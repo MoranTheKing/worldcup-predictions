@@ -56,13 +56,13 @@
 
   {"match_number": 28, "stage": "Group B", "home": "Canada", "away": "Qatar", "date_time": "2026-06-19T01:00:00+03:00"},
 
-  {"match_number": 29, "stage": "Group C", "home": "Brazil", "away": "Haiti", "date_time": "2026-06-20T03:30:00+03:00"},
+  {"match_number": 29, "stage": "Group C", "home": "Brazil", "away": "Haiti", "date_time": "2026-06-20T04:00:00+03:00"},
 
   {"match_number": 30, "stage": "Group C", "home": "Scotland", "away": "Morocco", "date_time": "2026-06-20T01:00:00+03:00"},
 
   {"match_number": 31, "stage": "Group D", "home": "United States", "away": "Australia", "date_time": "2026-06-19T22:00:00+03:00"},
 
-  {"match_number": 32, "stage": "Group D", "home": "Turkey", "away": "Paraguay", "date_time": "2026-06-20T06:00:00+03:00"},
+  {"match_number": 32, "stage": "Group D", "home": "Turkey", "away": "Paraguay", "date_time": "2026-06-20T07:00:00+03:00"},
 
   {"match_number": 33, "stage": "Group E", "home": "Germany", "away": "Ivory Coast", "date_time": "2026-06-20T23:00:00+03:00"},
 
@@ -80,131 +80,131 @@
 
   {"match_number": 40, "stage": "Group H", "home": "Uruguay", "away": "Cape Verde", "date_time": "2026-06-22T01:00:00+03:00"},
 
-  {"match_number": 41, "stage": "Group I", "home": "France", "away": "Iraq", "date_time": "2026-06-23T06:00:00+03:00"},
+  {"match_number": 41, "stage": "Group I", "home": "France", "away": "Iraq", "date_time": "2026-06-23T00:00:00+03:00"},
 
-  {"match_number": 42, "stage": "Group I", "home": "Norway", "away": "Senegal", "date_time": "2026-06-23T01:00:00+03:00"},
+  {"match_number": 42, "stage": "Group I", "home": "Norway", "away": "Senegal", "date_time": "2026-06-23T03:00:00+03:00"},
 
-  {"match_number": 43, "stage": "Group J", "home": "Argentina", "away": "Austria", "date_time": "2026-06-23T03:00:00+03:00"},
+  {"match_number": 43, "stage": "Group J", "home": "Argentina", "away": "Austria", "date_time": "2026-06-22T20:00:00+03:00"},
 
-  {"match_number": 44, "stage": "Group J", "home": "Jordan", "away": "Algeria", "date_time": "2026-06-23T04:00:00+03:00"},
+  {"match_number": 44, "stage": "Group J", "home": "Jordan", "away": "Algeria", "date_time": "2026-06-23T06:00:00+03:00"},
 
-  {"match_number": 45, "stage": "Group K", "home": "Portugal", "away": "Uzbekistan", "date_time": "2026-06-23T18:00:00+03:00"},
+  {"match_number": 45, "stage": "Group K", "home": "Portugal", "away": "Uzbekistan", "date_time": "2026-06-23T20:00:00+03:00"},
 
-  {"match_number": 46, "stage": "Group K", "home": "Colombia", "away": "DR Congo", "date_time": "2026-06-24T04:00:00+03:00"},
+  {"match_number": 46, "stage": "Group K", "home": "Colombia", "away": "DR Congo", "date_time": "2026-06-24T05:00:00+03:00"},
 
-  {"match_number": 47, "stage": "Group L", "home": "England", "away": "Ghana", "date_time": "2026-06-23T21:00:00+03:00"},
+  {"match_number": 47, "stage": "Group L", "home": "England", "away": "Ghana", "date_time": "2026-06-23T23:00:00+03:00"},
 
-  {"match_number": 48, "stage": "Group L", "home": "Panama", "away": "Croatia", "date_time": "2026-06-24T00:00:00+03:00"},
+  {"match_number": 48, "stage": "Group L", "home": "Panama", "away": "Croatia", "date_time": "2026-06-24T02:00:00+03:00"},
 
   {"match_number": 49, "stage": "Group A", "home": "Czech Republic", "away": "Mexico", "date_time": "2026-06-25T04:00:00+03:00"},
 
   {"match_number": 50, "stage": "Group A", "home": "South Africa", "away": "South Korea", "date_time": "2026-06-25T04:00:00+03:00"},
 
-  {"match_number": 51, "stage": "Group B", "home": "Switzerland", "away": "Canada", "date_time": "2026-06-24T20:00:00+03:00"},
+  {"match_number": 51, "stage": "Group B", "home": "Switzerland", "away": "Canada", "date_time": "2026-06-24T22:00:00+03:00"},
 
-  {"match_number": 52, "stage": "Group B", "home": "Bosnia and Herzegovina", "away": "Qatar", "date_time": "2026-06-24T20:00:00+03:00"},
+  {"match_number": 52, "stage": "Group B", "home": "Bosnia and Herzegovina", "away": "Qatar", "date_time": "2026-06-24T22:00:00+03:00"},
 
-  {"match_number": 53, "stage": "Group C", "home": "Scotland", "away": "Brazil", "date_time": "2026-06-24T23:00:00+03:00"},
+  {"match_number": 53, "stage": "Group C", "home": "Scotland", "away": "Brazil", "date_time": "2026-06-25T01:00:00+03:00"},
 
-  {"match_number": 54, "stage": "Group C", "home": "Morocco", "away": "Haiti", "date_time": "2026-06-24T23:00:00+03:00"},
+  {"match_number": 54, "stage": "Group C", "home": "Morocco", "away": "Haiti", "date_time": "2026-06-25T01:00:00+03:00"},
 
-  {"match_number": 55, "stage": "Group D", "home": "Turkey", "away": "United States", "date_time": "2026-06-26T03:00:00+03:00"},
+  {"match_number": 55, "stage": "Group D", "home": "Turkey", "away": "United States", "date_time": "2026-06-26T05:00:00+03:00"},
 
-  {"match_number": 56, "stage": "Group D", "home": "Paraguay", "away": "Australia", "date_time": "2026-06-26T03:00:00+03:00"},
+  {"match_number": 56, "stage": "Group D", "home": "Paraguay", "away": "Australia", "date_time": "2026-06-26T05:00:00+03:00"},
 
-  {"match_number": 57, "stage": "Group E", "home": "Ecuador", "away": "Germany", "date_time": "2026-06-25T04:00:00+03:00"},
+  {"match_number": 57, "stage": "Group E", "home": "Ecuador", "away": "Germany", "date_time": "2026-06-25T23:00:00+03:00"},
 
-  {"match_number": 58, "stage": "Group E", "home": "Curaçao", "away": "Ivory Coast", "date_time": "2026-06-25T04:00:00+03:00"},
+  {"match_number": 58, "stage": "Group E", "home": "Curaçao", "away": "Ivory Coast", "date_time": "2026-06-25T23:00:00+03:00"},
 
-  {"match_number": 59, "stage": "Group F", "home": "Tunisia", "away": "Netherlands", "date_time": "2026-06-26T00:00:00+03:00"},
+  {"match_number": 59, "stage": "Group F", "home": "Tunisia", "away": "Netherlands", "date_time": "2026-06-26T02:00:00+03:00"},
 
-  {"match_number": 60, "stage": "Group F", "home": "Japan", "away": "Sweden", "date_time": "2026-06-26T00:00:00+03:00"},
+  {"match_number": 60, "stage": "Group F", "home": "Japan", "away": "Sweden", "date_time": "2026-06-26T02:00:00+03:00"},
 
-  {"match_number": 61, "stage": "Group G", "home": "New Zealand", "away": "Belgium", "date_time": "2026-06-27T04:00:00+03:00"},
+  {"match_number": 61, "stage": "Group G", "home": "New Zealand", "away": "Belgium", "date_time": "2026-06-27T06:00:00+03:00"},
 
-  {"match_number": 62, "stage": "Group G", "home": "Egypt", "away": "Iran", "date_time": "2026-06-27T04:00:00+03:00"},
+  {"match_number": 62, "stage": "Group G", "home": "Egypt", "away": "Iran", "date_time": "2026-06-27T06:00:00+03:00"},
 
-  {"match_number": 63, "stage": "Group H", "home": "Uruguay", "away": "Spain", "date_time": "2026-06-27T01:00:00+03:00"},
+  {"match_number": 63, "stage": "Group H", "home": "Uruguay", "away": "Spain", "date_time": "2026-06-27T03:00:00+03:00"},
 
-  {"match_number": 64, "stage": "Group H", "home": "Cape Verde", "away": "Saudi Arabia", "date_time": "2026-06-27T01:00:00+03:00"},
+  {"match_number": 64, "stage": "Group H", "home": "Cape Verde", "away": "Saudi Arabia", "date_time": "2026-06-27T03:00:00+03:00"},
 
-  {"match_number": 65, "stage": "Group I", "home": "Norway", "away": "France", "date_time": "2026-06-26T20:00:00+03:00"},
+  {"match_number": 65, "stage": "Group I", "home": "Norway", "away": "France", "date_time": "2026-06-26T22:00:00+03:00"},
 
-  {"match_number": 66, "stage": "Group I", "home": "Senegal", "away": "Iraq", "date_time": "2026-06-26T20:00:00+03:00"},
+  {"match_number": 66, "stage": "Group I", "home": "Senegal", "away": "Iraq", "date_time": "2026-06-26T22:00:00+03:00"},
 
-  {"match_number": 67, "stage": "Group J", "home": "Jordan", "away": "Argentina", "date_time": "2026-06-27T01:00:00+03:00"},
+  {"match_number": 67, "stage": "Group J", "home": "Jordan", "away": "Argentina", "date_time": "2026-06-28T05:00:00+03:00"},
 
-  {"match_number": 68, "stage": "Group J", "home": "Algeria", "away": "Austria", "date_time": "2026-06-27T01:00:00+03:00"},
+  {"match_number": 68, "stage": "Group J", "home": "Algeria", "away": "Austria", "date_time": "2026-06-28T05:00:00+03:00"},
 
-  {"match_number": 69, "stage": "Group K", "home": "Colombia", "away": "Portugal", "date_time": "2026-06-27T04:00:00+03:00"},
+  {"match_number": 69, "stage": "Group K", "home": "Colombia", "away": "Portugal", "date_time": "2026-06-28T02:30:00+03:00"},
 
-  {"match_number": 70, "stage": "Group K", "home": "DR Congo", "away": "Uzbekistan", "date_time": "2026-06-27T04:00:00+03:00"},
+  {"match_number": 70, "stage": "Group K", "home": "DR Congo", "away": "Uzbekistan", "date_time": "2026-06-28T02:30:00+03:00"},
 
-  {"match_number": 71, "stage": "Group L", "home": "Panama", "away": "England", "date_time": "2026-06-27T22:00:00+03:00"},
+  {"match_number": 71, "stage": "Group L", "home": "Panama", "away": "England", "date_time": "2026-06-28T00:00:00+03:00"},
 
-  {"match_number": 72, "stage": "Group L", "home": "Croatia", "away": "Ghana", "date_time": "2026-06-27T22:00:00+03:00"},
+  {"match_number": 72, "stage": "Group L", "home": "Croatia", "away": "Ghana", "date_time": "2026-06-28T00:00:00+03:00"},
 
-  {"match_number": 73, "stage": "Round of 32", "home": "2A", "away": "2B", "date_time": "2026-06-28T19:00:00+03:00"},
+  {"match_number": 73, "stage": "Round of 32", "home": "2A", "away": "2B", "date_time": "2026-06-28T22:00:00+03:00"},
 
-  {"match_number": 74, "stage": "Round of 32", "home": "1E", "away": "3A/B/C/D/F", "date_time": "2026-06-28T22:00:00+03:00"},
+  {"match_number": 74, "stage": "Round of 32", "home": "1E", "away": "3A/B/C/D/F", "date_time": "2026-06-29T23:30:00+03:00"},
 
-  {"match_number": 75, "stage": "Round of 32", "home": "1F", "away": "2C", "date_time": "2026-06-29T01:00:00+03:00"},
+  {"match_number": 75, "stage": "Round of 32", "home": "1F", "away": "2C", "date_time": "2026-06-30T04:00:00+03:00"},
 
-  {"match_number": 76, "stage": "Round of 32", "home": "1C", "away": "2F", "date_time": "2026-06-29T04:00:00+03:00"},
+  {"match_number": 76, "stage": "Round of 32", "home": "1C", "away": "2F", "date_time": "2026-06-29T20:00:00+03:00"},
 
-  {"match_number": 77, "stage": "Round of 32", "home": "1I", "away": "3C/D/F/G/H", "date_time": "2026-06-29T19:00:00+03:00"},
+  {"match_number": 77, "stage": "Round of 32", "home": "1I", "away": "3C/D/F/G/H", "date_time": "2026-07-01T00:00:00+03:00"},
 
-  {"match_number": 78, "stage": "Round of 32", "home": "2E", "away": "2I", "date_time": "2026-06-29T22:00:00+03:00"},
+  {"match_number": 78, "stage": "Round of 32", "home": "2E", "away": "2I", "date_time": "2026-06-30T20:00:00+03:00"},
 
-  {"match_number": 79, "stage": "Round of 32", "home": "1A", "away": "3C/E/F/H/I", "date_time": "2026-06-30T01:00:00+03:00"},
+  {"match_number": 79, "stage": "Round of 32", "home": "1A", "away": "3C/E/F/H/I", "date_time": "2026-07-01T04:00:00+03:00"},
 
-  {"match_number": 80, "stage": "Round of 32", "home": "1L", "away": "3E/H/I/J/K", "date_time": "2026-06-30T04:00:00+03:00"},
+  {"match_number": 80, "stage": "Round of 32", "home": "1L", "away": "3E/H/I/J/K", "date_time": "2026-07-01T19:00:00+03:00"},
 
-  {"match_number": 81, "stage": "Round of 32", "home": "1D", "away": "3B/E/F/I/J", "date_time": "2026-07-01T19:00:00+03:00"},
+  {"match_number": 81, "stage": "Round of 32", "home": "1D", "away": "3B/E/F/I/J", "date_time": "2026-07-02T03:00:00+03:00"},
 
-  {"match_number": 82, "stage": "Round of 32", "home": "1G", "away": "3A/E/H/I/J", "date_time": "2026-07-01T22:00:00+03:00"},
+  {"match_number": 82, "stage": "Round of 32", "home": "1G", "away": "3A/E/H/I/J", "date_time": "2026-07-01T23:00:00+03:00"},
 
-  {"match_number": 83, "stage": "Round of 32", "home": "2K", "away": "2L", "date_time": "2026-07-02T01:00:00+03:00"},
+  {"match_number": 83, "stage": "Round of 32", "home": "2K", "away": "2L", "date_time": "2026-07-03T02:00:00+03:00"},
 
-  {"match_number": 84, "stage": "Round of 32", "home": "1H", "away": "2J", "date_time": "2026-07-02T04:00:00+03:00"},
+  {"match_number": 84, "stage": "Round of 32", "home": "1H", "away": "2J", "date_time": "2026-07-02T22:00:00+03:00"},
 
-  {"match_number": 85, "stage": "Round of 32", "home": "1B", "away": "3E/F/G/I/J", "date_time": "2026-07-02T19:00:00+03:00"},
+  {"match_number": 85, "stage": "Round of 32", "home": "1B", "away": "3E/F/G/I/J", "date_time": "2026-07-03T06:00:00+03:00"},
 
-  {"match_number": 86, "stage": "Round of 32", "home": "1J", "away": "2H", "date_time": "2026-07-02T22:00:00+03:00"},
+  {"match_number": 86, "stage": "Round of 32", "home": "1J", "away": "2H", "date_time": "2026-07-04T01:00:00+03:00"},
 
-  {"match_number": 87, "stage": "Round of 32", "home": "1K", "away": "3D/E/I/J/L", "date_time": "2026-07-03T01:00:00+03:00"},
+  {"match_number": 87, "stage": "Round of 32", "home": "1K", "away": "3D/E/I/J/L", "date_time": "2026-07-04T04:30:00+03:00"},
 
-  {"match_number": 88, "stage": "Round of 32", "home": "2D", "away": "2G", "date_time": "2026-07-03T04:00:00+03:00"},
+  {"match_number": 88, "stage": "Round of 32", "home": "2D", "away": "2G", "date_time": "2026-07-03T21:00:00+03:00"},
 
-  {"match_number": 89, "stage": "Round of 16", "home": "Winner Match 74", "away": "Winner Match 77", "date_time": "2026-07-04T19:00:00+03:00"},
+  {"match_number": 89, "stage": "Round of 16", "home": "Winner Match 74", "away": "Winner Match 77", "date_time": "2026-07-05T00:00:00+03:00"},
 
-  {"match_number": 90, "stage": "Round of 16", "home": "Winner Match 73", "away": "Winner Match 75", "date_time": "2026-07-04T23:00:00+03:00"},
+  {"match_number": 90, "stage": "Round of 16", "home": "Winner Match 73", "away": "Winner Match 75", "date_time": "2026-07-04T00:00:00+03:00"},
 
-  {"match_number": 91, "stage": "Round of 16", "home": "Winner Match 76", "away": "Winner Match 78", "date_time": "2026-07-05T03:00:00+03:00"},
+  {"match_number": 91, "stage": "Round of 16", "home": "Winner Match 76", "away": "Winner Match 78", "date_time": "2026-07-05T23:00:00+03:00"},
 
-  {"match_number": 92, "stage": "Round of 16", "home": "Winner Match 79", "away": "Winner Match 80", "date_time": "2026-07-05T19:00:00+03:00"},
+  {"match_number": 92, "stage": "Round of 16", "home": "Winner Match 79", "away": "Winner Match 80", "date_time": "2026-07-06T03:00:00+03:00"},
 
-  {"match_number": 93, "stage": "Round of 16", "home": "Winner Match 83", "away": "Winner Match 84", "date_time": "2026-07-05T23:00:00+03:00"},
+  {"match_number": 93, "stage": "Round of 16", "home": "Winner Match 83", "away": "Winner Match 84", "date_time": "2026-07-06T22:00:00+03:00"},
 
-  {"match_number": 94, "stage": "Round of 16", "home": "Winner Match 81", "away": "Winner Match 82", "date_time": "2026-07-06T03:00:00+03:00"},
+  {"match_number": 94, "stage": "Round of 16", "home": "Winner Match 81", "away": "Winner Match 82", "date_time": "2026-07-07T03:00:00+03:00"},
 
-  {"match_number": 95, "stage": "Round of 16", "home": "Winner Match 86", "away": "Winner Match 88", "date_time": "2026-07-07T01:00:00+03:00"},
+  {"match_number": 95, "stage": "Round of 16", "home": "Winner Match 86", "away": "Winner Match 88", "date_time": "2026-07-07T19:00:00+03:00"},
 
-  {"match_number": 96, "stage": "Round of 16", "home": "Winner Match 85", "away": "Winner Match 87", "date_time": "2026-07-07T04:00:00+03:00"},
+  {"match_number": 96, "stage": "Round of 16", "home": "Winner Match 85", "away": "Winner Match 87", "date_time": "2026-07-07T23:00:00+03:00"},
 
   {"match_number": 97, "stage": "Quarter-final", "home": "Winner Match 89", "away": "Winner Match 90", "date_time": "2026-07-09T23:00:00+03:00"},
 
-  {"match_number": 98, "stage": "Quarter-final", "home": "Winner Match 93", "away": "Winner Match 94", "date_time": "2026-07-10T04:00:00+03:00"},
+  {"match_number": 98, "stage": "Quarter-final", "home": "Winner Match 93", "away": "Winner Match 94", "date_time": "2026-07-10T22:00:00+03:00"},
 
-  {"match_number": 99, "stage": "Quarter-final", "home": "Winner Match 91", "away": "Winner Match 92", "date_time": "2026-07-10T23:00:00+03:00"},
+  {"match_number": 99, "stage": "Quarter-final", "home": "Winner Match 91", "away": "Winner Match 92", "date_time": "2026-07-12T00:00:00+03:00"},
 
-  {"match_number": 100, "stage": "Quarter-final", "home": "Winner Match 95", "away": "Winner Match 96", "date_time": "2026-07-11T04:00:00+03:00"},
+  {"match_number": 100, "stage": "Quarter-final", "home": "Winner Match 95", "away": "Winner Match 96", "date_time": "2026-07-12T04:00:00+03:00"},
 
-  {"match_number": 101, "stage": "Semi-final", "home": "Winner Match 97", "away": "Winner Match 98", "date_time": "2026-07-14T03:00:00+03:00"},
+  {"match_number": 101, "stage": "Semi-final", "home": "Winner Match 97", "away": "Winner Match 98", "date_time": "2026-07-14T22:00:00+03:00"},
 
-  {"match_number": 102, "stage": "Semi-final", "home": "Winner Match 99", "away": "Winner Match 100", "date_time": "2026-07-15T03:00:00+03:00"},
+  {"match_number": 102, "stage": "Semi-final", "home": "Winner Match 99", "away": "Winner Match 100", "date_time": "2026-07-15T22:00:00+03:00"},
 
-  {"match_number": 103, "stage": "Third Place", "home": "Loser Match 101", "away": "Loser Match 102", "date_time": "2026-07-18T23:00:00+03:00"},
+  {"match_number": 103, "stage": "Third Place", "home": "Loser Match 101", "away": "Loser Match 102", "date_time": "2026-07-19T00:00:00+03:00"},
 
   {"match_number": 104, "stage": "Final", "home": "Winner Match 101", "away": "Winner Match 102", "date_time": "2026-07-19T22:00:00+03:00"}
 

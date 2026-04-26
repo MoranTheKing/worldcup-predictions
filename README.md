@@ -271,10 +271,13 @@ Brevo Free מוגבל בכמות יומית לכל החשבון, לכן ביום
 - `20260426000023_enable_live_leaderboard_realtime.sql`
 - `20260426000024_add_match_odds_columns.sql`
 - `20260426000025_enable_global_leaderboard_realtime.sql`
+- `20260426000026_sync_match_schedule_with_kan.sql`
 
 את `20260424000021_public_tournament_projection.sql` צריך להריץ לפני בדיקת `/dashboard/tournament` כמשתמש לא רשום. בלי ה-migration הזה, הדף כבר לא ישתמש ב-service-role, אבל Supabase לא יכיר את ה-views הציבוריים ולכן לא יחזיר נתוני טורניר ל-anon.
 
 את `20260425000022_add_match_phase.sql` צריך להריץ לפני בדיקת מצבי מחצית/תוספת זמן חדשים. ה-migration מוסיף `match_phase` לטבלת `matches`, מרחיב את ה-view הציבורי `public_tournament_matches`, ומוסיף constraints שמונעים `match_phase` במשחק לא חי, דקה בזמן מחצית/פנדלים, והארכה/פנדלים במשחקי בתים. כך Dev Tools ודפי המשחקים מציגים מחצית, `45+`, `90+`, הארכה ופנדלים בלי לנחש לפי מספר הדקה בלבד.
+
+את `20260426000026_sync_match_schedule_with_kan.sql` צריך להריץ כדי לסנכרן את כל 104 זמני הפתיחה ב-`matches.date_time` לפי לוח המשחקים של כאן. ה-migration משנה רק תאריכים ושעות לפי `match_number`, בלי לשנות צד בית/חוץ, סטטוסים, תוצאות, יחסים או placeholders.
 
 ## הערות חשובות
 
@@ -323,6 +326,12 @@ Brevo Free מוגבל בכמות יומית לכל החשבון, לכן ביום
 - Dev Tools also includes a random odds button that seeds plausible 1/X/2 odds for every match and persists them through the bulk match API.
 - Dev Tools `Clear All Match Data` is a full reset: it clears match scores/statuses, odds, match predictions, tournament predictions, legacy bets, `profiles.total_score`, and therefore all league leaderboard totals.
 - The scoring sync now writes `0` into `predictions.points_earned` when a finished prediction earns zero, instead of leaving stale `null` values.
+
+## Schedule sync - 2026-04-26
+
+- `matches_data.json`, `matches_data.json.txt`, and migration `20260426000026_sync_match_schedule_with_kan.sql` now store the World Cup schedule according to the Kan schedule page, with Israel-time `+03:00` kickoff values.
+- The sync is intentionally date/time-only by `match_number`; team sides, knockout placeholders, scores, statuses and odds are unchanged.
+- Dev Tools keeps the existing controls but its match table now uses an LTR scroll container with an RTL table and a narrower minimum width so the horizontal overflow behaves predictably.
 
 ## Joker and live table update - 2026-04-26
 

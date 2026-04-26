@@ -788,3 +788,4 @@ raw_error
 - Joker eligibility is now two total Jokers, both group-stage-only. The sync/scoring path must ignore Joker multipliers on knockout matches even if a legacy prediction row still has `is_joker_applied = true`.
 - Group-stage live standings render inline live score from the row team's perspective, with the row team's goals on the visual right side in RTL.
 - The global leaderboard at `/game/leaderboard` uses the same league leaderboard UI and data shape as private leagues, but sources members from `profiles`; realtime profile-total refreshes require `supabase/migrations/20260426000025_enable_global_leaderboard_realtime.sql`.
+- `supabase/migrations/20260426000026_sync_match_schedule_with_kan.sql` aligns `matches.date_time` with the Kan World Cup schedule. It is date/time-only by `match_number` and must not alter team sides, placeholders, statuses, scores or odds.

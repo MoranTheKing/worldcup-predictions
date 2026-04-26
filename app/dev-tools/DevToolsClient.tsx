@@ -658,8 +658,8 @@ function DevToolsClientInner({ matches, error }: Props) {
           ))}
         </div>
 
-        <div className="overflow-x-auto rounded-[1.5rem] wc-card">
-          <table className="w-full min-w-[1420px] text-sm">
+        <div dir="ltr" className="overflow-x-auto rounded-[1.5rem] wc-card">
+          <table dir="rtl" className="w-full min-w-[1180px] text-sm">
             <thead>
               <tr className="border-b border-white/10 text-xs text-wc-fg3">
                 <th className="px-3 py-3 text-start">#</th>
