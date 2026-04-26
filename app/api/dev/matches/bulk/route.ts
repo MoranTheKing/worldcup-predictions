@@ -7,6 +7,7 @@ import {
   type EditableMatchState,
 } from "@/lib/tournament/dev-match-updates";
 import { syncTournamentState } from "@/lib/tournament/knockout-progression";
+import { scoreFinishedMatchPredictions } from "@/lib/game/scoring-sync";
 
 type BulkBody = {
   matches?: Array<DevMatchPatchInput & { match_number: number }>;
@@ -46,6 +47,7 @@ export async function PATCH(request: Request) {
   const existingByNumber = new Map(
     ((existingMatches ?? []) as EditableMatchState[]).map((match) => [match.match_number, match]),
   );
+  const finishedMatchNumbers = new Set<number>();
 
   for (const item of body.matches) {
     const existing = existingByNumber.get(item.match_number);
@@ -59,6 +61,10 @@ export async function PATCH(request: Request) {
         { error: `match ${item.match_number}: ${validation.error}` },
         { status: 400 },
       );
+    }
+
+    if (validation.next.status === "finished") {
+      finishedMatchNumbers.add(item.match_number);
     }
   }
 
@@ -77,7 +83,11 @@ export async function PATCH(request: Request) {
     }
   }
 
-  await syncTournamentState(supabase);
+  const sync = await syncTournamentState(supabase);
+  const scoring =
+    finishedMatchNumbers.size > 0
+      ? await scoreFinishedMatchPredictions(supabase, Array.from(finishedMatchNumbers))
+      : null;
 
-  return NextResponse.json({ updated: body.matches.length });
+  return NextResponse.json({ updated: body.matches.length, sync, scoring });
 }

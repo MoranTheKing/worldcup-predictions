@@ -774,3 +774,9 @@ raw_error
 - צבע הצ'יפ ב-Leaderboard מחושב מהתוצאה החיה מול הניחוש: סגול ל-Joker exact, ירוק ל-exact, צהוב לכיוון, אדום להחמצה או חוסר ניחוש, וכחול כשאין עדיין תוצאה להערכה.
 - התצוגה מוגבלת בכוונה לשני משחקי LIVE, כי במבנה הטורניר לא אמורים להיות יותר משני משחקים חיים במקביל; אם יגיעו יותר נתונים, יוצגו שני הראשונים לפי `match_number`.
 - מסך הליגה משתמש ב-polling הקיים של גרסת המשחקים ב-dev, כך שעדכוני sync/dev מקומיים מגיעים ל-Leaderboard בלי רענון ידני.
+## Implemented scoring hook - 2026-04-26
+
+- The implemented scorer is `lib/game/scoring.ts` with `calculatePredictionPoints(prediction, match)`.
+- The sync-side persistence helper is `lib/game/scoring-sync.ts` with `scoreFinishedMatchPredictions(supabase, matchNumbers)`.
+- Odds are stored on `matches.home_odds`, `matches.draw_odds`, and `matches.away_odds` via `supabase/migrations/20260426000024_add_match_odds_columns.sql`.
+- Current finished-match routes call the helper after `syncTournamentState`; the future Bzzoiro/Cloudflare Worker should call the same helper immediately after it detects a match moving to `finished`.

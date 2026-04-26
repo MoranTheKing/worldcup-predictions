@@ -45,6 +45,9 @@ export type TournamentMatchRecord = {
   away_placeholder: string | null;
   home_score: number | null;
   away_score: number | null;
+  home_odds?: number | string | null;
+  draw_odds?: number | string | null;
+  away_odds?: number | string | null;
   is_extra_time: boolean | null;
   home_penalty_score: number | null;
   away_penalty_score: number | null;

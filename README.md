@@ -269,6 +269,7 @@ Brevo Free מוגבל בכמות יומית לכל החשבון, לכן ביום
 - `20260424000021_public_tournament_projection.sql`
 - `20260425000022_add_match_phase.sql`
 - `20260426000023_enable_live_leaderboard_realtime.sql`
+- `20260426000024_add_match_odds_columns.sql`
 
 את `20260424000021_public_tournament_projection.sql` צריך להריץ לפני בדיקת `/dashboard/tournament` כמשתמש לא רשום. בלי ה-migration הזה, הדף כבר לא ישתמש ב-service-role, אבל Supabase לא יכיר את ה-views הציבוריים ולכן לא יחזיר נתוני טורניר ל-anon.
 
@@ -308,3 +309,9 @@ Brevo Free מוגבל בכמות יומית לכל החשבון, לכן ביום
 - Client refreshes are debounced and throttled before calling `router.refresh()`, and refresh work is deferred while the browser tab is hidden.
 - The old dev refresh hook now disables its polling branch in production builds. DevTools can still notify local tabs through BroadcastChannel/localStorage without hitting the server.
 - Run `supabase/migrations/20260426000023_enable_live_leaderboard_realtime.sql` so Supabase publishes the realtime table changes needed by the leaderboard.
+
+## Odds-based scoring engine - 2026-04-26
+
+- `public.matches` now stores 1X2 decimal odds in `home_odds`, `draw_odds`, and `away_odds` through `supabase/migrations/20260426000024_add_match_odds_columns.sql`.
+- `lib/game/scoring.ts` contains the pure `calculatePredictionPoints(prediction, match)` engine: miss returns `0`, direction/exact hits use the relevant odds tier, stage progression bonus, and x2 Joker multiplier.
+- Finished match updates call `scoreFinishedMatchPredictions`, updating `predictions.points_earned` and recalculating affected `profiles.total_score` values for leaderboard consistency.

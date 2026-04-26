@@ -20,5 +20,6 @@ Key rules to remember:
 - Cards use glassmorphism: backdrop-blur + rgba surface + subtle border
 - Bottom nav: frosted glass with neon green active glow
 - Production live prediction screens and leaderboards should use scoped Supabase Realtime subscriptions instead of interval polling. Debounce `router.refresh()` and defer refreshes while the browser tab is hidden.
+- Scoring lives in `lib/game/scoring.ts`: odds tier base points + stage progression bonus, then x2 Joker. Persist scores through `scoreFinishedMatchPredictions` so `predictions.points_earned` and `profiles.total_score` stay aligned.
 
 If the user invokes this skill without any other guidance, ask them what they want to build or design, ask some questions, and act as an expert designer who outputs HTML artifacts _or_ production code, depending on the need.

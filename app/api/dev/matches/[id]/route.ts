@@ -7,6 +7,7 @@ import {
   type EditableMatchState,
 } from "@/lib/tournament/dev-match-updates";
 import { syncTournamentState } from "@/lib/tournament/knockout-progression";
+import { scoreFinishedMatchPredictions } from "@/lib/game/scoring-sync";
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const blocked = devOnly(request);
@@ -63,7 +64,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  await syncTournamentState(supabase);
+  const sync = await syncTournamentState(supabase);
+  const scoring =
+    data.status === "finished" ? await scoreFinishedMatchPredictions(supabase, matchId) : null;
 
-  return NextResponse.json({ match: data });
+  return NextResponse.json({ match: data, sync, scoring });
 }

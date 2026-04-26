@@ -3,6 +3,7 @@ import { devOnly } from "@/app/api/dev/_guard";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isKnockoutStage, type TournamentMatchRecord } from "@/lib/tournament/matches";
 import { syncTournamentState } from "@/lib/tournament/knockout-progression";
+import { scoreFinishedMatchPredictions } from "@/lib/game/scoring-sync";
 
 function randomScore() {
   return Math.floor(Math.random() * 5);
@@ -61,9 +62,14 @@ export async function POST(request: Request) {
   }
 
   const sync = await syncTournamentState(supabase);
+  const scoring = await scoreFinishedMatchPredictions(
+    supabase,
+    matches.map((match) => match.match_number),
+  );
 
   return NextResponse.json({
     randomized: matches.length,
     sync,
+    scoring,
   });
 }
