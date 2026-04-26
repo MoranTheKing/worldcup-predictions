@@ -512,3 +512,9 @@ Not tied to a specific open PR, but implemented as a direct follow-up:
 - uploaded avatars are stored in a private Supabase bucket and served back only through an authenticated internal route
 - SVG uploads are intentionally rejected to avoid scriptable image payloads
 - nickname uniqueness checks were reused for post-login profile editing as well, so editing later cannot bypass the onboarding guarantees
+
+## Product/privacy follow-up from 2026-04-26
+
+- League leaderboards now expose member predictions only for matches that are already `live`, where prediction edits are locked by kickoff rules.
+- Scheduled-match predictions remain hidden from other users; the live leaderboard caps display to two concurrent live matches and queries only those match IDs.
+- Joker and score-hit colors in live views are presentation-only and do not expose odds, hidden scheduled picks, or unlocked private data.

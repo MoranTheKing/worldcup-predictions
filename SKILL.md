@@ -16,6 +16,7 @@ Key rules to remember:
 - Gold #F5C518 = trophy / winner
 - Fire #FF4D1C = hot streak 🔥
 - Always RTL (dir="rtl"), logical CSS, Hebrew-first copy
+- Live prediction chips in leaderboards should keep the surrounding UI RTL but render the numeric score itself with `dir="ltr"` to avoid flipped scores
 - Cards use glassmorphism: backdrop-blur + rgba surface + subtle border
 - Bottom nav: frosted glass with neon green active glow
 

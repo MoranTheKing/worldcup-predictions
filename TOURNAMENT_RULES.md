@@ -47,6 +47,7 @@ Relevant fields:
 Opponent view and league view follow anti-cheat rules:
 
 - scheduled matches are hidden from opponents
+- live match predictions can be shown inside a shared league leaderboard because the match has already locked
 - unresolved placeholder matches are hidden from opponents
 - outright picks are hidden from other users until tournament kickoff
 - the viewing user can still see their own outright picks before kickoff

@@ -3,7 +3,10 @@ import { requireServerMfa } from "@/lib/auth/mfa-server";
 import { hasTournamentStarted } from "@/lib/game/tournament-start";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import LeagueViewClient, { type LeagueMemberRow } from "./LeagueViewClient";
+import LeagueViewClient, {
+  type LeagueLiveMatchSummary,
+  type LeagueMemberRow,
+} from "./LeagueViewClient";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +25,36 @@ type RawMemberRow = {
         avatar_url?: string | null;
       }[]
     | null;
+};
+
+type RawLiveMatchRow = {
+  match_number: number | null;
+  stage: string | null;
+  status: string | null;
+  match_phase: string | null;
+  date_time: string | null;
+  minute: number | null;
+  home_team_id: string | null;
+  away_team_id: string | null;
+  home_placeholder: string | null;
+  away_placeholder: string | null;
+  home_score: number | null;
+  away_score: number | null;
+};
+
+type RawTeamRow = {
+  id: string;
+  name: string;
+  name_he?: string | null;
+  logo_url?: string | null;
+};
+
+type RawLivePredictionRow = {
+  user_id: string | null;
+  match_id: number | null;
+  home_score_guess: number | null;
+  away_score_guess: number | null;
+  is_joker_applied?: boolean | null;
 };
 
 export default async function LeaguePage({
@@ -74,7 +107,11 @@ export default async function LeaguePage({
     redirect("/game/leagues");
   }
 
-  const [{ data: rawMembers, error: membersError }, kickoffResult] = await Promise.all([
+  const [
+    { data: rawMembers, error: membersError },
+    kickoffResult,
+    { data: rawLiveMatches, error: liveMatchesError },
+  ] = await Promise.all([
     admin
       .from("league_members")
       .select("user_id, joined_at, profiles(display_name, total_score, avatar_url)")
@@ -85,10 +122,22 @@ export default async function LeaguePage({
       .order("match_number", { ascending: true })
       .limit(1)
       .maybeSingle(),
+    admin
+      .from("matches")
+      .select(
+        "match_number, stage, status, match_phase, date_time, minute, home_team_id, away_team_id, home_placeholder, away_placeholder, home_score, away_score",
+      )
+      .eq("status", "live")
+      .order("match_number", { ascending: true })
+      .limit(2),
   ]);
 
   if (membersError) {
     console.error("[LeaguePage] members error:", membersError);
+  }
+
+  if (liveMatchesError) {
+    console.error("[LeaguePage] live matches error:", liveMatchesError);
   }
 
   const tournamentStarted = hasTournamentStarted(kickoffResult.data);
@@ -115,6 +164,77 @@ export default async function LeaguePage({
   });
 
   const memberIds = membersBase.map((member) => member.user_id);
+  const liveMatchRows = ((rawLiveMatches ?? []) as RawLiveMatchRow[])
+    .filter((match) => typeof match.match_number === "number" && match.status === "live")
+    .slice(0, 2);
+  const liveMatchIds = liveMatchRows.map((match) => match.match_number as number);
+  const liveTeamIds = Array.from(
+    new Set(
+      liveMatchRows
+        .flatMap((match) => [match.home_team_id, match.away_team_id])
+        .filter((value): value is string => typeof value === "string" && Boolean(value)),
+    ),
+  );
+  const liveTeamsById = new Map<string, { name: string; logoUrl: string | null }>();
+
+  if (liveTeamIds.length > 0) {
+    const { data: rawLiveTeams, error: liveTeamsError } = await admin
+      .from("teams")
+      .select("id, name, name_he, logo_url")
+      .in("id", liveTeamIds);
+
+    if (liveTeamsError) {
+      console.error("[LeaguePage] live teams error:", liveTeamsError);
+    }
+
+    for (const team of (rawLiveTeams ?? []) as RawTeamRow[]) {
+      liveTeamsById.set(team.id, {
+        name: team.name_he ?? team.name,
+        logoUrl: team.logo_url ?? null,
+      });
+    }
+  }
+
+  const liveMatches: LeagueLiveMatchSummary[] = liveMatchRows.map((match) => {
+    const homeTeam = match.home_team_id ? liveTeamsById.get(match.home_team_id) ?? null : null;
+    const awayTeam = match.away_team_id ? liveTeamsById.get(match.away_team_id) ?? null : null;
+
+    return {
+      match_number: match.match_number as number,
+      stage: match.stage ?? "",
+      date_time: match.date_time ?? "",
+      minute: typeof match.minute === "number" ? match.minute : null,
+      match_phase: normalizeMatchPhase(match.match_phase),
+      home_name: homeTeam?.name ?? match.home_placeholder ?? "בית",
+      away_name: awayTeam?.name ?? match.away_placeholder ?? "חוץ",
+      home_logo_url: homeTeam?.logoUrl ?? null,
+      away_logo_url: awayTeam?.logoUrl ?? null,
+      home_score: typeof match.home_score === "number" ? match.home_score : null,
+      away_score: typeof match.away_score === "number" ? match.away_score : null,
+    };
+  });
+  const livePredictionMap = new Map<string, RawLivePredictionRow>();
+
+  if (memberIds.length > 0 && liveMatchIds.length > 0) {
+    const { data: rawLivePredictions, error: livePredictionsError } = await admin
+      .from("predictions")
+      .select("user_id, match_id, home_score_guess, away_score_guess, is_joker_applied")
+      .in("user_id", memberIds)
+      .in("match_id", liveMatchIds);
+
+    if (livePredictionsError) {
+      console.error("[LeaguePage] live predictions error:", livePredictionsError);
+    }
+
+    for (const prediction of (rawLivePredictions ?? []) as RawLivePredictionRow[]) {
+      if (typeof prediction.user_id !== "string" || typeof prediction.match_id !== "number") {
+        continue;
+      }
+
+      livePredictionMap.set(`${prediction.user_id}:${prediction.match_id}`, prediction);
+    }
+  }
+
   const outrightMap = new Map<
     string,
     { winner: string | null; winnerLogoUrl: string | null; topScorer: string | null }
@@ -201,6 +321,18 @@ export default async function LeaguePage({
         winner_logo_url: outright?.winnerLogoUrl ?? null,
         top_scorer_prediction: outright?.topScorer ?? null,
         outrights_visible: outrightsVisible,
+        live_predictions: liveMatches.map((match) => {
+          const prediction = livePredictionMap.get(`${member.user_id}:${match.match_number}`);
+
+          return {
+            match_number: match.match_number,
+            home_score_guess:
+              typeof prediction?.home_score_guess === "number" ? prediction.home_score_guess : null,
+            away_score_guess:
+              typeof prediction?.away_score_guess === "number" ? prediction.away_score_guess : null,
+            is_joker_applied: prediction?.is_joker_applied === true,
+          };
+        }),
       };
     })
     .sort((left, right) => right.total_score - left.total_score);
@@ -221,6 +353,21 @@ export default async function LeaguePage({
       }}
       currentUserId={user.id}
       members={members}
+      liveMatches={liveMatches}
     />
   );
+}
+
+function normalizeMatchPhase(value: string | null): LeagueLiveMatchSummary["match_phase"] {
+  if (
+    value === "first_half" ||
+    value === "halftime" ||
+    value === "second_half" ||
+    value === "extra_time" ||
+    value === "penalties"
+  ) {
+    return value;
+  }
+
+  return null;
 }

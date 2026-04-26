@@ -5,12 +5,37 @@ import { useActionState, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import OutrightChoiceBadge from "@/components/game/OutrightChoiceBadge";
 import UserAvatar from "@/components/UserAvatar";
+import { useDevLiveRefresh } from "@/lib/dev/live-refresh";
+import { getLiveMatchStatusLabel, type MatchPhase } from "@/lib/tournament/matches";
 import {
   deleteLeague,
   leaveLeague,
   removeMember,
   type LeagueActionState,
 } from "@/app/actions/league";
+
+type LivePredictionTone = "jackpot" | "success" | "direction" | "miss" | "live";
+
+export type LeagueLiveMatchSummary = {
+  match_number: number;
+  stage: string;
+  date_time: string;
+  minute: number | null;
+  match_phase: MatchPhase | null;
+  home_name: string;
+  away_name: string;
+  home_logo_url: string | null;
+  away_logo_url: string | null;
+  home_score: number | null;
+  away_score: number | null;
+};
+
+export type LeagueLivePrediction = {
+  match_number: number;
+  home_score_guess: number | null;
+  away_score_guess: number | null;
+  is_joker_applied: boolean;
+};
 
 export type LeagueMemberRow = {
   user_id: string;
@@ -22,6 +47,7 @@ export type LeagueMemberRow = {
   winner_logo_url: string | null;
   top_scorer_prediction: string | null;
   outrights_visible: boolean;
+  live_predictions: LeagueLivePrediction[];
 };
 
 type LeagueViewProps = {
@@ -33,14 +59,19 @@ type LeagueViewProps = {
   };
   currentUserId: string;
   members: LeagueMemberRow[];
+  liveMatches: LeagueLiveMatchSummary[];
 };
 
 export default function LeagueViewClient({
   league,
   currentUserId,
   members,
+  liveMatches,
 }: LeagueViewProps) {
+  useDevLiveRefresh({ pollIntervalMs: 1500 });
+
   const isOwner = league.owner_id === currentUserId;
+  const hasLiveMatches = liveMatches.length > 0;
 
   return (
     <div className="flex flex-col gap-6">
@@ -86,24 +117,28 @@ export default function LeagueViewClient({
       </section>
 
       <section className="overflow-hidden rounded-[1.75rem] border border-white/10 bg-[rgba(13,27,46,0.82)]">
-        <div className="flex items-center justify-between gap-3 border-b border-white/10 px-5 py-4">
-          <div>
+        <div className="flex flex-col gap-3 border-b border-white/10 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="min-w-0">
             <p className="text-sm font-bold text-wc-fg1">טבלת המובילים</p>
             <p className="mt-1 text-xs text-wc-fg3">
               מדורג לפי total score מהגבוה לנמוך. לחיצה על שורה תפתח את תצוגת הניחושים לקריאה בלבד,
               או עריכה מלאה אם זו השורה שלך.
             </p>
           </div>
+          <LiveMatchesStrip liveMatches={liveMatches} />
         </div>
 
         {members.length > 0 ? (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[980px]">
+            <table className={`w-full ${hasLiveMatches ? "min-w-[1160px]" : "min-w-[980px]"}`}>
               <thead>
                 <tr className="border-b border-white/10 text-right">
                   <th className="px-5 py-3 text-[11px] font-semibold text-wc-fg3">#</th>
                   <th className="px-4 py-3 text-[11px] font-semibold text-wc-fg3">שחקן</th>
                   <th className="px-4 py-3 text-[11px] font-semibold text-wc-fg3">נקודות</th>
+                  {hasLiveMatches ? (
+                    <th className="px-4 py-3 text-[11px] font-semibold text-wc-fg3">ניחושי לייב</th>
+                  ) : null}
                   <th className="px-4 py-3 text-[11px] font-semibold text-wc-fg3">זוכת טורניר</th>
                   <th className="px-4 py-3 text-[11px] font-semibold text-wc-fg3">מלך השערים</th>
                   <th className="px-5 py-3 text-[11px] font-semibold text-wc-fg3">פעולות</th>
@@ -118,6 +153,7 @@ export default function LeagueViewClient({
                     isOwner={isOwner}
                     isSelf={member.user_id === currentUserId}
                     leagueId={league.id}
+                    liveMatches={liveMatches}
                   />
                 ))}
               </tbody>
@@ -128,6 +164,89 @@ export default function LeagueViewClient({
         )}
       </section>
     </div>
+  );
+}
+
+function LiveMatchesStrip({ liveMatches }: { liveMatches: LeagueLiveMatchSummary[] }) {
+  if (liveMatches.length === 0) {
+    return (
+      <span className="inline-flex w-fit rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] font-semibold text-wc-fg3">
+        אין משחקי לייב כרגע
+      </span>
+    );
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      {liveMatches.map((match) => (
+        <div
+          key={match.match_number}
+          dir="rtl"
+          className="inline-flex items-center gap-2 rounded-full border border-[rgba(34,211,238,0.24)] bg-[rgba(34,211,238,0.08)] px-3 py-1.5 text-[11px] font-bold text-cyan-300"
+        >
+          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-cyan-300" />
+          <TeamFlag logoUrl={match.home_logo_url} name={match.home_name} />
+          <span dir="ltr" className="min-w-10 text-center font-black">
+            {formatScore(match.home_score, match.away_score)}
+          </span>
+          <TeamFlag logoUrl={match.away_logo_url} name={match.away_name} />
+          <span className="text-[10px] text-cyan-200">
+            {getLiveMatchStatusLabel(match.minute, match.match_phase)}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function LivePredictionChip({
+  match,
+  prediction,
+}: {
+  match: LeagueLiveMatchSummary;
+  prediction: LeagueLivePrediction | null;
+}) {
+  const tone = resolveLivePredictionTone(match, prediction);
+  const predictedHome =
+    typeof prediction?.home_score_guess === "number" ? prediction.home_score_guess : null;
+  const predictedAway =
+    typeof prediction?.away_score_guess === "number" ? prediction.away_score_guess : null;
+  const hasPrediction = predictedHome !== null && predictedAway !== null;
+
+  return (
+    <div
+      dir="rtl"
+      className={`inline-flex h-10 min-w-[124px] items-center justify-center gap-2 rounded-xl border px-2.5 text-xs font-black shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] ${getLivePredictionClass(tone)}`}
+      title={`${match.home_name} - ${match.away_name}`}
+      aria-label={`${match.home_name} ${hasPrediction ? predictedHome : "?"} - ${
+        hasPrediction ? predictedAway : "?"
+      } ${match.away_name}`}
+    >
+      <TeamFlag logoUrl={match.home_logo_url} name={match.home_name} />
+      <span dir="ltr" className="min-w-10 text-center tracking-normal">
+        {hasPrediction ? `${predictedHome} - ${predictedAway}` : "? - ?"}
+      </span>
+      <TeamFlag logoUrl={match.away_logo_url} name={match.away_name} />
+      {prediction?.is_joker_applied ? (
+        <span className="rounded-full border border-current/30 px-1 text-[10px] leading-4">J</span>
+      ) : null}
+    </div>
+  );
+}
+
+function TeamFlag({ logoUrl, name }: { logoUrl: string | null; name: string }) {
+  return (
+    <span
+      className="inline-flex h-5 w-5 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/10 text-[9px] font-black text-wc-fg2"
+      title={name}
+    >
+      {logoUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={logoUrl} alt="" className="h-full w-full object-cover" />
+      ) : (
+        name.slice(0, 1)
+      )}
+    </span>
   );
 }
 
@@ -246,12 +365,14 @@ function LeagueMemberRowView({
   isOwner,
   isSelf,
   leagueId,
+  liveMatches,
 }: {
   member: LeagueMemberRow;
   rank: number;
   isOwner: boolean;
   isSelf: boolean;
   leagueId: string;
+  liveMatches: LeagueLiveMatchSummary[];
 }) {
   const router = useRouter();
   const href = `/game/users/${member.user_id}?league=${leagueId}`;
@@ -292,6 +413,23 @@ function LeagueMemberRowView({
         </div>
       </td>
       <td className="px-4 py-3 text-sm font-black text-wc-neon">{member.total_score}</td>
+      {liveMatches.length > 0 ? (
+        <td className="px-4 py-3">
+          <div className="flex min-w-[260px] flex-wrap items-center gap-2">
+            {liveMatches.map((match) => (
+              <LivePredictionChip
+                key={match.match_number}
+                match={match}
+                prediction={
+                  member.live_predictions.find(
+                    (prediction) => prediction.match_number === match.match_number,
+                  ) ?? null
+                }
+              />
+            ))}
+          </div>
+        </td>
+      ) : null}
       <td className="px-4 py-3 text-sm text-wc-fg2">
         <OutrightChoiceBadge
           kind="winner"
@@ -370,6 +508,64 @@ function RemoveMemberButton({
 
 function InlineError({ message }: { message: string }) {
   return <p className="mt-3 text-xs font-semibold text-wc-danger">{message}</p>;
+}
+
+function formatScore(homeScore: number | null, awayScore: number | null) {
+  if (homeScore === null || awayScore === null) return "- -";
+  return `${homeScore} - ${awayScore}`;
+}
+
+function resolveLivePredictionTone(
+  match: LeagueLiveMatchSummary,
+  prediction: LeagueLivePrediction | null,
+): LivePredictionTone {
+  if (
+    !prediction ||
+    typeof prediction.home_score_guess !== "number" ||
+    typeof prediction.away_score_guess !== "number"
+  ) {
+    return "miss";
+  }
+
+  if (match.home_score === null || match.away_score === null) {
+    return "live";
+  }
+
+  const exactHit =
+    match.home_score === prediction.home_score_guess &&
+    match.away_score === prediction.away_score_guess;
+
+  if (exactHit && prediction.is_joker_applied) return "jackpot";
+  if (exactHit) return "success";
+
+  if (
+    Math.sign(match.home_score - match.away_score) ===
+    Math.sign(prediction.home_score_guess - prediction.away_score_guess)
+  ) {
+    return "direction";
+  }
+
+  return "miss";
+}
+
+function getLivePredictionClass(tone: LivePredictionTone) {
+  if (tone === "jackpot") {
+    return "border-[rgba(168,85,247,0.56)] bg-[linear-gradient(135deg,rgba(88,28,135,0.26),rgba(131,24,67,0.2))] text-[#F1B7FF]";
+  }
+
+  if (tone === "success") {
+    return "border-[rgba(34,197,94,0.42)] bg-[rgba(34,197,94,0.12)] text-[#7BFFB1]";
+  }
+
+  if (tone === "direction") {
+    return "border-[rgba(255,222,89,0.35)] bg-[rgba(255,222,89,0.08)] text-[#FFE9A1]";
+  }
+
+  if (tone === "live") {
+    return "border-[rgba(34,211,238,0.28)] bg-[rgba(34,211,238,0.08)] text-cyan-300";
+  }
+
+  return "border-[rgba(255,92,130,0.28)] bg-[rgba(255,92,130,0.08)] text-[#FFB5C9]";
 }
 
 function getRankLabel(rank: number) {

@@ -79,16 +79,17 @@ export default function MatchPredictionCard({
   const optimisticAway = state?.success ? parseDraftValue(awayDraft) : existingAway;
   const optimisticIsJoker = state?.success ? isJokerSelected : existingIsJoker;
   const hasPrediction = optimisticHome !== null && optimisticAway !== null;
-  const exactHit =
-    isFinished &&
-    hasPrediction &&
+  const scoreCanBeEvaluated = (isLive || isFinished) && hasPrediction;
+  const currentExactHit =
+    scoreCanBeEvaluated &&
     match.home_score === optimisticHome &&
     match.away_score === optimisticAway;
-  const directionHit =
-    isFinished &&
-    hasPrediction &&
-    !exactHit &&
+  const currentDirectionHit =
+    scoreCanBeEvaluated &&
+    !currentExactHit &&
     compareOutcome(match.home_score, match.away_score, optimisticHome, optimisticAway);
+  const exactHit = isFinished && currentExactHit;
+  const directionHit = isFinished && currentDirectionHit;
   const jokerJackpot = exactHit && optimisticIsJoker;
   const tone = resolveTone({
     isEditable,
@@ -99,19 +100,19 @@ export default function MatchPredictionCard({
     directionHit,
     jokerJackpot,
   });
-  const livePredictionTone =
-    isLive && hasPrediction
-      ? match.home_score === optimisticHome && match.away_score === optimisticAway
-        ? "success"
-        : compareOutcome(match.home_score, match.away_score, optimisticHome, optimisticAway)
-          ? "direction"
-          : "miss"
-      : tone;
+  const livePredictionTone = isLive
+    ? resolveLivePredictionTone({
+        hasPrediction,
+        exactHit: currentExactHit,
+        directionHit: currentDirectionHit,
+        jokerJackpot: currentExactHit && optimisticIsJoker,
+      })
+    : tone;
   const hiddenPredictionForPrivacy =
     isReadOnly && hideScheduledPrediction && match.status === "scheduled";
   const unsubmittedTone = !hasPrediction && (isLive || isFinished) ? "miss" : tone;
   const predictionPanelTone = hiddenPredictionForPrivacy ? "scheduled" : hasPrediction ? livePredictionTone : unsubmittedTone;
-  const pointsPanelTone = hiddenPredictionForPrivacy ? "scheduled" : tone;
+  const pointsPanelTone = hiddenPredictionForPrivacy ? "scheduled" : isLive ? predictionPanelTone : tone;
 
   return (
     <div className="relative overflow-hidden rounded-[1.6rem]">
@@ -305,7 +306,7 @@ export default function MatchPredictionCard({
                         : "התוצאה בפועל"
                   }
                   value={<ScoreSummaryInline summary={actualSummary} />}
-                  tone={isLive ? "live" : tone}
+                  tone={isLive ? predictionPanelTone : tone}
                 />
                 <ResultPanel
                   label={predictionOwnerLabel}
@@ -368,6 +369,24 @@ function resolveTone({
   if (isLive) return "live";
   if (isEditable && hasPrediction) return "saved";
   return "scheduled";
+}
+
+function resolveLivePredictionTone({
+  hasPrediction,
+  exactHit,
+  directionHit,
+  jokerJackpot,
+}: {
+  hasPrediction: boolean;
+  exactHit: boolean;
+  directionHit: boolean;
+  jokerJackpot: boolean;
+}): PredictionTone {
+  if (!hasPrediction) return "miss";
+  if (jokerJackpot) return "jackpot";
+  if (exactHit) return "success";
+  if (directionHit) return "direction";
+  return "miss";
 }
 
 function TeamSide({
