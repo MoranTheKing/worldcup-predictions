@@ -45,6 +45,29 @@ function randomPenaltyPair() {
   return { home, away };
 }
 
+function randomOddsTriple() {
+  const skew = Math.random() < 0.35 ? 1.8 + Math.random() * 1.8 : 1 + Math.random() * 0.8;
+  const homeBoost = Math.random() < 0.5 ? skew : 1;
+  const awayBoost = homeBoost === 1 ? skew : 1;
+  const homeStrength = (0.65 + Math.random() * 1.25) * homeBoost;
+  const awayStrength = (0.65 + Math.random() * 1.25) * awayBoost;
+  const drawStrength = 0.55 + Math.random() * 0.9;
+  const total = homeStrength + drawStrength + awayStrength;
+  const margin = 1.06 + Math.random() * 0.08;
+
+  return {
+    home_odds: toDecimalOdds(homeStrength / total, margin),
+    draw_odds: toDecimalOdds(drawStrength / total, margin),
+    away_odds: toDecimalOdds(awayStrength / total, margin),
+  };
+}
+
+function toDecimalOdds(probability: number, margin: number) {
+  const raw = 1 / Math.max(0.04, probability * margin);
+  const capped = Math.max(1.01, Math.min(15, raw));
+  return Math.round(capped * 100) / 100;
+}
+
 function isMinuteLockedPhase(phase: MatchPhase | null) {
   return phase === "halftime" || phase === "penalties";
 }
@@ -428,6 +451,19 @@ function DevToolsClientInner({ matches, error }: Props) {
     }
   }
 
+  async function randomizeOdds() {
+    if (!confirm("ליצור ולשמור יחסי הימורים אקראיים לכל המשחקים? משחקים שכבר finished יחושבו מחדש לפי היחסים החדשים.")) {
+      return;
+    }
+
+    const nextDrafts = drafts.map((match) => ({
+      ...match,
+      ...randomOddsTriple(),
+    }));
+
+    await persistDrafts(nextDrafts, "נוצרו ונשמרו יחסי הימורים אקראיים לכל המשחקים.");
+  }
+
   async function randomizeAll() {
     if (!confirm("למלא את כל המשחקים בתוצאות אקראיות ולסנכרן מיד את כל הטורניר?")) return;
 
@@ -545,6 +581,13 @@ function DevToolsClientInner({ matches, error }: Props) {
               className="rounded-2xl border border-[rgba(34,211,238,0.38)] bg-[rgba(34,211,238,0.1)] px-4 py-3 text-sm font-bold text-cyan-200 transition hover:bg-[rgba(34,211,238,0.18)] disabled:opacity-50"
             >
               ניחושים אקראיים שלי
+            </button>
+            <button
+              onClick={randomizeOdds}
+              disabled={pending}
+              className="rounded-2xl border border-[rgba(245,197,24,0.42)] bg-[rgba(245,197,24,0.1)] px-4 py-3 text-sm font-bold text-[#F5D56B] transition hover:bg-[rgba(245,197,24,0.18)] disabled:opacity-50"
+            >
+              יחסים אקראיים
             </button>
             <button
               onClick={finishAll}

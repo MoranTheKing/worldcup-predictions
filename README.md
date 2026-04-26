@@ -319,4 +319,5 @@ Brevo Free מוגבל בכמות יומית לכל החשבון, לכן ביום
 - `/game/leagues/[id]` projects live scoring in the leaderboard with `+N` badges per live prediction chip and a live delta next to each member's persisted total.
 - `/game/leaderboard` is a global table of all profiles by `total_score`.
 - Dev Tools can edit `home_odds`/`draw_odds`/`away_odds` and can generate random future predictions for the currently logged-in dev user only.
+- Dev Tools also includes a random odds button that seeds plausible 1/X/2 odds for every match and persists them through the bulk match API.
 - The scoring sync now writes `0` into `predictions.points_earned` when a finished prediction earns zero, instead of leaving stale `null` values.
