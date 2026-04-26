@@ -780,6 +780,7 @@ raw_error
 - The sync-side persistence helper is `lib/game/scoring-sync.ts` with `scoreFinishedMatchPredictions(supabase, matchNumbers)`.
 - Odds are stored on `matches.home_odds`, `matches.draw_odds`, and `matches.away_odds` via `supabase/migrations/20260426000024_add_match_odds_columns.sql`.
 - Current finished-match routes call the helper after `syncTournamentState`; the future Bzzoiro/Cloudflare Worker should call the same helper immediately after it detects a match moving to `finished`.
+- The current scoring formula is `odds base points + stage points + hit points`, then Joker x2 if active. A direction hit has `0` hit points; exact score adds the hit-point add-on.
 - The current UI now consumes those odds: `/game/predictions` shows direction/exact reward totals for home/draw/away, and `/game/leagues/[id]` shows projected live `+N` values without persisting them until `status = finished`.
 - Dev Tools can edit the three odds columns locally, seed random 1/X/2 odds for every match, and seed random future predictions for the logged-in dev user only.
 - Scoring persistence treats `null` and `0` differently: a finished miss is written as `points_earned = 0`, which keeps profile totals and leaderboard state deterministic.

@@ -1059,7 +1059,7 @@ function DevMatchRowEditor({
           <OddsInput
             label={`Home odds for ${homeName}`}
             value={match.home_odds ?? null}
-            shortLabel="1"
+            shortLabel="2"
             disabled={busy}
             onChange={(value) =>
               update((current) => ({
@@ -1083,7 +1083,7 @@ function DevMatchRowEditor({
           <OddsInput
             label={`Away odds for ${awayName}`}
             value={match.away_odds ?? null}
-            shortLabel="2"
+            shortLabel="1"
             disabled={busy}
             onChange={(value) =>
               update((current) => ({
