@@ -327,6 +327,7 @@ Brevo Free מוגבל בכמות יומית לכל החשבון, לכן ביום
 - If a dev/admin update moves a match away from `finished`, `clearUnfinishedMatchScoring` resets that match's `points_earned` back to `0` and recalculates affected profile totals so stale final points do not remain during LIVE.
 - `/game/predictions` shows the available direction reward for home/draw/away before saving, and the "exact score" row shows only the extra points added on top of the direction reward.
 - `/game/leagues/[id]` projects live scoring in the leaderboard with `+N` badges per live prediction chip and a live delta next to each member's persisted total.
+- League rows are sorted by projected score during LIVE (`total_score + live +N`) so users move up immediately when the current score puts them ahead. Equal projected scores are currently ordered by profile registration date.
 - `lib/game/live-score-projection.ts` reuses `calculatePredictionPoints` for the logged-in user's current live matches, and `/api/game/live-score-projection` returns the hero card's persisted totals plus the temporary live score delta.
 - `/game/leaderboard` reuses the full league leaderboard UI for all profiles: live prediction chips, projected live `+N`, tournament winner and top-scorer picks, and profile-based realtime total updates.
 - Dev Tools can edit `home_odds`/`draw_odds`/`away_odds` and can generate random future predictions for the currently logged-in dev user only.

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { requireServerMfa } from "@/lib/auth/mfa-server";
 import { canUseJokerOnMatch } from "@/lib/game/boosters";
+import { sortLeaderboardMembersByProjectedScore } from "@/lib/game/leaderboard-ranking";
 import { hasTournamentStarted } from "@/lib/game/tournament-start";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -16,6 +17,7 @@ type RawProfileRow = {
   display_name?: string | null;
   total_score?: number | null;
   avatar_url?: string | null;
+  created_at?: string | null;
 };
 
 type RawLiveMatchRow = {
@@ -71,9 +73,7 @@ export default async function GlobalLeaderboardPage() {
   ] = await Promise.all([
     admin
       .from("profiles")
-      .select("id, display_name, total_score, avatar_url")
-      .order("total_score", { ascending: false })
-      .limit(500),
+      .select("id, display_name, total_score, avatar_url, created_at"),
     admin
       .from("matches")
       .select("status, date_time")
@@ -103,6 +103,7 @@ export default async function GlobalLeaderboardPage() {
     .map((profile) => ({
       user_id: profile.id,
       joined_at: null,
+      registered_at: typeof profile.created_at === "string" ? profile.created_at : null,
       display_name:
         typeof profile.display_name === "string" && profile.display_name.trim()
           ? profile.display_name
@@ -115,11 +116,7 @@ export default async function GlobalLeaderboardPage() {
         typeof profile.avatar_url === "string" && profile.avatar_url.trim()
           ? profile.avatar_url
           : null,
-    }))
-    .sort((left, right) => {
-      if (right.total_score !== left.total_score) return right.total_score - left.total_score;
-      return left.display_name.localeCompare(right.display_name, "he");
-    });
+    }));
 
   const memberIds = membersBase.map((member) => member.user_id);
   const liveMatchRows = ((rawLiveMatches ?? []) as RawLiveMatchRow[]).filter(
@@ -134,32 +131,35 @@ export default async function GlobalLeaderboardPage() {
     tournamentStarted ? memberIds : memberIds.filter((memberId) => memberId === user.id),
   );
 
-  const members: LeagueMemberRow[] = membersBase.map((member) => {
-    const outright = outrightMap.get(member.user_id);
-    const outrightsVisible = tournamentStarted || member.user_id === user.id;
+  const members: LeagueMemberRow[] = sortLeaderboardMembersByProjectedScore(
+    membersBase.map((member) => {
+      const outright = outrightMap.get(member.user_id);
+      const outrightsVisible = tournamentStarted || member.user_id === user.id;
 
-    return {
-      ...member,
-      winner_prediction: outright?.winner ?? null,
-      winner_logo_url: outright?.winnerLogoUrl ?? null,
-      top_scorer_prediction: outright?.topScorer ?? null,
-      outrights_visible: outrightsVisible,
-      live_predictions: liveMatches.map((match) => {
-        const prediction = livePredictionMap.get(`${member.user_id}:${match.match_number}`);
+      return {
+        ...member,
+        winner_prediction: outright?.winner ?? null,
+        winner_logo_url: outright?.winnerLogoUrl ?? null,
+        top_scorer_prediction: outright?.topScorer ?? null,
+        outrights_visible: outrightsVisible,
+        live_predictions: liveMatches.map((match) => {
+          const prediction = livePredictionMap.get(`${member.user_id}:${match.match_number}`);
 
-        return {
-          match_number: match.match_number,
-          home_score_guess:
-            typeof prediction?.home_score_guess === "number" ? prediction.home_score_guess : null,
-          away_score_guess:
-            typeof prediction?.away_score_guess === "number" ? prediction.away_score_guess : null,
-          is_joker_applied:
-            prediction?.is_joker_applied === true &&
-            canUseJokerOnMatch(match.stage, match.match_number),
-        };
-      }),
-    };
-  });
+          return {
+            match_number: match.match_number,
+            home_score_guess:
+              typeof prediction?.home_score_guess === "number" ? prediction.home_score_guess : null,
+            away_score_guess:
+              typeof prediction?.away_score_guess === "number" ? prediction.away_score_guess : null,
+            is_joker_applied:
+              prediction?.is_joker_applied === true &&
+              canUseJokerOnMatch(match.stage, match.match_number),
+          };
+        }),
+      };
+    }),
+    liveMatches,
+  );
 
   return (
     <LeagueViewClient

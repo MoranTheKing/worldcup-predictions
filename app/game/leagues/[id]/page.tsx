@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { requireServerMfa } from "@/lib/auth/mfa-server";
 import { canUseJokerOnMatch } from "@/lib/game/boosters";
+import { sortLeaderboardMembersByProjectedScore } from "@/lib/game/leaderboard-ranking";
 import { hasTournamentStarted } from "@/lib/game/tournament-start";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -19,11 +20,13 @@ type RawMemberRow = {
         display_name?: string | null;
         total_score?: number | null;
         avatar_url?: string | null;
+        created_at?: string | null;
       }
     | {
         display_name?: string | null;
         total_score?: number | null;
         avatar_url?: string | null;
+        created_at?: string | null;
       }[]
     | null;
 };
@@ -118,7 +121,7 @@ export default async function LeaguePage({
   ] = await Promise.all([
     admin
       .from("league_members")
-      .select("user_id, joined_at, profiles(display_name, total_score, avatar_url)")
+      .select("user_id, joined_at, profiles(display_name, total_score, avatar_url, created_at)")
       .eq("league_id", id),
     admin
       .from("matches")
@@ -152,6 +155,8 @@ export default async function LeaguePage({
     return {
       user_id: String(row.user_id ?? ""),
       joined_at: typeof row.joined_at === "string" ? row.joined_at : null,
+      registered_at:
+        typeof safeProfile?.created_at === "string" ? safeProfile.created_at : null,
       display_name:
         typeof safeProfile?.display_name === "string" && safeProfile.display_name.trim()
           ? safeProfile.display_name
@@ -317,8 +322,8 @@ export default async function LeaguePage({
     }
   }
 
-  const members: LeagueMemberRow[] = membersBase
-    .map((member) => {
+  const members: LeagueMemberRow[] = sortLeaderboardMembersByProjectedScore(
+    membersBase.map((member) => {
       const outright = outrightMap.get(member.user_id);
       const outrightsVisible = tournamentStarted || member.user_id === user.id;
 
@@ -343,8 +348,9 @@ export default async function LeaguePage({
           };
         }),
       };
-    })
-    .sort((left, right) => right.total_score - left.total_score);
+    }),
+    liveMatches,
+  );
 
   return (
     <LeagueViewClient

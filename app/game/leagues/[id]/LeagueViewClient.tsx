@@ -45,6 +45,7 @@ export type LeagueLivePrediction = {
 export type LeagueMemberRow = {
   user_id: string;
   joined_at: string | null;
+  registered_at: string | null;
   display_name: string;
   total_score: number;
   avatar_url: string | null;

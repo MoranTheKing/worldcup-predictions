@@ -25,6 +25,7 @@ Key rules to remember:
 - When a match moves from `finished` back to `live` or `scheduled`, call `clearUnfinishedMatchScoring` so stale final points return to `0` and affected profile totals are recalculated.
 - Joker rules are exactly two total Jokers and both are group-stage-only. Do not surface or score Joker multipliers for knockout matches, even if legacy rows still have `is_joker_applied = true`.
 - Prediction cards should show available odds-based rewards before save; live cards and league rows should show projected `+N` without mutating persisted totals until the match is finished.
+- Leaderboards sort by projected live score while matches are live: `total_score + live +N`; ties currently break by `profiles.created_at` registration date.
 - In group live standings, the inline live score is row-team-perspective: the row team's goal count should appear on the visual right side.
 - `/game/leaderboard` is the global league and should share the private league leaderboard surface: live prediction chips, winner/top-scorer columns, projected live deltas, and profile-total realtime refreshes.
 - Dev Tools match-clock ranges are phase-aware: first half allows 0-60 and displays 45+, second half allows 46-105 and displays 90+, and knockout extra time allows 91-135 with 120+ display for stoppage.
