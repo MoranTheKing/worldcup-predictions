@@ -24,6 +24,7 @@ Key rules to remember:
 - Scoring lives in `lib/game/scoring.ts`: odds-tier base points + stage direction bonus; exact hits add the separate stage exact-score bonus, then x2 Joker. Persist scores through `scoreFinishedMatchPredictions` so `predictions.points_earned` and `profiles.total_score` stay aligned.
 - When a match moves from `finished` back to `live` or `scheduled`, call `clearUnfinishedMatchScoring` so stale final points return to `0` and affected profile totals are recalculated.
 - Joker rules are exactly two total Jokers and both are group-stage-only. Do not surface or score Joker multipliers for knockout matches, even if legacy rows still have `is_joker_applied = true`.
+- Unused group-stage Joker cards must show an expired state, not `זמין`, after the group stage closes or knockout starts.
 - Prediction cards should show available odds-based rewards before save; live cards and league rows should show projected `+N` without mutating persisted totals until the match is finished.
 - Leaderboards sort by projected live score while matches are live: `total_score + live +N`; ties currently break by `profiles.created_at` registration date.
 - In group live standings, the inline live score is row-team-perspective: the row team's goal count should appear on the visual right side.

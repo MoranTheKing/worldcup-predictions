@@ -74,6 +74,10 @@ The current intended behavior is:
 - tournament winner/top-scorer predictions lock at tournament kickoff
 - these locks must exist in both app logic and database policy
 
+## Joker availability
+
+Users have two total Jokers and both are group-stage-only. A group Joker is available only while at least one group-stage match is still scheduled and no knockout match has started. After that, unused Joker cards are shown as expired rather than available.
+
 Required DB remediations:
 
 - `20260423000018_restore_social_prediction_privacy.sql`

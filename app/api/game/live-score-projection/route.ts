@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerMfaGateState } from "@/lib/auth/mfa-server";
+import { areGroupJokersAvailable } from "@/lib/game/boosters";
 import { getUserGameStats } from "@/lib/game/stats";
 import { getUserLiveScoreProjection } from "@/lib/game/live-score-projection";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -24,7 +25,7 @@ export async function GET() {
   }
 
   const admin = createAdminClient();
-  const [profile, gameStats, liveProjection] = await Promise.all([
+  const [profile, gameStats, liveProjection, groupJokersAvailable] = await Promise.all([
     fetchAuthProfile(admin, user.id).catch((error) => {
       console.error("[live-score-projection] profile fetch failed:", error);
       return null;
@@ -37,11 +38,16 @@ export async function GET() {
       console.error("[live-score-projection] live projection failed:", error);
       return { liveScoreDelta: null, liveMatchCount: 0, livePredictionCount: 0 };
     }),
+    areGroupJokersAvailable(admin).catch((error) => {
+      console.error("[live-score-projection] joker availability failed:", error);
+      return false;
+    }),
   ]);
 
   return NextResponse.json({
     totalScore: profile?.totalScore ?? 0,
     totalHits: gameStats.totalHits,
+    groupJokersAvailable,
     ...liveProjection,
   });
 }

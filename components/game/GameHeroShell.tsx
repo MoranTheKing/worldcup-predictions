@@ -15,6 +15,7 @@ type GameHeroShellProps = {
   liveMatchCount: number;
   groupJokerUsedCount: number;
   groupJokerLimit: number;
+  groupJokersAvailable: boolean;
 };
 
 type HeroStats = {
@@ -22,6 +23,7 @@ type HeroStats = {
   totalHits: number;
   liveScoreDelta: number | null;
   liveMatchCount: number;
+  groupJokersAvailable: boolean;
 };
 
 type HeroStatsResponse = Partial<HeroStats>;
@@ -36,13 +38,20 @@ export default function GameHeroShell({
   liveMatchCount,
   groupJokerUsedCount,
   groupJokerLimit,
+  groupJokersAvailable,
 }: GameHeroShellProps) {
   const pathname = usePathname();
   const showOwnHeader = !pathname.startsWith("/game/users/");
   const showJokers = pathname === "/game/predictions" || pathname === "/game";
   const initialStats = useMemo(
-    () => ({ totalScore, totalHits, liveScoreDelta, liveMatchCount }),
-    [liveMatchCount, liveScoreDelta, totalHits, totalScore],
+    () => ({
+      totalScore,
+      totalHits,
+      liveScoreDelta,
+      liveMatchCount,
+      groupJokersAvailable,
+    }),
+    [groupJokersAvailable, liveMatchCount, liveScoreDelta, totalHits, totalScore],
   );
   const stats = useLiveHeroStats({
     currentUserId,
@@ -112,6 +121,7 @@ export default function GameHeroShell({
               title={`ג'וקר שלב הבתים ${index + 1}`}
               subtitle="זמין רק למשחקי שלב הבתים"
               isUsed={groupJokerUsedCount > index}
+              isExpired={groupJokerUsedCount <= index && !stats.groupJokersAvailable}
             />
           ))}
         </div>
@@ -199,6 +209,10 @@ function useLiveHeroStats({
           totalHits: normalizeNumber(payload.totalHits, previous.totalHits),
           liveScoreDelta: typeof payload.liveScoreDelta === "number" ? payload.liveScoreDelta : null,
           liveMatchCount: normalizeNumber(payload.liveMatchCount, previous.liveMatchCount),
+          groupJokersAvailable:
+            typeof payload.groupJokersAvailable === "boolean"
+              ? payload.groupJokersAvailable
+              : previous.groupJokersAvailable,
         };
       });
     } catch (error) {
@@ -276,19 +290,25 @@ function BoosterCard({
   title,
   subtitle,
   isUsed,
+  isExpired,
 }: {
   title: string;
   subtitle: string;
   isUsed: boolean;
+  isExpired: boolean;
 }) {
+  const isDisabled = isUsed || isExpired;
+  const statusLabel = isUsed ? "נוצל" : isExpired ? "פג תוקף" : "זמין";
+  const displaySubtitle = isExpired ? "שלב הבתים הסתיים" : subtitle;
+
   return (
     <div
       className={`rounded-[1.4rem] border px-4 py-4 transition-all ${
-        isUsed ? "opacity-70" : "shadow-[0_0_18px_rgba(111,60,255,0.18)]"
+        isDisabled ? "opacity-70" : "shadow-[0_0_18px_rgba(111,60,255,0.18)]"
       }`}
       style={{
-        borderColor: isUsed ? "rgba(255,255,255,0.08)" : "rgba(111,60,255,0.38)",
-        background: isUsed
+        borderColor: isDisabled ? "rgba(255,255,255,0.08)" : "rgba(111,60,255,0.38)",
+        background: isDisabled
           ? "rgba(255,255,255,0.04)"
           : "linear-gradient(135deg, rgba(111,60,255,0.18), rgba(255,47,166,0.12))",
       }}
@@ -296,17 +316,17 @@ function BoosterCard({
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-sm font-bold text-wc-fg1">{title}</p>
-          <p className="mt-1 text-xs text-wc-fg3">{subtitle}</p>
+          <p className="mt-1 text-xs text-wc-fg3">{displaySubtitle}</p>
         </div>
-        <span className={`text-3xl ${isUsed ? "grayscale" : ""}`}>🎏</span>
+        <span className={`text-3xl ${isDisabled ? "grayscale" : ""}`}>🎏</span>
       </div>
 
       <div
         className={`mt-3 inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-          isUsed ? "bg-white/6 text-wc-fg3" : "bg-[rgba(95,255,123,0.14)] text-wc-neon"
+          isDisabled ? "bg-white/6 text-wc-fg3" : "bg-[rgba(95,255,123,0.14)] text-wc-neon"
         }`}
       >
-        {isUsed ? "נוצל" : "זמין"}
+        {statusLabel}
       </div>
     </div>
   );

@@ -18,6 +18,11 @@ type MatchStageRow = {
   stage: string;
 };
 
+type MatchStatusRow = {
+  match_number: number | null;
+  status: string | null;
+};
+
 type QueryResult<T> = {
   data: T[] | null;
   error: SupabaseLikeError | null;
@@ -37,6 +42,23 @@ type BoosterClient = {
         eq: (column: string, value: unknown) => Promise<QueryResult<PredictionUsageRow>>;
       };
       in: (column: string, values: number[]) => Promise<QueryResult<MatchStageRow>>;
+    };
+  };
+};
+
+type GroupJokerAvailabilityClient = {
+  from: (table: string) => {
+    select: (columns: string) => {
+      lte: (column: string, value: number) => {
+        eq: (column: string, value: string) => {
+          limit: (count: number) => Promise<QueryResult<MatchStatusRow>>;
+        };
+      };
+      gte: (column: string, value: number) => {
+        in: (column: string, values: string[]) => {
+          limit: (count: number) => Promise<QueryResult<MatchStatusRow>>;
+        };
+      };
     };
   };
 };
@@ -127,6 +149,50 @@ export function getJokerBucket(
 
 export function canUseJokerOnMatch(stage: string, matchNumber?: number | null) {
   return getJokerBucket(stage, matchNumber) === "group";
+}
+
+export async function areGroupJokersAvailable(supabase: unknown) {
+  try {
+    const client = supabase as GroupJokerAvailabilityClient;
+    const [scheduledGroupResult, startedKnockoutResult] = await Promise.all([
+      client
+        .from("matches")
+        .select("match_number, status")
+        .lte("match_number", 72)
+        .eq("status", "scheduled")
+        .limit(1),
+      client
+        .from("matches")
+        .select("match_number, status")
+        .gte("match_number", 73)
+        .in("status", ["live", "finished"])
+        .limit(1),
+    ]);
+
+    if (scheduledGroupResult.error) {
+      console.error(
+        "[areGroupJokersAvailable] group matches query error:",
+        formatSupabaseError(scheduledGroupResult.error),
+      );
+      return false;
+    }
+
+    if (startedKnockoutResult.error) {
+      console.error(
+        "[areGroupJokersAvailable] knockout matches query error:",
+        formatSupabaseError(startedKnockoutResult.error),
+      );
+      return false;
+    }
+
+    return (
+      (scheduledGroupResult.data?.length ?? 0) > 0 &&
+      (startedKnockoutResult.data?.length ?? 0) === 0
+    );
+  } catch (error) {
+    console.error("[areGroupJokersAvailable] unexpected error:", formatUnknownError(error));
+    return false;
+  }
 }
 
 function buildJokerUsage(groupUsedCount: number, knockoutUsed: boolean): JokerUsage {

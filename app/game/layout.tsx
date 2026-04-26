@@ -4,7 +4,11 @@ import DevToolsFloatingButton from "@/components/DevToolsFloatingButton";
 import GameHeroShell from "@/components/game/GameHeroShell";
 import GameSubNav from "@/components/game/GameSubNav";
 import { requireServerMfa } from "@/lib/auth/mfa-server";
-import { GROUP_JOKER_LIMIT, getUserJokerUsage } from "@/lib/game/boosters";
+import {
+  areGroupJokersAvailable,
+  GROUP_JOKER_LIMIT,
+  getUserJokerUsage,
+} from "@/lib/game/boosters";
 import { getUserLiveScoreProjection } from "@/lib/game/live-score-projection";
 import { getUserGameStats } from "@/lib/game/stats";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -31,7 +35,7 @@ export default async function GameLayout({
 
   const admin = createAdminClient();
 
-  const [profile, jokerUsage, gameStats, liveProjection] = await Promise.all([
+  const [profile, jokerUsage, groupJokersAvailable, gameStats, liveProjection] = await Promise.all([
     fetchAuthProfile(admin, user.id).catch((error) => {
       console.error("[GameLayout] profile fetch failed:", error);
       return null;
@@ -44,6 +48,10 @@ export default async function GameLayout({
         groupUsedCount: 0,
         groupRemaining: GROUP_JOKER_LIMIT,
       };
+    }),
+    areGroupJokersAvailable(admin).catch((error) => {
+      console.error("[GameLayout] joker availability failed:", error);
+      return false;
     }),
     getUserGameStats(admin, user.id).catch((error) => {
       console.error("[GameLayout] game stats failed:", error);
@@ -73,6 +81,7 @@ export default async function GameLayout({
           liveMatchCount={liveProjection.liveMatchCount}
           groupJokerUsedCount={jokerUsage.groupUsedCount}
           groupJokerLimit={GROUP_JOKER_LIMIT}
+          groupJokersAvailable={groupJokersAvailable}
         />
 
         <GameSubNav />

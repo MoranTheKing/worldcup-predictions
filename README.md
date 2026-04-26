@@ -347,5 +347,6 @@ Brevo Free מוגבל בכמות יומית לכל החשבון, לכן ביום
 
 - Joker rules are now two total Jokers, both usable only on group-stage matches. Server saves, client selection, dev random prediction filling, and `calculatePredictionPoints` all enforce the same eligibility rule.
 - The game header shows two group-stage Joker cards instead of one group Joker and one knockout Joker.
+- Unused group-stage Joker cards stop showing `זמין` once the group stage is closed or a knockout match has started; they show an expired state instead.
 - Legacy/non-group `is_joker_applied` values are ignored for scoring and display, so a knockout prediction cannot receive a Joker x2 multiplier.
 - Group live standings score pills render from the row team's perspective with the row team's goals on the visual right side.
