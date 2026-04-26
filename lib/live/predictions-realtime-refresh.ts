@@ -11,73 +11,52 @@ type RealtimePayload = {
   old?: RealtimeRecord;
 };
 
-type UseLeagueRealtimeRefreshOptions = {
-  leagueId: string;
+type UsePredictionsRealtimeRefreshOptions = {
+  currentUserId: string | null;
   liveMatchIds: number[];
-  memberIds: string[];
   debounceMs?: number;
   minRefreshIntervalMs?: number;
   enabled?: boolean;
 };
 
-export function useLeagueRealtimeRefresh({
-  leagueId,
+export function usePredictionsRealtimeRefresh({
+  currentUserId,
   liveMatchIds,
-  memberIds,
-  debounceMs = 650,
-  minRefreshIntervalMs = 1200,
+  debounceMs,
+  minRefreshIntervalMs,
   enabled = true,
-}: UseLeagueRealtimeRefreshOptions) {
+}: UsePredictionsRealtimeRefreshOptions) {
   const supabase = useMemo(() => createClient(), []);
   const liveMatchKey = useMemo(() => buildNumberKey(liveMatchIds), [liveMatchIds]);
-  const memberKey = useMemo(() => buildStringKey(memberIds), [memberIds]);
   const scheduleRefresh = useRealtimeRefreshScheduler({ debounceMs, minRefreshIntervalMs });
 
   useEffect(() => {
-    if (!enabled || !leagueId) return;
+    if (!enabled) return;
 
     const liveIds = liveMatchKey ? liveMatchKey.split(",").map(Number) : [];
     const liveIdSet = new Set(liveIds);
-    const memberIdSet = new Set(memberKey ? memberKey.split(",") : []);
+    const channel = supabase.channel(`predictions-live-refresh:${currentUserId ?? "anon"}`);
 
-    const channel = supabase
-      .channel(`league-live-refresh:${leagueId}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "matches" },
-        (payload: RealtimePayload) => {
-          if (shouldRefreshForMatch(payload, liveIdSet)) {
-            scheduleRefresh();
-          }
-        },
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "league_members",
-          filter: `league_id=eq.${leagueId}`,
-        },
-        scheduleRefresh,
-      );
+    channel.on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "matches" },
+      (payload: RealtimePayload) => {
+        if (shouldRefreshForMatch(payload, liveIdSet)) {
+          scheduleRefresh();
+        }
+      },
+    );
 
-    for (const matchId of liveIds) {
+    if (currentUserId) {
       channel.on(
         "postgres_changes",
         {
           event: "*",
           schema: "public",
           table: "predictions",
-          filter: `match_id=eq.${matchId}`,
+          filter: `user_id=eq.${currentUserId}`,
         },
-        (payload: RealtimePayload) => {
-          const changedUserId =
-            readString(payload.new, "user_id") ?? readString(payload.old, "user_id");
-          if (!changedUserId || memberIdSet.has(changedUserId)) {
-            scheduleRefresh();
-          }
-        },
+        scheduleRefresh,
       );
     }
 
@@ -86,14 +65,7 @@ export function useLeagueRealtimeRefresh({
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [
-    enabled,
-    leagueId,
-    liveMatchKey,
-    memberKey,
-    scheduleRefresh,
-    supabase,
-  ]);
+  }, [currentUserId, enabled, liveMatchKey, scheduleRefresh, supabase]);
 }
 
 function shouldRefreshForMatch(payload: RealtimePayload, liveIdSet: Set<number>) {
@@ -122,11 +94,5 @@ function buildNumberKey(values: number[]) {
     new Set(values.filter((value) => Number.isInteger(value) && value > 0)),
   )
     .sort((left, right) => left - right)
-    .join(",");
-}
-
-function buildStringKey(values: string[]) {
-  return Array.from(new Set(values.filter((value) => value.trim()).map((value) => value.trim())))
-    .sort()
     .join(",");
 }

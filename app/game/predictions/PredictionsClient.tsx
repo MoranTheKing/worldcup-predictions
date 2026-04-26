@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { MatchWithTeams } from "@/lib/tournament/matches";
 import { getJokerBucket } from "@/lib/game/boosters";
+import { usePredictionsRealtimeRefresh } from "@/lib/live/predictions-realtime-refresh";
 import MatchPredictionCard from "./MatchPredictionCard";
 import OutrightForm from "./OutrightForm";
 import type { PickerPlayer, PickerTeam } from "./OutrightForm";
@@ -32,6 +33,7 @@ type JokerSelectionOverride = {
 };
 
 export default function PredictionsClient({
+  currentUserId,
   matches,
   teams,
   players,
@@ -42,6 +44,7 @@ export default function PredictionsClient({
   knockoutJokerUsed,
   tournamentStarted,
 }: {
+  currentUserId: string | null;
   matches: MatchWithTeams[];
   teams: PickerTeam[];
   players: PickerPlayer[];
@@ -52,6 +55,20 @@ export default function PredictionsClient({
   knockoutJokerUsed: boolean;
   tournamentStarted: boolean;
 }) {
+  const liveMatchIds = useMemo(
+    () =>
+      matches
+        .filter((match) => match.status === "live")
+        .map((match) => match.match_number),
+    [matches],
+  );
+
+  usePredictionsRealtimeRefresh({
+    currentUserId,
+    liveMatchIds,
+    enabled: isAuthenticated,
+  });
+
   const predictionMap = useMemo(
     () => new Map(existingPredictions.map((prediction) => [prediction.match_id, prediction])),
     [existingPredictions],

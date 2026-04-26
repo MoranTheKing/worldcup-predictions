@@ -304,6 +304,7 @@ Brevo Free מוגבל בכמות יומית לכל החשבון, לכן ביום
 ## Production live refresh - 2026-04-26
 
 - `/game/leagues/[id]` no longer relies on interval polling for live leaderboard updates. It uses Supabase Realtime postgres changes for `matches`, current live-match `predictions`, and the current `league_members` row scope.
+- `/game/predictions` uses the same production refresh path for live match status/score changes and the current user's prediction updates.
 - Client refreshes are debounced and throttled before calling `router.refresh()`, and refresh work is deferred while the browser tab is hidden.
 - The old dev refresh hook now disables its polling branch in production builds. DevTools can still notify local tabs through BroadcastChannel/localStorage without hitting the server.
 - Run `supabase/migrations/20260426000023_enable_live_leaderboard_realtime.sql` so Supabase publishes the realtime table changes needed by the leaderboard.

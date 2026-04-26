@@ -81,6 +81,7 @@ export default async function OpponentPredictionsPage({
         </div>
 
         <PredictionsClient
+          currentUserId={user.id}
           matches={selfData.matches}
           teams={selfData.teams}
           players={selfData.players}

@@ -19,6 +19,7 @@ export default async function PredictionsPage() {
 
   return (
     <PredictionsClient
+      currentUserId={user?.id ?? null}
       matches={data.matches}
       teams={data.teams}
       players={data.players}
