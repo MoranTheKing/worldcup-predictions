@@ -785,3 +785,5 @@ raw_error
 - Dev Tools can edit the three odds columns locally, seed random 1/X/2 odds for every match, and seed random future predictions for the logged-in dev user only.
 - Dev Tools `Clear All Match Data` is a local full reset: matches return to scheduled 0-0, odds become null, prediction/tournament/legacy bet rows are deleted, and profile totals are reset to zero so league scoreboards clear without deleting league memberships.
 - Scoring persistence treats `null` and `0` differently: a finished miss is written as `points_earned = 0`, which keeps profile totals and leaderboard state deterministic.
+- Joker eligibility is now two total Jokers, both group-stage-only. The sync/scoring path must ignore Joker multipliers on knockout matches even if a legacy prediction row still has `is_joker_applied = true`.
+- Group-stage live standings render inline live score from the row team's perspective, with the row team's goals on the visual right side in RTL.

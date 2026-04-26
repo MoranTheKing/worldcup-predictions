@@ -322,3 +322,10 @@ Brevo Free מוגבל בכמות יומית לכל החשבון, לכן ביום
 - Dev Tools also includes a random odds button that seeds plausible 1/X/2 odds for every match and persists them through the bulk match API.
 - Dev Tools `Clear All Match Data` is a full reset: it clears match scores/statuses, odds, match predictions, tournament predictions, legacy bets, `profiles.total_score`, and therefore all league leaderboard totals.
 - The scoring sync now writes `0` into `predictions.points_earned` when a finished prediction earns zero, instead of leaving stale `null` values.
+
+## Joker and live table update - 2026-04-26
+
+- Joker rules are now two total Jokers, both usable only on group-stage matches. Server saves, client selection, dev random prediction filling, and `calculatePredictionPoints` all enforce the same eligibility rule.
+- The game header shows two group-stage Joker cards instead of one group Joker and one knockout Joker.
+- Legacy/non-group `is_joker_applied` values are ignored for scoring and display, so a knockout prediction cannot receive a Joker x2 multiplier.
+- Group live standings score pills render from the row team's perspective with the row team's goals on the visual right side.

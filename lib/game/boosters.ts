@@ -3,7 +3,11 @@ import { getMatchStageKind } from "@/lib/tournament/matches";
 export type JokerUsage = {
   groupUsed: boolean;
   knockoutUsed: boolean;
+  groupUsedCount: number;
+  groupRemaining: number;
 };
+
+export const GROUP_JOKER_LIMIT = 2;
 
 type PredictionUsageRow = {
   match_id: number | null;
@@ -56,7 +60,7 @@ export async function getUserJokerUsage(
           formatSupabaseError(predictionResult.error),
         );
       }
-      return { groupUsed: false, knockoutUsed: false };
+      return buildJokerUsage(0, false);
     }
 
     const matchIds = (predictionResult.data ?? [])
@@ -64,7 +68,7 @@ export async function getUserJokerUsage(
       .filter((matchId): matchId is number => typeof matchId === "number");
 
     if (matchIds.length === 0) {
-      return { groupUsed: false, knockoutUsed: false };
+      return buildJokerUsage(0, false);
     }
 
     const matchesResult = await client
@@ -77,30 +81,26 @@ export async function getUserJokerUsage(
         "[getUserJokerUsage] matches query error:",
         formatSupabaseError(matchesResult.error),
       );
-      return { groupUsed: false, knockoutUsed: false };
+      return buildJokerUsage(0, false);
     }
 
-    let groupUsed = false;
+    let groupUsedCount = 0;
     let knockoutUsed = false;
 
     for (const match of matchesResult.data ?? []) {
       const bucket = getJokerBucket(match.stage, match.match_number);
 
       if (bucket === "group") {
-        groupUsed = true;
+        groupUsedCount += 1;
       } else {
         knockoutUsed = true;
       }
-
-      if (groupUsed && knockoutUsed) {
-        break;
-      }
     }
 
-    return { groupUsed, knockoutUsed };
+    return buildJokerUsage(groupUsedCount, knockoutUsed);
   } catch (error) {
     console.error("[getUserJokerUsage] unexpected error:", formatUnknownError(error));
-    return { groupUsed: false, knockoutUsed: false };
+    return buildJokerUsage(0, false);
   }
 }
 
@@ -118,11 +118,24 @@ export function getJokerBucket(
     return "knockout";
   }
 
-  if (typeof matchNumber === "number" && matchNumber >= 1 && matchNumber <= 48) {
+  if (typeof matchNumber === "number" && matchNumber >= 1 && matchNumber <= 72) {
     return "group";
   }
 
   return "knockout";
+}
+
+export function canUseJokerOnMatch(stage: string, matchNumber?: number | null) {
+  return getJokerBucket(stage, matchNumber) === "group";
+}
+
+function buildJokerUsage(groupUsedCount: number, knockoutUsed: boolean): JokerUsage {
+  return {
+    groupUsed: groupUsedCount > 0,
+    knockoutUsed,
+    groupUsedCount,
+    groupRemaining: Math.max(0, GROUP_JOKER_LIMIT - groupUsedCount),
+  };
 }
 
 function isMissingColumnError(error: SupabaseLikeError | null) {

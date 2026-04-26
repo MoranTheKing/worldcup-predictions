@@ -4,7 +4,7 @@ import DevToolsFloatingButton from "@/components/DevToolsFloatingButton";
 import GameHeroShell from "@/components/game/GameHeroShell";
 import GameSubNav from "@/components/game/GameSubNav";
 import { requireServerMfa } from "@/lib/auth/mfa-server";
-import { getUserJokerUsage } from "@/lib/game/boosters";
+import { GROUP_JOKER_LIMIT, getUserJokerUsage } from "@/lib/game/boosters";
 import { getUserGameStats } from "@/lib/game/stats";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { fetchAuthProfile, resolveDisplayName } from "@/lib/supabase/auth-profile";
@@ -37,7 +37,12 @@ export default async function GameLayout({
     }),
     getUserJokerUsage(admin, user.id).catch((error) => {
       console.error("[GameLayout] joker usage failed:", error);
-      return { groupUsed: false, knockoutUsed: false };
+      return {
+        groupUsed: false,
+        knockoutUsed: false,
+        groupUsedCount: 0,
+        groupRemaining: GROUP_JOKER_LIMIT,
+      };
     }),
     getUserGameStats(admin, user.id).catch((error) => {
       console.error("[GameLayout] game stats failed:", error);
@@ -58,8 +63,8 @@ export default async function GameLayout({
           avatarUrl={avatarUrl}
           totalScore={totalScore}
           totalHits={totalHits}
-          groupJokerUsed={jokerUsage.groupUsed}
-          knockoutJokerUsed={jokerUsage.knockoutUsed}
+          groupJokerUsedCount={jokerUsage.groupUsedCount}
+          groupJokerLimit={GROUP_JOKER_LIMIT}
         />
 
         <GameSubNav />

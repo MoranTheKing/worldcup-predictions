@@ -1,12 +1,14 @@
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import { devOnly } from "@/app/api/dev/_guard";
+import { canUseJokerOnMatch } from "@/lib/game/boosters";
 import { hasKickoffStarted } from "@/lib/game/tournament-start";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 type MatchRow = {
   match_number: number | null;
+  stage: string | null;
   status: string | null;
   date_time: string | null;
   home_team_id: string | null;
@@ -39,7 +41,7 @@ export async function POST(request: Request) {
   const admin = createAdminClient();
   const { data: matchesData, error: matchesError } = await admin
     .from("matches")
-    .select("match_number, status, date_time, home_team_id, away_team_id")
+    .select("match_number, stage, status, date_time, home_team_id, away_team_id")
     .order("date_time", { ascending: true });
 
   if (matchesError) {
@@ -82,7 +84,9 @@ export async function POST(request: Request) {
       match_id: match.match_number,
       home_score_guess: homeScore,
       away_score_guess: awayScore,
-      is_joker_applied: existingJokerByMatch.get(match.match_number) === true,
+      is_joker_applied:
+        existingJokerByMatch.get(match.match_number) === true &&
+        canUseJokerOnMatch(match.stage ?? "", match.match_number),
     };
   });
 

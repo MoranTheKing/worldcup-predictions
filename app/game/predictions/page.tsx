@@ -26,8 +26,8 @@ export default async function PredictionsPage() {
       existingPredictions={data.existingPredictions}
       tournamentPrediction={data.tournamentPrediction}
       isAuthenticated={Boolean(user)}
-      groupJokerUsed={data.groupJokerUsed}
-      knockoutJokerUsed={data.knockoutJokerUsed}
+      groupJokerUsedCount={data.groupJokerUsedCount}
+      groupJokerLimit={data.groupJokerLimit}
       tournamentStarted={data.tournamentStarted}
     />
   );

@@ -8,8 +8,8 @@ type GameHeroShellProps = {
   avatarUrl: string | null;
   totalScore: number;
   totalHits: number;
-  groupJokerUsed: boolean;
-  knockoutJokerUsed: boolean;
+  groupJokerUsedCount: number;
+  groupJokerLimit: number;
 };
 
 export default function GameHeroShell({
@@ -17,8 +17,8 @@ export default function GameHeroShell({
   avatarUrl,
   totalScore,
   totalHits,
-  groupJokerUsed,
-  knockoutJokerUsed,
+  groupJokerUsedCount,
+  groupJokerLimit,
 }: GameHeroShellProps) {
   const pathname = usePathname();
   const showOwnHeader = !pathname.startsWith("/game/users/");
@@ -78,16 +78,14 @@ export default function GameHeroShell({
 
       {showJokers ? (
         <div className="mt-5 grid gap-3 md:grid-cols-2">
-          <BoosterCard
-            title="ג'וקר שלב הבתים"
-            subtitle="זמין פעם אחת בלבד למשחקי הבתים"
-            isUsed={groupJokerUsed}
-          />
-          <BoosterCard
-            title="ג'וקר נוקאאוט"
-            subtitle="זמין פעם אחת בלבד לשלבי ההכרעה"
-            isUsed={knockoutJokerUsed}
-          />
+          {Array.from({ length: groupJokerLimit }, (_, index) => (
+            <BoosterCard
+              key={index}
+              title={`ג'וקר שלב הבתים ${index + 1}`}
+              subtitle="זמין רק למשחקי שלב הבתים"
+              isUsed={groupJokerUsedCount > index}
+            />
+          ))}
         </div>
       ) : null}
     </div>

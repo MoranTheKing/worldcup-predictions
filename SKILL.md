@@ -21,7 +21,9 @@ Key rules to remember:
 - Bottom nav: frosted glass with neon green active glow
 - Production live prediction screens and leaderboards should use scoped Supabase Realtime subscriptions instead of interval polling. Debounce `router.refresh()` and defer refreshes while the browser tab is hidden.
 - Scoring lives in `lib/game/scoring.ts`: odds-tier base points + stage direction bonus; exact hits add the separate stage exact-score bonus, then x2 Joker. Persist scores through `scoreFinishedMatchPredictions` so `predictions.points_earned` and `profiles.total_score` stay aligned.
+- Joker rules are exactly two total Jokers and both are group-stage-only. Do not surface or score Joker multipliers for knockout matches, even if legacy rows still have `is_joker_applied = true`.
 - Prediction cards should show available odds-based rewards before save; live cards and league rows should show projected `+N` without mutating persisted totals until the match is finished.
+- In group live standings, the inline live score is row-team-perspective: the row team's goal count should appear on the visual right side.
 - Dev Tools owns local odds editing, random odds seeding, and current-user-only random prediction filling. Keep these routes localhost-only and never use them for bulk production user prediction generation.
 - Dev Tools `Clear All Match Data` is intentionally destructive in local dev: it resets matches, odds, all prediction tables, legacy bets, and profile totals so league leaderboards return to zero while memberships remain.
 

@@ -4,6 +4,7 @@ import MatchPredictionCard from "@/app/game/predictions/MatchPredictionCard";
 import UserAvatar from "@/components/UserAvatar";
 import PredictionsClient from "@/app/game/predictions/PredictionsClient";
 import OutrightChoiceBadge from "@/components/game/OutrightChoiceBadge";
+import { canUseJokerOnMatch } from "@/lib/game/boosters";
 import { loadPredictionsHubData } from "@/lib/game/predictions-hub";
 import { getUserGameStats } from "@/lib/game/stats";
 import { hasTournamentStarted } from "@/lib/game/tournament-start";
@@ -88,8 +89,8 @@ export default async function OpponentPredictionsPage({
           existingPredictions={selfData.existingPredictions}
           tournamentPrediction={selfData.tournamentPrediction}
           isAuthenticated
-          groupJokerUsed={selfData.groupJokerUsed}
-          knockoutJokerUsed={selfData.knockoutJokerUsed}
+          groupJokerUsedCount={selfData.groupJokerUsedCount}
+          groupJokerLimit={selfData.groupJokerLimit}
           tournamentStarted={selfData.tournamentStarted}
         />
       </div>
@@ -262,13 +263,16 @@ export default async function OpponentPredictionsPage({
         {visibleOpponentMatches.length > 0 ? (
           visibleOpponentMatches.map((match) => {
             const prediction = predictionMap.get(match.match_number);
+            const effectiveIsJoker =
+              prediction?.is_joker_applied === true &&
+              canUseJokerOnMatch(match.stage, match.match_number);
             return (
               <MatchPredictionCard
-                key={`${match.match_number}-${prediction?.home_score_guess ?? "x"}-${prediction?.away_score_guess ?? "x"}-${prediction?.is_joker_applied ? "joker" : "plain"}-${match.status}`}
+                key={`${match.match_number}-${prediction?.home_score_guess ?? "x"}-${prediction?.away_score_guess ?? "x"}-${effectiveIsJoker ? "joker" : "plain"}-${match.status}`}
                 match={match}
                 existingHome={prediction?.home_score_guess ?? null}
                 existingAway={prediction?.away_score_guess ?? null}
-                existingIsJoker={prediction?.is_joker_applied ?? false}
+                existingIsJoker={effectiveIsJoker}
                 pointsEarned={prediction?.points_earned ?? null}
                 isJokerSelected={Boolean(prediction?.is_joker_applied)}
                 showJokerToggle={false}

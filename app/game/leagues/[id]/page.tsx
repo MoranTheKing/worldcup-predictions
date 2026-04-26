@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { requireServerMfa } from "@/lib/auth/mfa-server";
+import { canUseJokerOnMatch } from "@/lib/game/boosters";
 import { hasTournamentStarted } from "@/lib/game/tournament-start";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -336,7 +337,9 @@ export default async function LeaguePage({
               typeof prediction?.home_score_guess === "number" ? prediction.home_score_guess : null,
             away_score_guess:
               typeof prediction?.away_score_guess === "number" ? prediction.away_score_guess : null,
-            is_joker_applied: prediction?.is_joker_applied === true,
+            is_joker_applied:
+              prediction?.is_joker_applied === true &&
+              canUseJokerOnMatch(match.stage, match.match_number),
           };
         }),
       };

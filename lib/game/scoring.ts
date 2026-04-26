@@ -1,4 +1,5 @@
 import { getMatchStageKind } from "@/lib/tournament/matches";
+import { canUseJokerOnMatch } from "@/lib/game/boosters";
 
 export type PredictionDirection = "home" | "draw" | "away";
 export type PredictionHitKind = "miss" | "direction" | "exact";
@@ -11,6 +12,7 @@ export type ScoringPrediction = {
 };
 
 export type ScoringMatch = {
+  match_number?: number | null;
   stage: string;
   home_score: number | null;
   away_score: number | null;
@@ -71,7 +73,10 @@ export function calculatePredictionPoints(
   const basePoints = getBasePointsForOdds(getOddsForDirection(match, predictedDirection));
   const directionBonus = getDirectionBonus(match.stage);
   const exactBonus = hitKind === "exact" ? getExactBonus(match.stage) : 0;
-  const multiplier = prediction.is_joker === true || prediction.is_joker_applied === true ? 2 : 1;
+  const hasEligibleJoker =
+    (prediction.is_joker === true || prediction.is_joker_applied === true) &&
+    canUseJokerOnMatch(match.stage, match.match_number);
+  const multiplier = hasEligibleJoker ? 2 : 1;
 
   return (basePoints + directionBonus + exactBonus) * multiplier;
 }

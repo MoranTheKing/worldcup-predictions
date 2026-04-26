@@ -4,7 +4,11 @@ import { revalidatePath } from "next/cache";
 import { requireServerMfa } from "@/lib/auth/mfa-server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getJokerBucket, getUserJokerUsage } from "@/lib/game/boosters";
+import {
+  GROUP_JOKER_LIMIT,
+  canUseJokerOnMatch,
+  getUserJokerUsage,
+} from "@/lib/game/boosters";
 import { hasKickoffStarted, hasTournamentStarted } from "@/lib/game/tournament-start";
 
 export type PredictionActionState = {
@@ -91,18 +95,15 @@ export async function upsertMatchPrediction(
 
   const existingIsJoker = existingPrediction.data?.is_joker_applied ?? false;
 
+  if (wantsJoker && !canUseJokerOnMatch(stage, matchId)) {
+    return { error: "ניתן להפעיל ג'וקר רק במשחקי שלב הבתים." };
+  }
+
   if (wantsJoker && !existingIsJoker) {
     const usage = await getUserJokerUsage(admin, user.id);
-    const bucket = getJokerBucket(stage, matchId);
-    const isAlreadyUsed = bucket === "group" ? usage.groupUsed : usage.knockoutUsed;
 
-    if (isAlreadyUsed) {
-      return {
-        error:
-          bucket === "group"
-            ? "ג'וקר שלב הבתים כבר נוצל."
-            : "ג'וקר הנוקאאוט כבר נוצל.",
-      };
+    if (usage.groupUsedCount >= GROUP_JOKER_LIMIT) {
+      return { error: "שני הג'וקרים של שלב הבתים כבר נוצלו." };
     }
   }
 

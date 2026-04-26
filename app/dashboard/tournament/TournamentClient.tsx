@@ -1355,7 +1355,7 @@ function InlineLiveScoreBadge({
           }`}
         />
       </span>
-      {`${liveScore.teamGoals} - ${liveScore.opponentGoals}`}
+      {`${liveScore.opponentGoals} - ${liveScore.teamGoals}`}
     </span>
   );
 }

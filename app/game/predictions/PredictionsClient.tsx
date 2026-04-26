@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { MatchWithTeams } from "@/lib/tournament/matches";
-import { getJokerBucket } from "@/lib/game/boosters";
+import { GROUP_JOKER_LIMIT, canUseJokerOnMatch } from "@/lib/game/boosters";
 import { usePredictionsRealtimeRefresh } from "@/lib/live/predictions-realtime-refresh";
 import MatchPredictionCard from "./MatchPredictionCard";
 import OutrightForm from "./OutrightForm";
@@ -23,13 +23,7 @@ export type TournamentPredRow = {
 };
 
 type JokerSelectionState = {
-  group: number | null;
-  knockout: number | null;
-};
-
-type JokerSelectionOverride = {
-  group?: number | null;
-  knockout?: number | null;
+  group: number[];
 };
 
 export default function PredictionsClient({
@@ -40,8 +34,8 @@ export default function PredictionsClient({
   existingPredictions,
   tournamentPrediction,
   isAuthenticated,
-  groupJokerUsed,
-  knockoutJokerUsed,
+  groupJokerUsedCount,
+  groupJokerLimit = GROUP_JOKER_LIMIT,
   tournamentStarted,
 }: {
   currentUserId: string | null;
@@ -51,8 +45,8 @@ export default function PredictionsClient({
   existingPredictions: MatchPredictionRow[];
   tournamentPrediction: TournamentPredRow | null;
   isAuthenticated: boolean;
-  groupJokerUsed: boolean;
-  knockoutJokerUsed: boolean;
+  groupJokerUsedCount: number;
+  groupJokerLimit?: number;
   tournamentStarted: boolean;
 }) {
   const liveMatchIds = useMemo(
@@ -75,20 +69,22 @@ export default function PredictionsClient({
   );
 
   const initialJokerSelection = useMemo<JokerSelectionState>(() => {
-    const selection: JokerSelectionState = { group: null, knockout: null };
+    const selection: JokerSelectionState = { group: [] };
 
     for (const match of matches) {
       const existing = predictionMap.get(match.match_number);
       if (!existing?.is_joker_applied) continue;
+      if (!canUseJokerOnMatch(match.stage, match.match_number)) continue;
 
-      const bucket = getJokerBucket(match.stage, match.match_number);
-      selection[bucket] = match.match_number;
+      selection.group.push(match.match_number);
     }
 
     return selection;
   }, [matches, predictionMap]);
 
-  const [jokerSelectionOverride, setJokerSelectionOverride] = useState<JokerSelectionOverride>({});
+  const [jokerSelectionOverride, setJokerSelectionOverride] = useState<JokerSelectionState | null>(
+    null,
+  );
   const didAutoScroll = useRef(false);
   const matchRefs = useRef<Record<number, HTMLDivElement | null>>({});
 
@@ -173,18 +169,25 @@ export default function PredictionsClient({
           <div className="flex flex-col gap-4">
             {matches.map((match) => {
               const existing = predictionMap.get(match.match_number);
-              const bucket = getJokerBucket(match.stage, match.match_number);
-              const savedStageUsed = bucket === "group" ? groupJokerUsed : knockoutJokerUsed;
-              const selectedMatchId =
-                jokerSelectionOverride[bucket] !== undefined
-                  ? jokerSelectionOverride[bucket] ?? null
-                  : initialJokerSelection[bucket];
-              const isSelected = selectedMatchId === match.match_number;
-              const showJokerToggle = isSelected || (!savedStageUsed && selectedMatchId === null);
+              const isGroupStageJokerMatch = canUseJokerOnMatch(match.stage, match.match_number);
+              const effectiveExistingIsJoker =
+                existing?.is_joker_applied === true && isGroupStageJokerMatch;
+              const selectedGroupJokers =
+                jokerSelectionOverride?.group ?? initialJokerSelection.group;
+              const persistedVisibleJokerCount = initialJokerSelection.group.length;
+              const activeGroupJokerCount = Math.max(
+                0,
+                groupJokerUsedCount - persistedVisibleJokerCount + selectedGroupJokers.length,
+              );
+              const isSelected =
+                isGroupStageJokerMatch && selectedGroupJokers.includes(match.match_number);
+              const showJokerToggle =
+                isGroupStageJokerMatch &&
+                (isSelected || activeGroupJokerCount < groupJokerLimit);
 
               return (
                 <div
-                  key={`${match.match_number}-${existing?.home_score_guess ?? "x"}-${existing?.away_score_guess ?? "x"}-${existing?.is_joker_applied ? "joker" : "plain"}-${match.status}`}
+                  key={`${match.match_number}-${existing?.home_score_guess ?? "x"}-${existing?.away_score_guess ?? "x"}-${effectiveExistingIsJoker ? "joker" : "plain"}-${match.status}`}
                   ref={(element) => {
                     matchRefs.current[match.match_number] = element;
                   }}
@@ -193,15 +196,19 @@ export default function PredictionsClient({
                     match={match}
                     existingHome={existing?.home_score_guess ?? null}
                     existingAway={existing?.away_score_guess ?? null}
-                    existingIsJoker={existing?.is_joker_applied ?? false}
+                    existingIsJoker={effectiveExistingIsJoker}
                     pointsEarned={existing?.points_earned ?? null}
                     isJokerSelected={isSelected}
                     showJokerToggle={showJokerToggle}
                     onToggleJoker={() =>
-                      setJokerSelectionOverride((current) => ({
-                        ...current,
-                        [bucket]: current[bucket] === match.match_number ? null : match.match_number,
-                      }))
+                      setJokerSelectionOverride((current) => {
+                        const currentGroup = current?.group ?? initialJokerSelection.group;
+                        const nextGroup = currentGroup.includes(match.match_number)
+                          ? currentGroup.filter((matchNumber) => matchNumber !== match.match_number)
+                          : [...currentGroup, match.match_number].slice(0, groupJokerLimit);
+
+                        return { group: nextGroup };
+                      })
                     }
                   />
                 </div>

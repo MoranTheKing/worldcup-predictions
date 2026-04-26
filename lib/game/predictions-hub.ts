@@ -1,5 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getUserJokerUsage } from "@/lib/game/boosters";
+import { GROUP_JOKER_LIMIT, getUserJokerUsage } from "@/lib/game/boosters";
 import { hasTournamentStarted } from "@/lib/game/tournament-start";
 import { attachTeamsToMatches } from "@/lib/tournament/matches";
 import type { MatchWithTeams } from "@/lib/tournament/matches";
@@ -14,6 +14,8 @@ export type PredictionsHubData = {
   tournamentPrediction: TournamentPredRow | null;
   groupJokerUsed: boolean;
   knockoutJokerUsed: boolean;
+  groupJokerUsedCount: number;
+  groupJokerLimit: number;
   tournamentStarted: boolean;
 };
 
@@ -67,6 +69,7 @@ export async function loadPredictionsHubData(userId: string | null): Promise<Pre
   let tournamentPrediction: TournamentPredRow | null = null;
   let groupJokerUsed = false;
   let knockoutJokerUsed = false;
+  let groupJokerUsedCount = 0;
 
   if (userId) {
     const [predictionsResult, tournamentResult, jokerUsage] = await Promise.all([
@@ -112,6 +115,7 @@ export async function loadPredictionsHubData(userId: string | null): Promise<Pre
 
     groupJokerUsed = jokerUsage.groupUsed;
     knockoutJokerUsed = jokerUsage.knockoutUsed;
+    groupJokerUsedCount = jokerUsage.groupUsedCount;
   }
 
   return {
@@ -122,6 +126,8 @@ export async function loadPredictionsHubData(userId: string | null): Promise<Pre
     tournamentPrediction,
     groupJokerUsed,
     knockoutJokerUsed,
+    groupJokerUsedCount,
+    groupJokerLimit: GROUP_JOKER_LIMIT,
     tournamentStarted,
   };
 }
