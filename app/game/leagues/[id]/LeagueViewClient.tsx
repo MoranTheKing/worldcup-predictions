@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import OutrightChoiceBadge from "@/components/game/OutrightChoiceBadge";
 import UserAvatar from "@/components/UserAvatar";
 import { useDevLiveRefresh } from "@/lib/dev/live-refresh";
+import { useLeagueRealtimeRefresh } from "@/lib/live/league-realtime-refresh";
 import { getLiveMatchStatusLabel, type MatchPhase } from "@/lib/tournament/matches";
 import {
   deleteLeague,
@@ -68,7 +69,18 @@ export default function LeagueViewClient({
   members,
   liveMatches,
 }: LeagueViewProps) {
-  useDevLiveRefresh({ pollIntervalMs: 1500 });
+  const liveMatchIds = useMemo(
+    () => liveMatches.map((match) => match.match_number),
+    [liveMatches],
+  );
+  const memberIds = useMemo(() => members.map((member) => member.user_id), [members]);
+
+  useDevLiveRefresh();
+  useLeagueRealtimeRefresh({
+    leagueId: league.id,
+    liveMatchIds,
+    memberIds,
+  });
 
   const isOwner = league.owner_id === currentUserId;
   const hasLiveMatches = liveMatches.length > 0;

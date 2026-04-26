@@ -54,6 +54,8 @@ export function useDevLiveRefresh({ pollIntervalMs = 0 }: UseDevLiveRefreshOptio
   const lastRefreshAtRef = useRef(0);
   const lastPolledVersionRef = useRef<string | null>(null);
   const pollInFlightRef = useRef(false);
+  const effectivePollIntervalMs =
+    process.env.NODE_ENV === "production" ? 0 : pollIntervalMs;
 
   useEffect(() => {
     function refreshAt(timestamp: number) {
@@ -96,7 +98,7 @@ export function useDevLiveRefresh({ pollIntervalMs = 0 }: UseDevLiveRefreshOptio
     window.addEventListener("storage", handleStorage);
 
     const intervalId =
-      pollIntervalMs > 0
+      effectivePollIntervalMs > 0
         ? window.setInterval(() => {
             if (document.visibilityState !== "visible" || pollInFlightRef.current) return;
 
@@ -130,7 +132,7 @@ export function useDevLiveRefresh({ pollIntervalMs = 0 }: UseDevLiveRefreshOptio
               .finally(() => {
                 pollInFlightRef.current = false;
               });
-          }, pollIntervalMs)
+          }, effectivePollIntervalMs)
         : null;
 
     return () => {
@@ -140,5 +142,5 @@ export function useDevLiveRefresh({ pollIntervalMs = 0 }: UseDevLiveRefreshOptio
         window.clearInterval(intervalId);
       }
     };
-  }, [pollIntervalMs, router]);
+  }, [effectivePollIntervalMs, router]);
 }

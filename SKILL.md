@@ -19,5 +19,6 @@ Key rules to remember:
 - Live prediction chips in leaderboards keep the surrounding UI RTL. Remember that RTL flex visually reverses child order, so either make the whole chip `dir="ltr"` or render the numeric score in the visual flag order; the league live chips intentionally render away-home with `dir="ltr"` for the score.
 - Cards use glassmorphism: backdrop-blur + rgba surface + subtle border
 - Bottom nav: frosted glass with neon green active glow
+- Production live leaderboards should use scoped Supabase Realtime subscriptions instead of interval polling. Debounce `router.refresh()` and defer refreshes while the browser tab is hidden.
 
 If the user invokes this skill without any other guidance, ask them what they want to build or design, ask some questions, and act as an expert designer who outputs HTML artifacts _or_ production code, depending on the need.

@@ -268,6 +268,7 @@ Brevo Free מוגבל בכמות יומית לכל החשבון, לכן ביום
 - `20260423000020_enforce_unique_profile_handles.sql`
 - `20260424000021_public_tournament_projection.sql`
 - `20260425000022_add_match_phase.sql`
+- `20260426000023_enable_live_leaderboard_realtime.sql`
 
 את `20260424000021_public_tournament_projection.sql` צריך להריץ לפני בדיקת `/dashboard/tournament` כמשתמש לא רשום. בלי ה-migration הזה, הדף כבר לא ישתמש ב-service-role, אבל Supabase לא יכיר את ה-views הציבוריים ולכן לא יחזיר נתוני טורניר ל-anon.
 
@@ -297,5 +298,12 @@ Brevo Free מוגבל בכמות יומית לכל החשבון, לכן ביום
 - `/game/predictions` צובע פגיעת בול עם Joker בזמן LIVE בסגול jackpot, כולל הריבועים של התוצאה/הניחוש/הנקודות באותו tone כמו אחרי סיום משחק.
 - `/game/leagues/[id]` מציג ב-Leaderboard עד שני משחקים חיים עם ניחושי החברים: דגל בית, תוצאת הניחוש ב-`dir="ltr"`, דגל חוץ, וסימון Joker קטן.
 - צ'יפי הלייב בליגה מקבלים צבע לפי מצב הניחוש מול התוצאה החיה: סגול ל-Joker exact, ירוק ל-exact, צהוב לכיוון, אדום להחמצה או חוסר ניחוש, וכחול כשאין עדיין תוצאה להערכה.
-- מסך הליגה משתמש ברענון ה-dev live הקיים כדי לשקף שינויי משחק מקומיים בלי רענון ידני.
+- מסך הליגה משתמש ב-Supabase Realtime לרענון לייב בפרודקשן, ונשאר מחובר ל-BroadcastChannel המקומי של DevTools בלי polling.
 - בדיקות שעברו: `npm.cmd run lint`, `npm.cmd run build`.
+
+## Production live refresh - 2026-04-26
+
+- `/game/leagues/[id]` no longer relies on interval polling for live leaderboard updates. It uses Supabase Realtime postgres changes for `matches`, current live-match `predictions`, and the current `league_members` row scope.
+- Client refreshes are debounced and throttled before calling `router.refresh()`, and refresh work is deferred while the browser tab is hidden.
+- The old dev refresh hook now disables its polling branch in production builds. DevTools can still notify local tabs through BroadcastChannel/localStorage without hitting the server.
+- Run `supabase/migrations/20260426000023_enable_live_leaderboard_realtime.sql` so Supabase publishes the realtime table changes needed by the leaderboard.
