@@ -30,9 +30,15 @@ const STAGE_POINTS_BY_KIND: Record<string, number> = {
   unknown: 0,
 };
 
-const HIT_POINTS_BY_KIND: Record<Exclude<PredictionHitKind, "miss">, number> = {
-  direction: 0,
-  exact: 1,
+const EXACT_HIT_POINTS_BY_KIND: Record<string, number> = {
+  group: 2,
+  round_of_32: 1,
+  round_of_16: 1,
+  quarter_final: 1,
+  semi_final: 1,
+  third_place: 1,
+  final: 2,
+  unknown: 2,
 };
 
 export function calculatePredictionPoints(
@@ -64,7 +70,7 @@ export function calculatePredictionPoints(
     predictedHome === actualHome && predictedAway === actualAway ? "exact" : "direction";
   const basePoints = getBasePointsForOdds(getOddsForDirection(match, predictedDirection));
   const stagePoints = getStagePoints(match.stage);
-  const hitPoints = HIT_POINTS_BY_KIND[hitKind];
+  const hitPoints = hitKind === "exact" ? getExactHitPoints(match.stage) : 0;
   const multiplier = prediction.is_joker === true || prediction.is_joker_applied === true ? 2 : 1;
 
   return (basePoints + stagePoints + hitPoints) * multiplier;
@@ -86,6 +92,11 @@ export function getBasePointsForOdds(odds: number | string | null | undefined) {
 function getStagePoints(stage: string) {
   const kind = getMatchStageKind(stage);
   return STAGE_POINTS_BY_KIND[kind] ?? STAGE_POINTS_BY_KIND.unknown;
+}
+
+function getExactHitPoints(stage: string) {
+  const kind = getMatchStageKind(stage);
+  return EXACT_HIT_POINTS_BY_KIND[kind] ?? EXACT_HIT_POINTS_BY_KIND.unknown;
 }
 
 function getOddsForDirection(match: ScoringMatch, direction: PredictionDirection) {
