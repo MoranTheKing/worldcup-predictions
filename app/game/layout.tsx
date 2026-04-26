@@ -5,6 +5,7 @@ import GameHeroShell from "@/components/game/GameHeroShell";
 import GameSubNav from "@/components/game/GameSubNav";
 import { requireServerMfa } from "@/lib/auth/mfa-server";
 import { GROUP_JOKER_LIMIT, getUserJokerUsage } from "@/lib/game/boosters";
+import { getUserLiveScoreProjection } from "@/lib/game/live-score-projection";
 import { getUserGameStats } from "@/lib/game/stats";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { fetchAuthProfile, resolveDisplayName } from "@/lib/supabase/auth-profile";
@@ -30,7 +31,7 @@ export default async function GameLayout({
 
   const admin = createAdminClient();
 
-  const [profile, jokerUsage, gameStats] = await Promise.all([
+  const [profile, jokerUsage, gameStats, liveProjection] = await Promise.all([
     fetchAuthProfile(admin, user.id).catch((error) => {
       console.error("[GameLayout] profile fetch failed:", error);
       return null;
@@ -48,6 +49,10 @@ export default async function GameLayout({
       console.error("[GameLayout] game stats failed:", error);
       return { totalHits: 0 };
     }),
+    getUserLiveScoreProjection(admin, user.id).catch((error) => {
+      console.error("[GameLayout] live projection failed:", error);
+      return { liveScoreDelta: null, liveMatchCount: 0, livePredictionCount: 0 };
+    }),
   ]);
 
   const displayName = resolveDisplayName(profile, user);
@@ -59,10 +64,13 @@ export default async function GameLayout({
     <DashboardShell>
       <div className="max-w-5xl p-4 md:p-8">
         <GameHeroShell
+          currentUserId={user.id}
           displayName={displayName}
           avatarUrl={avatarUrl}
           totalScore={totalScore}
           totalHits={totalHits}
+          liveScoreDelta={liveProjection.liveScoreDelta}
+          liveMatchCount={liveProjection.liveMatchCount}
           groupJokerUsedCount={jokerUsage.groupUsedCount}
           groupJokerLimit={GROUP_JOKER_LIMIT}
         />

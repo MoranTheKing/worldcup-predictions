@@ -314,6 +314,7 @@ Brevo Free מוגבל בכמות יומית לכל החשבון, לכן ביום
 
 - `/game/leagues/[id]` no longer relies on interval polling for live leaderboard updates. It uses Supabase Realtime postgres changes for `matches`, current live-match `predictions`, and the current `league_members` row scope.
 - `/game/predictions` uses the same production refresh path for live match status/score changes and the current user's prediction updates.
+- The `/game` hero score cards also refresh through Supabase Realtime. `Total Score` remains the persisted finished-match score, and a small `LIVE +N` badge shows the current projected live delta without mutating `profiles.total_score`.
 - Client refreshes are debounced and throttled before calling `router.refresh()`, and refresh work is deferred while the browser tab is hidden.
 - The old dev refresh hook now disables its polling branch in production builds. DevTools can still notify local tabs through BroadcastChannel/localStorage without hitting the server.
 - Run `supabase/migrations/20260426000023_enable_live_leaderboard_realtime.sql` so Supabase publishes the realtime table changes needed by the leaderboard.
@@ -325,6 +326,7 @@ Brevo Free מוגבל בכמות יומית לכל החשבון, לכן ביום
 - Finished match updates call `scoreFinishedMatchPredictions`, updating `predictions.points_earned` and recalculating affected `profiles.total_score` values for leaderboard consistency.
 - `/game/predictions` shows the available direction reward for home/draw/away before saving, and the "exact score" row shows only the extra points added on top of the direction reward.
 - `/game/leagues/[id]` projects live scoring in the leaderboard with `+N` badges per live prediction chip and a live delta next to each member's persisted total.
+- `lib/game/live-score-projection.ts` reuses `calculatePredictionPoints` for the logged-in user's current live matches, and `/api/game/live-score-projection` returns the hero card's persisted totals plus the temporary live score delta.
 - `/game/leaderboard` reuses the full league leaderboard UI for all profiles: live prediction chips, projected live `+N`, tournament winner and top-scorer picks, and profile-based realtime total updates.
 - Dev Tools can edit `home_odds`/`draw_odds`/`away_odds` and can generate random future predictions for the currently logged-in dev user only.
 - Dev Tools also includes a random odds button that seeds plausible 1/X/2 odds for every match and persists them through the bulk match API.

@@ -20,6 +20,7 @@ Key rules to remember:
 - Cards use glassmorphism: backdrop-blur + rgba surface + subtle border
 - Bottom nav: frosted glass with neon green active glow
 - Production live prediction screens and leaderboards should use scoped Supabase Realtime subscriptions instead of interval polling. Debounce `router.refresh()` and defer refreshes while the browser tab is hidden.
+- Game header score cards should keep `Total Score` as the persisted finished-match score and show temporary live projections as a separate `LIVE +N` badge sourced from `/api/game/live-score-projection`.
 - Scoring lives in `lib/game/scoring.ts`: odds-tier base points + stage direction bonus; exact hits add the separate stage exact-score bonus, then x2 Joker. Persist scores through `scoreFinishedMatchPredictions` so `predictions.points_earned` and `profiles.total_score` stay aligned.
 - Joker rules are exactly two total Jokers and both are group-stage-only. Do not surface or score Joker multipliers for knockout matches, even if legacy rows still have `is_joker_applied = true`.
 - Prediction cards should show available odds-based rewards before save; live cards and league rows should show projected `+N` without mutating persisted totals until the match is finished.

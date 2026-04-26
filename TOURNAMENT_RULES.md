@@ -52,6 +52,17 @@ Opponent view and league view follow anti-cheat rules:
 - outright picks are hidden from other users until tournament kickoff
 - the viewing user can still see their own outright picks before kickoff
 
+## Live projected scoring
+
+Persisted totals stay final-only: `profiles.total_score` changes only when a match is finished and scoring sync writes `predictions.points_earned`.
+
+During live matches, UI surfaces may show temporary projections as `+N`:
+
+- leaderboard rows show per-live-prediction and per-user live deltas
+- the game hero shows a `LIVE +N` badge next to `Total Score`
+- projections use `calculatePredictionPoints` against the current live score and never write to the database
+- at most two live matches are considered for compact UI surfaces
+
 ## Prediction lock rules
 
 The current intended behavior is:
