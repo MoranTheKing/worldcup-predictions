@@ -105,11 +105,24 @@ type GroupStandingContext = {
 };
 
 const THIRD_PLACE_QUALIFIERS = 8;
-const PENDING_MATCH_SCENARIOS = [
+const BASIC_PENDING_MATCH_SCENARIOS = [
   { homeScore: 1, awayScore: 0 },
   { homeScore: 0, awayScore: 0 },
   { homeScore: 0, awayScore: 1 },
 ] as const;
+const MID_PENDING_MATCH_SCENARIOS = [
+  { homeScore: 1, awayScore: 0 },
+  { homeScore: 2, awayScore: 0 },
+  { homeScore: 3, awayScore: 0 },
+  { homeScore: 0, awayScore: 0 },
+  { homeScore: 1, awayScore: 1 },
+  { homeScore: 2, awayScore: 2 },
+  { homeScore: 3, awayScore: 3 },
+  { homeScore: 0, awayScore: 1 },
+  { homeScore: 0, awayScore: 2 },
+  { homeScore: 0, awayScore: 3 },
+] as const;
+const DETAILED_SCENARIO_MAX_GOALS = 8;
 
 function isCompletedGroupMatch(match: TournamentMatch): boolean {
   return (
@@ -387,6 +400,24 @@ function buildScenarioMatch(
   };
 }
 
+function buildDetailedPendingMatchScenarios(): Array<{ homeScore: number; awayScore: number }> {
+  const scenarios: Array<{ homeScore: number; awayScore: number }> = [];
+
+  for (let homeScore = 0; homeScore <= DETAILED_SCENARIO_MAX_GOALS; homeScore += 1) {
+    for (let awayScore = 0; awayScore <= DETAILED_SCENARIO_MAX_GOALS; awayScore += 1) {
+      scenarios.push({ homeScore, awayScore });
+    }
+  }
+
+  return scenarios;
+}
+
+function getPendingMatchScenarioScores(pendingMatchCount: number) {
+  if (pendingMatchCount <= 2) return buildDetailedPendingMatchScenarios();
+  if (pendingMatchCount <= 3) return MID_PENDING_MATCH_SCENARIOS;
+  return BASIC_PENDING_MATCH_SCENARIOS;
+}
+
 function buildScenarioStandings(
   teams: TournamentTeam[],
   completedMatches: TournamentMatch[],
@@ -417,6 +448,7 @@ function enumerateStandingScenarios(
   pendingMatches: PendingGroupMatch[],
 ): TeamStanding[][] {
   const scenarios: TeamStanding[][] = [];
+  const scoreScenarios = getPendingMatchScenarioScores(pendingMatches.length);
 
   if (pendingMatches.length === 0) {
     scenarios.push(buildScenarioStandings(teams, completedMatches, []));
@@ -431,7 +463,7 @@ function enumerateStandingScenarios(
 
     const pendingMatch = pendingMatches[index];
 
-    for (const score of PENDING_MATCH_SCENARIOS) {
+    for (const score of scoreScenarios) {
       walk(index + 1, [
         ...scenarioMatches,
         buildScenarioMatch(pendingMatch, score.homeScore, score.awayScore),
