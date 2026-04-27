@@ -39,5 +39,8 @@ Key rules to remember:
 - For kickoff audits, prefer FIFA's official Scores & Fixtures API (`https://api.fifa.com/api/v3/calendar/matches`, World Cup `idCompetition=17`, `idSeason=285023`) over prose articles. Convert the API UTC `Date` to Israel time (`+03:00` during the tournament).
 - Dev Tools owns local odds editing, random odds seeding, and current-user-only random prediction filling. Keep these routes localhost-only and never use them for bulk production user prediction generation.
 - Dev Tools `Clear All Match Data` is intentionally destructive in local dev: it resets matches, odds, all prediction tables, legacy bets, and profile totals so league leaderboards return to zero while memberships remain.
+- Team hub pages now include `/dashboard/teams`, `/dashboard/teams/[id]`, `/dashboard/teams/[id]/squad`, and `/dashboard/teams/[id]/stats`. Keep the main team page focused, and put detailed player/team API stats on the stats route.
+- Team profile score displays are team-perspective RTL: the viewed team's goals must remain on the visual right side, including recent-form and match cards.
+- API-ready team profile data lives in migration `20260427000030_add_team_api_profile_fields.sql`: outright odds, coach name, player appearances/minutes/cards, and five pre-tournament `team_recent_matches`.
 
 If the user invokes this skill without any other guidance, ask them what they want to build or design, ask some questions, and act as an expert designer who outputs HTML artifacts _or_ production code, depending on the need.

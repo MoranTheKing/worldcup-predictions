@@ -794,3 +794,12 @@ raw_error
 - The global leaderboard at `/game/leaderboard` uses the same league leaderboard UI and data shape as private leagues, but sources members from `profiles`; realtime profile-total refreshes require `supabase/migrations/20260426000025_enable_global_leaderboard_realtime.sql`.
 - `supabase/migrations/20260426000027_correct_schedule_from_fifa.sql` corrects `matches.match_number` and `matches.date_time` to FIFA's official match order and kickoff timestamps. It relinks existing `predictions.match_id`/`bets.match_id` references to the same fixture after renumbering, and must not alter team sides, placeholders, statuses, scores or odds.
 - `supabase/migrations/20260426000028_align_knockout_kickoffs_israel.sql` aligns knockout matches 74-90 to the Israel-time knockout schedule by match number. It is date/time-only and keeps all bracket placeholders and match numbers intact.
+
+## Team profile API fields - 2026-04-27
+
+- `teams.outright_odds` and `teams.outright_odds_updated_at` hold live tournament-winning odds for `/dashboard/teams` and `/dashboard/teams/[id]`.
+- `teams.coach_name` and `teams.coach_updated_at` hold the head coach card for squad/profile pages.
+- `players.appearances`, `players.minutes_played`, `players.yellow_cards`, and `players.red_cards` support the new team stats route.
+- `team_recent_matches` stores five pre-tournament form matches per team, with result, score, opponent, competition, source, and date.
+- These fields are introduced by `supabase/migrations/20260427000030_add_team_api_profile_fields.sql`.
+- RTL rule for API consumers: when rendering scores from a selected team's perspective, pass team goals first and render them on the visual right side. Do not reuse home-away LTR score order inside team profile cards.

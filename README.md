@@ -356,6 +356,15 @@ Brevo Free מוגבל בכמות יומית לכל החשבון, לכן ביום
 - `20260427000029_align_knockout_kickoffs_with_fifa_api.sql` corrects #74-#90 again against FIFA's official Scores & Fixtures API (`api.fifa.com/api/v3/calendar/matches`, `idCompetition=17`, `idSeason=285023`). This fixes the July 3/4 drift: #86 is `2026-07-04T01:00:00+03:00`, #87 is `2026-07-04T04:30:00+03:00`, #88 is `2026-07-03T21:00:00+03:00`, #89 is `2026-07-05T00:00:00+03:00`, and #90 is `2026-07-04T20:00:00+03:00`.
 - Dev Tools keeps the existing controls but its match table now uses an LTR scroll container with an RTL table and a narrower minimum width so the horizontal overflow behaves predictably.
 
+## Team Hub update - 2026-04-27
+
+- Added `/dashboard/teams` as a live RTL teams index. It groups all teams by group, mirrors the tournament standings logic, and displays each team's outright winning odds from `teams.outright_odds`.
+- Expanded `/dashboard/teams/[id]` so the hero no longer repeats points or goal difference. The team record now lives in the group table, while goals are shown clearly as goals for and goals against.
+- Added `/dashboard/teams/[id]/stats` for team and player statistics: goals, assists, appearances, minutes, yellow cards, red cards, clean sheets, and group status.
+- Updated `/dashboard/teams/[id]/squad` to read coach and richer player stats from API-ready columns.
+- Added migration `20260427000030_add_team_api_profile_fields.sql` with `teams.outright_odds`, `teams.coach_name`, player stat columns, and `team_recent_matches` for the five pre-tournament form matches.
+- Team-perspective scores are rendered with RTL-safe inline order: the viewed team's goals are on the visual right side, and the opponent's goals are on the visual left side.
+
 ## Joker and live table update - 2026-04-26
 
 - Joker rules are now two total Jokers, both usable only on group-stage matches. Server saves, client selection, dev random prediction filling, and `calculatePredictionPoints` all enforce the same eligibility rule.

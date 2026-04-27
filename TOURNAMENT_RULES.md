@@ -104,3 +104,13 @@ Each resolved team has a canonical public detail route at `/dashboard/teams/[id]
 Team references in match cards, prediction cards, tournament tables, knockout bracket seeds, league live chips, and tournament-winner badges should navigate to that route.
 The detail page is intentionally read-only and summarizes the team's fixture path, next known match, current group standing, tournament status, expanded stats, and five-match form.
 It also links to `/dashboard/teams/[id]/squad`, which shows the current local player data, grouped by position, plus a coach placeholder until the external API sync supplies coach data.
+
+## Team hub, odds, and player statistics
+
+The team hub now has three public routes:
+
+- `/dashboard/teams` lists every team by group, using the same live standings calculation as `/dashboard/tournament`, and shows `teams.outright_odds` as the API-fed tournament-winning odds.
+- `/dashboard/teams/[id]` is the primary team profile. It avoids duplicating points and goal difference in the hero; those live values are shown in the group table instead.
+- `/dashboard/teams/[id]/stats` separates team statistics from individual player statistics, including goals, assists, appearances, minutes, yellow cards, and red cards.
+
+The `team_recent_matches` table is reserved for the five pre-tournament form matches. Tournament matches and pre-tournament form share the same RTL score rendering rule: from the viewed team's perspective, the team's goals are rendered on the visual right side and the opponent's goals on the visual left side.

@@ -12,6 +12,10 @@ type TeamPlayer = {
   position: string | null;
   goals?: number | null;
   assists?: number | null;
+  appearances?: number | null;
+  minutes_played?: number | null;
+  yellow_cards?: number | null;
+  red_cards?: number | null;
 };
 
 type PositionGroup = {
@@ -27,12 +31,12 @@ export default async function TeamSquadPage({ params }: { params: Promise<{ id: 
   const [{ data: teamData }, { data: playersData, error: playersError }] = await Promise.all([
     supabase
       .from("teams")
-      .select("id, name, name_he, logo_url, group_letter, fair_play_score, fifa_ranking, is_eliminated")
+      .select("id, name, name_he, logo_url, group_letter, fair_play_score, fifa_ranking, is_eliminated, coach_name, coach_updated_at")
       .eq("id", id)
       .maybeSingle(),
     supabase
       .from("players")
-      .select("id, name, position, goals, assists")
+      .select("id, name, position, goals, assists, appearances, minutes_played, yellow_cards, red_cards")
       .eq("team_id", id)
       .order("position", { ascending: true })
       .order("name", { ascending: true }),
@@ -51,7 +55,7 @@ export default async function TeamSquadPage({ params }: { params: Promise<{ id: 
 
   return (
     <div className="wc-shell px-4 py-4 md:px-6 md:py-6" dir="rtl">
-      <div className="mb-4 flex items-center justify-between gap-3">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <Link
           href={`/dashboard/teams/${encodeURIComponent(id)}`}
           className="inline-flex items-center gap-2 text-xs font-semibold text-wc-fg3 transition hover:text-wc-fg1"
@@ -59,10 +63,10 @@ export default async function TeamSquadPage({ params }: { params: Promise<{ id: 
           חזרה לנבחרת
         </Link>
         <Link
-          href="/dashboard/tournament"
-          className="hidden text-xs font-semibold text-wc-fg3 transition hover:text-wc-fg1 sm:inline-flex"
+          href={`/dashboard/teams/${encodeURIComponent(id)}/stats`}
+          className="rounded-full border border-white/10 bg-white/8 px-3 py-1.5 text-xs font-bold text-wc-fg2 transition hover:border-wc-neon/40 hover:text-wc-neon"
         >
-          טבלת הטורניר
+          סטטיסטיקות
         </Link>
       </div>
 
@@ -76,7 +80,7 @@ export default async function TeamSquadPage({ params }: { params: Promise<{ id: 
                 {displayName}
               </h1>
               <p className="mt-3 max-w-2xl text-sm leading-7 text-wc-fg2">
-                הסגל והמאמן יסתנכרנו בהמשך מול ה-API. כרגע מוצגים השחקנים שכבר קיימים במערכת.
+                שחקנים, עמדות, מאמן ראשי ונתוני הופעות בסיסיים לקראת סנכרון מלא מה-API.
               </p>
             </div>
           </div>
@@ -94,9 +98,9 @@ export default async function TeamSquadPage({ params }: { params: Promise<{ id: 
           <h2 className="mt-1 font-sans text-xl font-black tracking-normal text-wc-fg1">מאמן</h2>
           <div className="mt-4 rounded-[1.4rem] border border-white/10 bg-black/14 p-5">
             <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-wc-fg3">מאמן ראשי</p>
-            <p className="mt-2 text-2xl font-black text-wc-fg1">טרם סונכרן</p>
+            <p className="mt-2 text-2xl font-black text-wc-fg1">{team.coach_name ?? "טרם סונכרן"}</p>
             <p className="mt-2 text-sm leading-7 text-wc-fg3">
-              ברגע שנתוני המאמן יגיעו מה-API, הכרטיס הזה יתעדכן אוטומטית.
+              כאשר נתוני המאמן יגיעו מה-API, הכרטיס הזה יתעדכן אוטומטית.
             </p>
           </div>
         </section>
@@ -127,7 +131,7 @@ export default async function TeamSquadPage({ params }: { params: Promise<{ id: 
             <div className="mt-4 rounded-[1.4rem] border border-dashed border-white/10 bg-white/[0.035] p-8 text-center">
               <p className="text-lg font-black text-wc-fg1">הסגל עדיין לא סונכרן</p>
               <p className="mt-2 text-sm leading-7 text-wc-fg3">
-                כשה-API יחזיר את רשימת השחקנים הרשמית, הם יוצגו כאן לפי עמדות.
+                כאשר ה-API יחזיר את רשימת השחקנים הרשמית, הם יוצגו כאן לפי עמדות.
               </p>
             </div>
           )}
@@ -170,14 +174,21 @@ function HeroStat({ label, value }: { label: string; value: string }) {
 
 function PlayerRow({ player }: { player: TeamPlayer }) {
   return (
-    <div className="flex items-center justify-between gap-3 rounded-xl bg-white/5 px-3 py-2">
-      <div className="min-w-0">
-        <p className="truncate text-sm font-bold text-wc-fg1">{player.name}</p>
-        <p className="text-[11px] text-wc-fg3">{getPositionLabel(player.position)}</p>
+    <div className="rounded-xl bg-white/5 px-3 py-2">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-bold text-wc-fg1">{player.name}</p>
+          <p className="text-[11px] text-wc-fg3">{getPositionLabel(player.position)}</p>
+        </div>
+        <div className="shrink-0 text-end">
+          <p className="text-xs font-bold text-wc-fg2">{player.goals ?? 0} שערים</p>
+          <p className="text-[11px] text-wc-fg3">{player.assists ?? 0} בישולים</p>
+        </div>
       </div>
-      <div className="shrink-0 text-end">
-        <p className="text-xs font-bold text-wc-fg2">{player.goals ?? 0} שערים</p>
-        <p className="text-[11px] text-wc-fg3">{player.assists ?? 0} בישולים</p>
+      <div className="mt-2 grid grid-cols-3 gap-1 text-center text-[10px] font-bold text-wc-fg3">
+        <span className="rounded-full bg-white/6 px-2 py-1">{player.appearances ?? 0} הופ׳</span>
+        <span className="rounded-full bg-white/6 px-2 py-1 text-wc-amber">{player.yellow_cards ?? 0} צה׳</span>
+        <span className="rounded-full bg-white/6 px-2 py-1 text-wc-danger">{player.red_cards ?? 0} אד׳</span>
       </div>
     </div>
   );

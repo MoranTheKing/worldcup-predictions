@@ -30,6 +30,10 @@ export type TournamentTeamRecord = {
   fifa_ranking?: number | null;
   played_count?: number | null;
   is_eliminated?: boolean | null;
+  outright_odds?: number | string | null;
+  outright_odds_updated_at?: string | null;
+  coach_name?: string | null;
+  coach_updated_at?: string | null;
 };
 
 export type TournamentMatchRecord = {
