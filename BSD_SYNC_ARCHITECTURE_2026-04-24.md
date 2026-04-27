@@ -825,6 +825,14 @@ raw_error
 - Dev Tools now has manual team outright odds editing and reset via `/api/dev/outright-odds/teams`. Top-scorer odds remain random/API-fed until the external player feed is connected.
 - API sync can start with a source-ID mapping phase: store external team, match, and player identifiers, then sync match clocks/scores, odds, rosters, coach data, recent form, and player stats into Supabase. Browser UI should continue reading Supabase only.
 
+## Dev odds and sync execution note - 2026-04-27
+
+- `/api/dev/outright-odds/teams` now updates existing team rows instead of upserting. This prevents a partial Dev Tools save from creating a `teams` row without the required `name` column.
+- Dev Tools includes a team-only random outright-odds action for all existing national teams. The existing combined randomizer still seeds team outright odds and top-scorer odds, but both paths are update-only.
+- The BSD migration only adds storage for external IDs, coach images, and sync timestamps. Data appears only after the server route `POST /api/dev/bzzoiro/sync-teams` runs successfully.
+- Current visible BSD fields after a successful sync are team external IDs/images, coach name/photo, player external IDs/photos/shirt numbers, and refreshed squad/team pages. Live match clocks and score syncing remain a later Worker slice.
+- The browser calls only local app routes. BSD API requests and the BSD token stay on the server route, so ordinary users do not create per-visit BSD traffic.
+
 ## Implemented team sync foundation - 2026-04-27
 
 - Added localhost-only `POST /api/dev/bzzoiro/sync-teams` as the first BSD sync slice. It is intentionally dev-only and still Supabase-first.

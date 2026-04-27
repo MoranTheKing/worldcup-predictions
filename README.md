@@ -409,3 +409,12 @@ Brevo Free מוגבל בכמות יומית לכל החשבון, לכן ביום
 - Added `supabase/migrations/20260427000033_add_bzzoiro_sync_fields.sql` for BSD/Bzzoiro team IDs, player IDs, coach image fields, and sync timestamps.
 - Added localhost-only `/api/dev/bzzoiro/sync-teams` plus the Dev Tools `סנכרון נבחרות BSD` button. The sync uses BSD `/api/teams/`, `/api/players/?national_team=...`, `/api/managers/?team_id=...`, and public `/img/{type}/{id}/` image URLs, then writes the results into Supabase.
 - The BSD team-name matching was checked against the configured World Cup league ID: paginated BSD team data maps to all 48 local teams after aliases such as `Czech Republic/Czechia` and `Bosnia and Herzegovina/Bosnia & Herzegovina`.
+
+## Dev odds and BSD sync safety - 2026-04-27
+
+- Manual team outright odds saving is update-only. `/api/dev/outright-odds/teams` no longer uses `upsert` into `teams`, so saving an empty or partial odds form cannot accidentally insert a team row without `name`.
+- Dev Tools now has a team-only random odds button for all national teams. It updates existing `teams.outright_odds` rows and leaves player top-scorer odds untouched.
+- The combined team/player odds randomizer also updates existing rows only. It must not create teams or players as a side effect of seeding development odds.
+- Running the BSD migration does not run the sync. After `20260427000033_add_bzzoiro_sync_fields.sql` is applied, use the Dev Tools `סנכרון נבחרות BSD` action, or `POST /api/dev/bzzoiro/sync-teams` locally, to pull data.
+- Successful BSD team sync is visible in Supabase and UI through `teams.bzzoiro_team_id`, BSD team image URLs, `teams.coach_name`, `teams.coach_photo_url`, `players.bzzoiro_player_id`, player photos, shirt numbers, and refreshed squad pages.
+- BSD fetching is server-side only. The browser calls the local Next route, the route reads the BSD token from server env, writes Supabase, and revalidates pages. Regular visitors do not call BSD directly.

@@ -60,17 +60,72 @@ export async function PATCH(request: Request) {
   }
 
   const supabase = createAdminClient();
+  let updated = 0;
 
-  if (rows.length > 0) {
-    const { error } = await supabase.from("teams").upsert(rows, { onConflict: "id" });
+  for (const row of rows) {
+    const { data, error } = await supabase
+      .from("teams")
+      .update({
+        outright_odds: row.outright_odds,
+        outright_odds_updated_at: row.outright_odds_updated_at,
+      })
+      .eq("id", row.id)
+      .select("id")
+      .maybeSingle();
+
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    if (data) {
+      updated += 1;
     }
   }
 
   revalidateTeamOddsPaths();
 
-  return NextResponse.json({ updated: rows.length });
+  return NextResponse.json({ updated });
+}
+
+export async function POST(request: Request) {
+  const blocked = devOnly(request);
+  if (blocked) return blocked;
+
+  const supabase = createAdminClient();
+  const { data: teams, error: teamsError } = await supabase
+    .from("teams")
+    .select("id, fifa_ranking");
+
+  if (teamsError) {
+    return NextResponse.json({ error: teamsError.message }, { status: 500 });
+  }
+
+  const updatedAt = new Date().toISOString();
+  let updated = 0;
+
+  for (const team of (teams ?? []) as Array<{ id: string; fifa_ranking?: number | null }>) {
+    const { data, error } = await supabase
+      .from("teams")
+      .update({
+        outright_odds: randomTeamOutrightOdds(team.fifa_ranking),
+        outright_odds_updated_at: updatedAt,
+      })
+      .eq("id", team.id)
+      .select("id")
+      .maybeSingle();
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    if (data) {
+      updated += 1;
+    }
+  }
+
+  revalidateTeamOddsPaths();
+
+  return NextResponse.json({ updated });
 }
 
 export async function DELETE(request: Request) {
@@ -98,4 +153,12 @@ function revalidateTeamOddsPaths() {
   revalidatePath("/dashboard/teams");
   revalidatePath("/dashboard/stats");
   revalidatePath("/dev-tools");
+}
+
+function randomTeamOutrightOdds(fifaRanking: number | null | undefined) {
+  const rank = Number.isFinite(Number(fifaRanking)) ? Math.max(1, Number(fifaRanking)) : 80;
+  const base = 3.2 + Math.pow(rank, 1.16) * 0.32;
+  const jitter = 0.78 + Math.random() * 0.56;
+  const longshotBoost = Math.random() < 0.12 ? 1.4 + Math.random() * 1.2 : 1;
+  return Math.round(Math.min(350, Math.max(2.5, base * jitter * longshotBoost)) * 100) / 100;
 }

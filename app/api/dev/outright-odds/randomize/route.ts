@@ -45,13 +45,31 @@ export async function POST(request: Request) {
   }));
 
   if (teamRows.length > 0) {
-    const { error } = await supabase.from("teams").upsert(teamRows, { onConflict: "id" });
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    for (const row of teamRows) {
+      const { error } = await supabase
+        .from("teams")
+        .update({
+          outright_odds: row.outright_odds,
+          outright_odds_updated_at: row.outright_odds_updated_at,
+        })
+        .eq("id", row.id);
+
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    }
   }
 
   if (playerRows.length > 0) {
-    const { error } = await supabase.from("players").upsert(playerRows, { onConflict: "id" });
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    for (const row of playerRows) {
+      const { error } = await supabase
+        .from("players")
+        .update({
+          top_scorer_odds: row.top_scorer_odds,
+          top_scorer_odds_updated_at: row.top_scorer_odds_updated_at,
+        })
+        .eq("id", row.id);
+
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    }
   }
 
   revalidatePath("/dashboard", "layout");

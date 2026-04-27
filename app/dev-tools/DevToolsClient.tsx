@@ -563,6 +563,29 @@ function DevToolsClientInner({ matches, teams, error }: Props) {
     }
   }
 
+  async function randomizeTeamOutrightOdds() {
+    if (!confirm("ליצור יחסי זכייה אקראיים לכל הנבחרות בלבד?")) {
+      return;
+    }
+
+    setBulkSaving(true);
+    setMessage(null);
+
+    try {
+      const res = await fetch("/api/dev/outright-odds/teams", { method: "POST" });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setMessage(`Error: ${body.error ?? res.statusText}`);
+        return;
+      }
+
+      const body = await res.json().catch(() => ({}));
+      refreshWithMessage(`נוצרו יחסי זכייה אקראיים ל-${body.updated ?? 0} נבחרות.`);
+    } finally {
+      setBulkSaving(false);
+    }
+  }
+
   async function resetTeamOutrightOdds() {
     if (!confirm("לאפס את יחסי הזכייה של כל הנבחרות?")) {
       return;
@@ -812,6 +835,13 @@ function DevToolsClientInner({ matches, teams, error }: Props) {
                 className="rounded-xl border border-[rgba(95,255,123,0.32)] bg-[rgba(95,255,123,0.14)] px-4 py-2 text-xs font-black text-wc-neon transition hover:bg-[rgba(95,255,123,0.22)] disabled:opacity-50"
               >
                 שמור יחסי נבחרות
+              </button>
+              <button
+                onClick={randomizeTeamOutrightOdds}
+                disabled={pending}
+                className="rounded-xl border border-[rgba(245,197,24,0.42)] bg-[rgba(245,197,24,0.1)] px-4 py-2 text-xs font-black text-[#F5D56B] transition hover:bg-[rgba(245,197,24,0.18)] disabled:opacity-50"
+              >
+                רנדום לכל הנבחרות
               </button>
               <button
                 onClick={resetTeamOutrightOdds}

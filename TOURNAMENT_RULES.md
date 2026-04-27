@@ -144,6 +144,13 @@ Manual team outright editing and reset are handled by localhost-only `/api/dev/o
 
 When a group is final, team-hub group tables must show exact locked positions only (`מקום 1` through `מקום 4`) and should match `/dashboard/tournament`. Negative goal differences must render in LTR numeric isolation so `-4` never flips to `4-`.
 
+## Dev odds write safety
+
+- Team outright odds saves must update existing `teams` rows only. Do not use `upsert` for manual Dev Tools odds writes, because an incomplete client payload can otherwise try to insert a team without required fields such as `name`.
+- The team-only random odds action should update every existing team with a plausible `outright_odds` value and must leave top-scorer odds untouched.
+- The combined team/player random odds action should also be update-only for both tables.
+- Applying BSD sync migrations only prepares the schema. The actual pull is a server-side dev action through `POST /api/dev/bzzoiro/sync-teams`; client components and public visitors must continue to read Supabase and must not call BSD directly.
+
 ## BSD team sync foundation
 
 - External BSD/Bzzoiro identifiers live in Supabase, not in client state: `teams.bzzoiro_team_id`, `teams.coach_bzzoiro_id`, `players.bzzoiro_player_id`, and sync timestamps are introduced by `20260427000033_add_bzzoiro_sync_fields.sql`.
