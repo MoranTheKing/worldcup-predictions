@@ -152,6 +152,12 @@ When a group is final, team-hub group tables must show exact locked positions on
 - Applying BSD sync migrations only prepares the schema. The actual pull is a server-side dev action through `POST /api/dev/bzzoiro/sync-teams`; client components and public visitors must continue to read Supabase and must not call BSD directly.
 - BSD roster sync must replace the old 49 mock players with API-backed records. Prefer in-place updates when an exact BSD player exists so existing prediction references remain valid; remove stale mock duplicates only after migrating any legacy outright FK to the matching BSD row or null.
 
+## Stats table display rule
+
+- Statistics tables should stay compact: player tables show player, national team, and one metric; team tables show national team and one metric.
+- Show only Top 3 by default. If more rows exist, expose Top 10 through an explicit `עוד - Top 10` control.
+- Player rows should use `players.photo_url` when available and keep team links RTL-safe through the shared compact leader table component.
+
 ## BSD team sync foundation
 
 - External BSD/Bzzoiro identifiers live in Supabase, not in client state: `teams.bzzoiro_team_id`, `teams.coach_bzzoiro_id`, `players.bzzoiro_player_id`, and sync timestamps are introduced by `20260427000033_add_bzzoiro_sync_fields.sql`.

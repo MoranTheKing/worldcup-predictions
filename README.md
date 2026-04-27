@@ -419,3 +419,10 @@ Brevo Free מוגבל בכמות יומית לכל החשבון, לכן ביום
 - Successful BSD team sync is visible in Supabase and UI through `teams.bzzoiro_team_id`, BSD team image URLs, `teams.coach_name`, `teams.coach_photo_url`, `players.bzzoiro_player_id`, player photos, shirt numbers, and refreshed squad pages.
 - BSD fetching is server-side only. The browser calls the local Next route, the route reads the BSD token from server env, writes Supabase, and revalidates pages. Regular visitors do not call BSD directly.
 - The BSD team sync now overwrites the original 49 mock top-scorer players in place when an exact BSD player exists, preserving existing prediction references while adding `bzzoiro_player_id`, `photo_url`, position, and shirt number. If the mock row duplicates an already-synced BSD row or has no BSD match, the dev sync removes the stale mock row after moving legacy outright references.
+
+## Stats table UX - 2026-04-27
+
+- Global stats tables now use `components/stats/CompactLeaderTable.tsx`: each row shows only the relevant entity, team context, and one metric.
+- Player leaderboards include player photos from `players.photo_url`, the linked national team chip, and the current metric.
+- Every stats table shows Top 3 by default and can expand to Top 10 with a single `עוד - Top 10` button.
+- The same compact table pattern is reused for team player stats so the UI stays RTL-safe and avoids wide, overloaded tables.

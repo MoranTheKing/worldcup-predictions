@@ -3,6 +3,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { GoalsForAgainst, SignedNumber } from "@/components/StatNumbers";
+import CompactLeaderTable, {
+  type CompactLeaderRow,
+  type CompactLeaderTeam,
+} from "@/components/stats/CompactLeaderTable";
 import { createClient } from "@/lib/supabase/server";
 import {
   attachTeamsToMatches,
@@ -26,7 +30,9 @@ type TeamMatch = MatchWithTeams;
 type TeamPlayer = {
   id: number | string;
   name: string;
+  team_id?: string | null;
   position: string | null;
+  photo_url?: string | null;
   goals?: number | null;
   assists?: number | null;
   appearances?: number | null;
@@ -50,6 +56,8 @@ type TeamStats = {
   liveCount: number;
   scheduledCount: number;
 };
+
+void _StatsTable;
 
 export default async function TeamStatsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -92,7 +100,7 @@ export default async function TeamStatsPage({ params }: { params: Promise<{ id: 
       .order("date_time", { ascending: true }),
     supabase
       .from("players")
-      .select("id, name, position, goals, assists, appearances, minutes_played, yellow_cards, red_cards, top_scorer_odds, top_scorer_odds_updated_at")
+      .select("id, name, team_id, position, photo_url, goals, assists, appearances, minutes_played, yellow_cards, red_cards, top_scorer_odds, top_scorer_odds_updated_at")
       .eq("team_id", id)
       .order("goals", { ascending: false })
       .order("assists", { ascending: false }),
@@ -127,6 +135,8 @@ export default async function TeamStatsPage({ params }: { params: Promise<{ id: 
   const totals = buildPlayerTotals(players);
   const leaders = players.slice().sort(compareAttackers).slice(0, 12);
   const discipline = players.slice().sort(compareCards).slice(0, 12);
+  const attackRows = buildTeamPlayerRows(leaders, team, "attack");
+  const disciplineRows = buildTeamPlayerRows(discipline, team, "discipline");
 
   return (
     <div className="wc-shell px-4 py-4 md:px-6 md:py-6" dir="rtl">
@@ -208,8 +218,20 @@ export default async function TeamStatsPage({ params }: { params: Promise<{ id: 
       </div>
 
       <section className="mt-5 grid gap-5 xl:grid-cols-2">
-        <StatsTable title="מלכי שערים ובישולים" players={leaders} mode="attack" />
-        <StatsTable title="כרטיסים ומשמעת" players={discipline} mode="discipline" />
+        <CompactLeaderTable
+          title="מלכי שערים ובישולים"
+          eyebrow="שחקן / נבחרת / תרומה התקפית"
+          rows={attackRows}
+          emptyTitle="אין עדיין נתוני שחקנים"
+          emptyDescription="הטבלה תתמלא אחרי סנכרון נתוני השחקנים."
+        />
+        <CompactLeaderTable
+          title="כרטיסים ומשמעת"
+          eyebrow="שחקן / נבחרת / כרטיסים"
+          rows={disciplineRows}
+          emptyTitle="אין עדיין נתוני משמעת"
+          emptyDescription="הטבלה תתמלא אחרי סנכרון נתוני הכרטיסים."
+        />
       </section>
     </div>
   );
@@ -283,7 +305,37 @@ function MetricRow({
   );
 }
 
-function StatsTable({
+function buildTeamPlayerRows(
+  players: TeamPlayer[],
+  team: TournamentTeamRecord,
+  mode: "attack" | "discipline",
+): CompactLeaderRow[] {
+  return players.slice(0, 10).map((player) => ({
+    id: String(player.id),
+    title: player.name,
+    subtitle: getPositionLabel(player.position),
+    imageUrl: player.photo_url ?? null,
+    imageAlt: player.name,
+    team: toCompactTeam(team),
+    metricLabel: mode === "attack" ? "תרומה" : "כרטיסים",
+    metricValue:
+      mode === "attack"
+        ? `${(player.goals ?? 0) + (player.assists ?? 0)}`
+        : `${(player.yellow_cards ?? 0) + (player.red_cards ?? 0)}`,
+    metricTone: mode === "attack" ? "green" : "amber",
+  }));
+}
+
+function toCompactTeam(team: TournamentTeamRecord): CompactLeaderTeam {
+  return {
+    id: team.id,
+    name: team.name,
+    name_he: team.name_he,
+    logo_url: team.logo_url,
+  };
+}
+
+function _StatsTable({
   title,
   players,
   mode,
