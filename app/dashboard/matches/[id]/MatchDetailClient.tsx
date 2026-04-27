@@ -1,6 +1,7 @@
 "use client";
 
 import { useDevLiveRefresh } from "@/lib/dev/live-refresh";
+import TeamLink from "@/components/TeamLink";
 import {
   formatMatchTimeLabel,
   getLiveMatchStatusLabel,
@@ -59,7 +60,7 @@ export default function MatchDetailClient({ match }: { match: MatchDetailRow }) 
         </div>
 
         <div className="mt-6 grid grid-cols-[1fr_auto_1fr] items-center gap-4">
-          <TeamBlock logo={homeLogo} name={homeName} />
+          <TeamBlock team={match.homeTeam} logo={homeLogo} name={homeName} />
           <div className="flex flex-col items-center text-center">
             {scoreSummary ? (
               <ScoreSummaryHero
@@ -77,7 +78,7 @@ export default function MatchDetailClient({ match }: { match: MatchDetailRow }) 
                   : `${formatMatchTimeLabel(match.date_time)} IDT`}
             </p>
           </div>
-          <TeamBlock logo={awayLogo} name={awayName} />
+          <TeamBlock team={match.awayTeam} logo={awayLogo} name={awayName} />
         </div>
 
         <div className="mt-6 rounded-[1.5rem] border border-white/10 bg-white/4 p-5 text-sm leading-7 text-wc-fg2">
@@ -120,9 +121,17 @@ function ScoreSummaryHero({
   );
 }
 
-function TeamBlock({ logo, name }: { logo: string | null; name: string }) {
-  return (
-    <div className="flex flex-col items-center gap-3">
+function TeamBlock({
+  team,
+  logo,
+  name,
+}: {
+  team: MatchDetailRow["homeTeam"];
+  logo: string | null;
+  name: string;
+}) {
+  const content = (
+    <>
       {logo ? (
         <Image
           src={logo}
@@ -137,6 +146,21 @@ function TeamBlock({ logo, name }: { logo: string | null; name: string }) {
         <div className="h-12 w-[72px] rounded-md bg-white/10" />
       )}
       <p className="text-center text-sm font-bold text-wc-fg1">{name}</p>
+    </>
+  );
+  const className = "flex flex-col items-center gap-3 rounded-2xl p-2 transition hover:bg-white/5";
+
+  if (team) {
+    return (
+      <TeamLink team={team} className={className}>
+        {content}
+      </TeamLink>
+    );
+  }
+
+  return (
+    <div className={className}>
+      {content}
     </div>
   );
 }

@@ -7,6 +7,7 @@ import {
   upsertMatchPrediction,
   type PredictionActionState,
 } from "@/app/actions/predictions";
+import TeamLink from "@/components/TeamLink";
 import {
   getLiveMatchStatusLabel,
   getMatchScoreSummary,
@@ -223,7 +224,7 @@ export default function MatchPredictionCard({
               />
 
               <div className="flex items-center gap-3">
-                <TeamSide align="right" name={homeTeamName} logoUrl={match.homeTeam?.logo_url ?? null} />
+                <TeamSide align="right" team={match.homeTeam} name={homeTeamName} logoUrl={match.homeTeam?.logo_url ?? null} />
 
                 <div dir="ltr" className="flex flex-shrink-0 flex-row-reverse items-center gap-2">
                   <ScoreInput
@@ -241,7 +242,7 @@ export default function MatchPredictionCard({
                   />
                 </div>
 
-                <TeamSide align="left" name={awayTeamName} logoUrl={match.awayTeam?.logo_url ?? null} />
+                <TeamSide align="left" team={match.awayTeam} name={awayTeamName} logoUrl={match.awayTeam?.logo_url ?? null} />
               </div>
 
               <AvailableRewardsStrip rewards={availableRewards} />
@@ -318,13 +319,13 @@ export default function MatchPredictionCard({
           ) : (
             <>
               <div className="flex items-center gap-3">
-                <TeamSide align="right" name={homeTeamName} logoUrl={match.homeTeam?.logo_url ?? null} />
+                <TeamSide align="right" team={match.homeTeam} name={homeTeamName} logoUrl={match.homeTeam?.logo_url ?? null} />
 
                 <div className="flex flex-shrink-0 items-center gap-2">
                   <ReadOnlyScore summary={actualSummary} />
                 </div>
 
-                <TeamSide align="left" name={awayTeamName} logoUrl={match.awayTeam?.logo_url ?? null} />
+                <TeamSide align="left" team={match.awayTeam} name={awayTeamName} logoUrl={match.awayTeam?.logo_url ?? null} />
               </div>
 
               <div className="mt-4 grid gap-3 md:grid-cols-3">
@@ -416,21 +417,38 @@ function resolveLivePredictionTone({
 
 function TeamSide({
   align,
+  team,
   name,
   logoUrl,
 }: {
   align: "left" | "right";
+  team: MatchWithTeams["homeTeam"];
   name: string;
   logoUrl: string | null;
 }) {
-  return (
-    <div className={`flex min-w-0 flex-1 items-center gap-2 ${align === "right" ? "justify-end" : ""}`}>
+  const content = (
+    <>
       {logoUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={logoUrl} alt="" className="h-7 w-7 flex-shrink-0 rounded-full object-cover" />
       ) : null}
       <span className="truncate text-sm font-bold text-wc-fg1">{name}</span>
-    </div>
+    </>
+  );
+  const className = `flex min-w-0 flex-1 items-center gap-2 rounded-xl px-1 py-0.5 transition ${
+    align === "right" ? "justify-end" : ""
+  } ${team ? "hover:bg-white/5" : ""}`;
+
+  if (team) {
+    return (
+      <TeamLink team={team} className={className}>
+        {content}
+      </TeamLink>
+    );
+  }
+
+  return (
+    <div className={className}>{content}</div>
   );
 }
 

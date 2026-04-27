@@ -1,11 +1,13 @@
 "use client";
 
 import Image from "next/image";
+import TeamLink from "@/components/TeamLink";
 
 export type OutrightChoiceBadgeProps = {
   kind: "winner" | "topScorer";
   label?: string;
   value: string | null;
+  teamId?: string | null;
   logoUrl?: string | null;
   locked?: boolean;
   hidden?: boolean;
@@ -17,6 +19,7 @@ export default function OutrightChoiceBadge({
   kind,
   label,
   value,
+  teamId = null,
   logoUrl = null,
   locked = false,
   hidden = false,
@@ -60,20 +63,46 @@ export default function OutrightChoiceBadge({
       {label ? (
         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-wc-fg3">{label}</p>
       ) : null}
-      <div className={`mt-2 flex items-center gap-2 font-bold text-wc-fg1 ${rowClassName}`}>
-        <ChoiceIcon kind={kind} logoUrl={logoUrl} size={size} compact={compact} />
-        <span className="truncate">{value ?? "לא נבחר"}</span>
-        {locked ? (
-          <span
-            className={`ms-auto inline-flex items-center justify-center rounded-full bg-white/8 px-1.5 text-wc-gold ${
-              compact ? "h-6 min-w-6 text-[11px]" : hero ? "h-8 min-w-8 text-sm" : "h-6 min-w-6 text-[11px]"
-            }`}
-          >
-            🔒
-          </span>
-        ) : null}
-      </div>
+      {kind === "winner" && teamId && value ? (
+        <TeamLink
+          team={{ id: teamId, name: value, name_he: value, logo_url: logoUrl }}
+          className={`mt-2 flex items-center gap-2 font-bold text-wc-fg1 transition hover:text-wc-neon ${rowClassName}`}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <ChoiceIcon kind={kind} logoUrl={logoUrl} size={size} compact={compact} />
+          <span className="truncate">{value}</span>
+          <LockIcon locked={locked} compact={compact} hero={hero} />
+        </TeamLink>
+      ) : (
+        <div className={`mt-2 flex items-center gap-2 font-bold text-wc-fg1 ${rowClassName}`}>
+          <ChoiceIcon kind={kind} logoUrl={logoUrl} size={size} compact={compact} />
+          <span className="truncate">{value ?? "לא נבחר"}</span>
+          <LockIcon locked={locked} compact={compact} hero={hero} />
+        </div>
+      )}
     </div>
+  );
+}
+
+function LockIcon({
+  locked,
+  compact,
+  hero,
+}: {
+  locked: boolean;
+  compact: boolean;
+  hero: boolean;
+}) {
+  if (!locked) return null;
+
+  return (
+    <span
+      className={`ms-auto inline-flex items-center justify-center rounded-full bg-white/8 px-1.5 text-wc-gold ${
+        compact ? "h-6 min-w-6 text-[11px]" : hero ? "h-8 min-w-8 text-sm" : "h-6 min-w-6 text-[11px]"
+      }`}
+    >
+      🔒
+    </span>
   );
 }
 

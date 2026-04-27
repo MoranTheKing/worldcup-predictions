@@ -1,6 +1,7 @@
 "use client";
 
 import { useDevLiveRefresh } from "@/lib/dev/live-refresh";
+import TeamLink from "@/components/TeamLink";
 import { buildKnockoutWinnerTree } from "@/lib/tournament/knockout-tree";
 import {
   formatMatchDateLabel,
@@ -243,14 +244,18 @@ function MatchCard({ match }: { match: MatchListRow }) {
   const awayLogo = getTeamDisplayLogo(match.awayTeam);
 
   return (
-    <Link
-      href={`/dashboard/matches/${match.match_number}`}
+    <article
       className={`wc-card group flex flex-col gap-4 border p-4 transition hover:border-white/20 ${statusMeta.cardClassName}`}
     >
       <div className="flex items-center justify-between gap-3 text-[11px] text-wc-fg3">
         <div className="min-w-0">
           <p className="truncate font-semibold text-wc-fg2">{getStageLabelHe(match.stage)}</p>
-          <p className="mt-1 font-mono text-[10px] text-wc-fg3">Match #{match.match_number}</p>
+          <Link
+            href={`/dashboard/matches/${match.match_number}`}
+            className="mt-1 block font-mono text-[10px] text-wc-fg3 hover:text-wc-fg1"
+          >
+            Match #{match.match_number}
+          </Link>
         </div>
         <span className={`inline-flex shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold ${statusMeta.pillClassName}`}>
           {statusMeta.label}
@@ -258,7 +263,7 @@ function MatchCard({ match }: { match: MatchListRow }) {
       </div>
 
       <div className="flex items-center justify-between gap-3">
-        <TeamSide logo={homeLogo} name={homeName} />
+        <TeamSide team={match.homeTeam} logo={homeLogo} name={homeName} />
         <div className="flex shrink-0 flex-col items-center gap-1 text-center">
           {scoreSummary ? (
             <ScoreSummaryBadge
@@ -271,9 +276,9 @@ function MatchCard({ match }: { match: MatchListRow }) {
           <span className="text-[11px] text-wc-fg3">{formatMatchTimeLabel(match.date_time)}</span>
           <span className="text-[10px] uppercase tracking-[0.18em] text-wc-fg3">IDT</span>
         </div>
-        <TeamSide logo={awayLogo} name={awayName} reverse />
+        <TeamSide team={match.awayTeam} logo={awayLogo} name={awayName} reverse />
       </div>
-    </Link>
+    </article>
   );
 }
 
@@ -309,16 +314,18 @@ function ScoreSummaryBadge({
 }
 
 function TeamSide({
+  team,
   logo,
   name,
   reverse = false,
 }: {
+  team: MatchListRow["homeTeam"];
   logo: string | null;
   name: string;
   reverse?: boolean;
 }) {
-  return (
-    <div className={`flex min-w-0 flex-1 items-center gap-2 ${reverse ? "flex-row-reverse text-end" : "text-start"}`}>
+  const content = (
+    <>
       {logo ? (
         <Image
           src={logo}
@@ -335,6 +342,21 @@ function TeamSide({
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-semibold text-wc-fg1">{name}</p>
       </div>
-    </div>
+    </>
+  );
+  const className = `flex min-w-0 flex-1 items-center gap-2 transition-colors ${
+    reverse ? "flex-row-reverse text-end" : "text-start"
+  } ${team ? "hover:text-wc-neon" : ""}`;
+
+  if (team) {
+    return (
+      <TeamLink team={team} className={className}>
+        {content}
+      </TeamLink>
+    );
+  }
+
+  return (
+    <div className={className}>{content}</div>
   );
 }

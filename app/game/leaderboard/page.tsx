@@ -139,6 +139,7 @@ export default async function GlobalLeaderboardPage() {
       return {
         ...member,
         winner_prediction: outright?.winner ?? null,
+        winner_team_id: outright?.winnerTeamId ?? null,
         winner_logo_url: outright?.winnerLogoUrl ?? null,
         top_scorer_prediction: outright?.topScorer ?? null,
         outrights_visible: outrightsVisible,
@@ -227,6 +228,8 @@ function buildLiveMatches(
       date_time: match.date_time ?? "",
       minute: typeof match.minute === "number" ? match.minute : null,
       match_phase: normalizeMatchPhase(match.match_phase),
+      home_team_id: match.home_team_id ?? null,
+      away_team_id: match.away_team_id ?? null,
       home_name: homeTeam?.name ?? match.home_placeholder ?? "בית",
       away_name: awayTeam?.name ?? match.away_placeholder ?? "חוץ",
       home_logo_url: homeTeam?.logoUrl ?? null,
@@ -276,7 +279,7 @@ async function loadLivePredictions(
 async function loadOutrights(admin: ReturnType<typeof createAdminClient>, userIds: string[]) {
   const outrightMap = new Map<
     string,
-    { winner: string | null; winnerLogoUrl: string | null; topScorer: string | null }
+    { winner: string | null; winnerTeamId: string | null; winnerLogoUrl: string | null; topScorer: string | null }
   >();
 
   if (userIds.length === 0) {
@@ -323,7 +326,7 @@ async function loadOutrights(admin: ReturnType<typeof createAdminClient>, userId
       }>
     ).map((team) => [
       team.id,
-      { name: team.name_he ?? team.name, logoUrl: team.logo_url ?? null },
+      { id: team.id, name: team.name_he ?? team.name, logoUrl: team.logo_url ?? null },
     ]),
   );
 
@@ -339,6 +342,7 @@ async function loadOutrights(admin: ReturnType<typeof createAdminClient>, userId
 
     outrightMap.set(row.user_id, {
       winner: winner?.name ?? null,
+      winnerTeamId: winner?.id ?? null,
       winnerLogoUrl: winner?.logoUrl ?? null,
       topScorer:
         typeof row.predicted_top_scorer_name === "string" &&

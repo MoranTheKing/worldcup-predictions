@@ -21,6 +21,7 @@
 - עריכת פרופיל אחרי כניסה: שינוי כינוי ותמונה, כולל העלאת תמונה אישית, זום ומיקום.
 - ליגות פרטיות, קודי הצטרפות, השוואת ניחושים וטבלת ניקוד.
 - דפי `/dashboard/tournament` ו-`/dashboard/matches` נטענו מחדש בדפדפן אחרי תיקוני 2026-04-24: טבלת הטורניר הציבורית מציגה את כל 48 הנבחרות וה-Match Center מציג את כל 104 המשחקים.
+- נוסף דף נבחרת ציבורי `/dashboard/teams/[id]`, וכל אזכור מרכזי של נבחרת במסכי משחקים, ניחושים, טורניר, בראקט, ליגות ובחירת זוכה טורניר מוביל אליו.
 - רענון Dev Live במסכי `/dashboard/tournament` ו-`/dashboard/matches` בודק גרסת משחקים קטנה דרך `/api/dev/matches/version`, ומרענן את הדף רק כשבאמת היה שינוי ב-Dev Tools.
 - דף הטורניר הציבורי קורא רק מ-views ציבוריים מצומצמים לנתוני `teams` ו-`matches`, ולא משתמש יותר ב-service-role key.
 - בראש דף הטורניר מופיע אזור הכרעה: אחרי משחק המקום השלישי מוצג מקום 3 לצד "2 נבחרות שנותרו", ואחרי הגמר מוצג פודיום מלא למקומות 1-2-3.
@@ -71,7 +72,9 @@ npm.cmd run build
 - `app/onboarding/page.tsx` ו-`app/onboarding/OnboardingForm.tsx` - מסך הפרופיל הראשוני.
 - `app/dashboard/tournament/page.tsx` - דף טורניר ציבורי שקורא מה-views `public_tournament_teams` ו-`public_tournament_matches`, כדי להציג נתוני טורניר ציבוריים בלי service-role.
 - `app/dashboard/tournament/TournamentClient.tsx` - UI הטורניר, כולל טבלאות, בראקט ופודיום הסיום.
+- `app/dashboard/teams/[id]/page.tsx` - דף נבחרת ציבורי עם המשחקים של הנבחרת, המשחק הבא, טבלת בית קטנה, סטטוס ונתוני סיכום.
 - `app/dashboard/matches/MatchesClient.tsx` - מרכז המשחקים, כולל התאמות Next 16 למידות דגלים כדי למנוע אזהרות aspect-ratio.
+- `components/TeamLink.tsx` - קישור אחיד לנבחרות, כדי שכל דגל/שם/תג זוכה יוביל לדף הנבחרת בלי לשבור RTL או שורות לחיצות.
 - `components/profile/ProfileEditorModal.tsx` - עריכת פרופיל אחרי כניסה.
 - `components/profile/ProfileAvatarField.tsx` - בחירה, העלאה, תצוגה מקדימה וחיתוך תמונת פרופיל.
 - `app/api/profile/avatar/[userId]/route.ts` - הגשת תמונות פרופיל פרטיות.
@@ -341,7 +344,6 @@ Brevo Free מוגבל בכמות יומית לכל החשבון, לכן ביום
 - Group tables now display guaranteed qualification/elimination even when the exact group rank is not locked yet. Example: a team can show "הבטיחה העפלה" while still being able to finish first or second.
 - Locked rank labels remain separate: when the exact position is mathematically fixed, the row still shows `מקום N`.
 - Pending group-match scenarios now use the same tie-break ranking pipeline as the visible table instead of only comparing points. Late-group checks include scoreline variants, so draws with goals and goal-difference swings are considered before a team is marked as guaranteed top two.
-- Teams that are guaranteed at least third, but are not yet guaranteed to qualify through the best-third table, show the intermediate `לפחות מקום 3` badge.
 
 ## Schedule sync - 2026-04-26
 

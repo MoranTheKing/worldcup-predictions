@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useActionState, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import OutrightChoiceBadge from "@/components/game/OutrightChoiceBadge";
+import TeamLink from "@/components/TeamLink";
 import UserAvatar from "@/components/UserAvatar";
 import { useDevLiveRefresh } from "@/lib/dev/live-refresh";
 import { calculatePredictionPoints } from "@/lib/game/scoring";
@@ -24,6 +25,8 @@ export type LeagueLiveMatchSummary = {
   date_time: string;
   minute: number | null;
   match_phase: MatchPhase | null;
+  home_team_id: string | null;
+  away_team_id: string | null;
   home_name: string;
   away_name: string;
   home_logo_url: string | null;
@@ -50,6 +53,7 @@ export type LeagueMemberRow = {
   total_score: number;
   avatar_url: string | null;
   winner_prediction: string | null;
+  winner_team_id: string | null;
   winner_logo_url: string | null;
   top_scorer_prediction: string | null;
   outrights_visible: boolean;
@@ -248,11 +252,11 @@ function LiveMatchesStrip({ liveMatches }: { liveMatches: LeagueLiveMatchSummary
           className="inline-flex items-center gap-2 rounded-full border border-[rgba(34,211,238,0.24)] bg-[rgba(34,211,238,0.08)] px-3 py-1.5 text-[11px] font-bold text-cyan-300"
         >
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-cyan-300" />
-          <TeamFlag logoUrl={match.home_logo_url} name={match.home_name} />
+          <TeamFlag teamId={match.home_team_id} logoUrl={match.home_logo_url} name={match.home_name} />
           <span dir="ltr" className="min-w-10 text-center font-black">
             {formatRtlVisualScore(match.home_score, match.away_score)}
           </span>
-          <TeamFlag logoUrl={match.away_logo_url} name={match.away_name} />
+          <TeamFlag teamId={match.away_team_id} logoUrl={match.away_logo_url} name={match.away_name} />
           <span className="text-[10px] text-cyan-200">
             {getLiveMatchStatusLabel(match.minute, match.match_phase)}
           </span>
@@ -286,11 +290,11 @@ function LivePredictionChip({
         hasPrediction ? predictedHome : "?"
       } ${match.home_name}`}
     >
-      <TeamFlag logoUrl={match.home_logo_url} name={match.home_name} />
+      <TeamFlag teamId={match.home_team_id} logoUrl={match.home_logo_url} name={match.home_name} />
       <span dir="ltr" className="min-w-10 text-center tracking-normal">
         {hasPrediction ? `${predictedAway} - ${predictedHome}` : "? - ?"}
       </span>
-      <TeamFlag logoUrl={match.away_logo_url} name={match.away_name} />
+      <TeamFlag teamId={match.away_team_id} logoUrl={match.away_logo_url} name={match.away_name} />
       {prediction?.is_joker_applied ? (
         <span className="rounded-full border border-current/30 px-1 text-[10px] leading-4">J</span>
       ) : null}
@@ -303,8 +307,16 @@ function LivePredictionChip({
   );
 }
 
-function TeamFlag({ logoUrl, name }: { logoUrl: string | null; name: string }) {
-  return (
+function TeamFlag({
+  teamId,
+  logoUrl,
+  name,
+}: {
+  teamId: string | null;
+  logoUrl: string | null;
+  name: string;
+}) {
+  const flag = (
     <span
       className="inline-flex h-5 w-5 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/10 text-[9px] font-black text-wc-fg2"
       title={name}
@@ -316,6 +328,21 @@ function TeamFlag({ logoUrl, name }: { logoUrl: string | null; name: string }) {
         name.slice(0, 1)
       )}
     </span>
+  );
+
+  if (!teamId) {
+    return flag;
+  }
+
+  return (
+    <TeamLink
+      team={{ id: teamId, name, name_he: name, logo_url: logoUrl }}
+      className="inline-flex flex-shrink-0 transition hover:scale-110"
+      onClick={(event) => event.stopPropagation()}
+      title={name}
+    >
+      {flag}
+    </TeamLink>
   );
 }
 
@@ -534,6 +561,7 @@ function LeagueMemberRowView({
         <OutrightChoiceBadge
           kind="winner"
           value={member.winner_prediction}
+          teamId={member.winner_team_id}
           logoUrl={member.winner_logo_url}
           hidden={!member.outrights_visible}
           compact

@@ -25,7 +25,6 @@ Group positions and best-third-place positions are locked only when they are mat
 Qualification and elimination status can be settled before the exact group position is settled. In that case the UI should show a qualified/eliminated pill without a locked-place label.
 Scenario analysis for pending group matches runs through the same head-to-head and overall tie-break pipeline as the live table, so a team can be marked qualified when every remaining result path keeps it in the top two even if its exact rank can still move.
 Late-group scenarios include scoreline variants, not only win/draw/loss directions, because goal difference and goals scored can change qualification certainty.
-If every remaining result path keeps a team at least third, but qualification through the best-third table is not yet guaranteed, the group table shows an intermediate `לפחות מקום 3` badge.
 
 ## Annex C and knockout progression
 
@@ -98,3 +97,9 @@ For the full security narrative, see:
 After the RLS privacy hardening, it uses a server-side admin client to read only public tournament fields needed for groups, bracket slots, flags, records, and elimination state.
 
 This keeps the public tournament page usable while leaving user predictions, league membership, and hidden outright picks under the social privacy rules above.
+
+## Team detail navigation
+
+Each resolved team has a canonical public detail route at `/dashboard/teams/[id]`.
+Team references in match cards, prediction cards, tournament tables, knockout bracket seeds, league live chips, and tournament-winner badges should navigate to that route.
+The detail page is intentionally read-only and summarizes the team's fixture path, next known match, current group standing, tournament status, and quick stats.

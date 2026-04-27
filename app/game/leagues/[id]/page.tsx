@@ -214,6 +214,8 @@ export default async function LeaguePage({
       date_time: match.date_time ?? "",
       minute: typeof match.minute === "number" ? match.minute : null,
       match_phase: normalizeMatchPhase(match.match_phase),
+      home_team_id: match.home_team_id ?? null,
+      away_team_id: match.away_team_id ?? null,
       home_name: homeTeam?.name ?? match.home_placeholder ?? "בית",
       away_name: awayTeam?.name ?? match.away_placeholder ?? "חוץ",
       home_logo_url: homeTeam?.logoUrl ?? null,
@@ -249,7 +251,7 @@ export default async function LeaguePage({
 
   const outrightMap = new Map<
     string,
-    { winner: string | null; winnerLogoUrl: string | null; topScorer: string | null }
+    { winner: string | null; winnerTeamId: string | null; winnerLogoUrl: string | null; topScorer: string | null }
   >();
   const canLoadAllOutrights = tournamentStarted;
   const outrightUserIds = canLoadAllOutrights
@@ -296,7 +298,7 @@ export default async function LeaguePage({
           }>
         ).map((team) => [
           team.id,
-          { name: team.name_he ?? team.name, logoUrl: team.logo_url ?? null },
+          { id: team.id, name: team.name_he ?? team.name, logoUrl: team.logo_url ?? null },
         ]),
       );
 
@@ -312,6 +314,7 @@ export default async function LeaguePage({
 
         outrightMap.set(row.user_id, {
           winner: winner?.name ?? null,
+          winnerTeamId: winner?.id ?? null,
           winnerLogoUrl: winner?.logoUrl ?? null,
           topScorer:
             typeof row.predicted_top_scorer_name === "string" && row.predicted_top_scorer_name.trim()
@@ -330,6 +333,7 @@ export default async function LeaguePage({
       return {
         ...member,
         winner_prediction: outright?.winner ?? null,
+        winner_team_id: outright?.winnerTeamId ?? null,
         winner_logo_url: outright?.winnerLogoUrl ?? null,
         top_scorer_prediction: outright?.topScorer ?? null,
         outrights_visible: outrightsVisible,

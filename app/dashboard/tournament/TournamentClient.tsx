@@ -7,6 +7,7 @@ import type {
 } from "@/lib/bracket/knockout";
 import { useDevLiveRefresh } from "@/lib/dev/live-refresh";
 import type { StandingStatus, TeamStanding } from "@/lib/utils/standings";
+import TeamLink from "@/components/TeamLink";
 import Image from "next/image";
 import { useMemo, useState } from "react";
 
@@ -69,12 +70,10 @@ const TEXT = {
   remainingTeams: "נבחרות שנותרו",
   lockedPositionLegend: "מיקום סופי נעול",
   qualifiedLegend: "העפלה ודאית",
-  securedThirdLegend: "לפחות מקום 3",
   eliminatedLegend: "הדחה ודאית",
   liveLegend: "נבחרת שמשחקת עכשיו",
   lockedPosition: "מקום",
   qualified: "הבטיחה העפלה",
-  securedAtLeastThird: "לפחות מקום 3",
   eliminated: "הודחה",
   group: "בית",
   team: "נבחרת",
@@ -141,7 +140,6 @@ const STATUS_META: Record<StandingStatus, { rowClassName: string }> = {
 const QUALIFIED_PILL_CLASS = "bg-[rgba(95,255,123,0.14)] text-wc-neon";
 const ELIMINATED_PILL_CLASS = "bg-[rgba(255,92,130,0.14)] text-wc-danger";
 const LOCKED_POSITION_PILL_CLASS = "bg-white/8 text-wc-fg2";
-const SECURED_THIRD_PILL_CLASS = "bg-[rgba(255,182,73,0.16)] text-wc-amber";
 const CONNECTOR_CLASS = "bg-[rgba(255,255,255,0.18)]";
 const CARD_WIDTH_CLASS = "mx-auto w-[148px] min-w-[140px] max-w-[152px]";
 const TOP_HALF_BRANCHES: readonly QuarterBranchConfig[] = [
@@ -268,10 +266,6 @@ function getGroupStatusDisplay(
     return { label: TEXT.eliminated, pillClassName: ELIMINATED_PILL_CLASS };
   }
 
-  if (entry.guaranteedAtLeastRank === 3) {
-    return { label: TEXT.securedAtLeastThird, pillClassName: SECURED_THIRD_PILL_CLASS };
-  }
-
   return null;
 }
 
@@ -389,7 +383,6 @@ export default function TournamentClient({
           <div className="mt-6 flex flex-wrap gap-3 text-xs">
             <LegendBadge colorClassName="bg-white/25" label={TEXT.lockedPositionLegend} />
             <LegendBadge colorClassName="bg-wc-neon shadow-[0_0_12px_rgba(95,255,123,0.7)]" label={TEXT.qualifiedLegend} />
-            <LegendBadge colorClassName="bg-wc-amber shadow-[0_0_12px_rgba(255,182,73,0.7)]" label={TEXT.securedThirdLegend} />
             <LegendBadge colorClassName="bg-wc-danger shadow-[0_0_12px_rgba(255,92,130,0.7)]" label={TEXT.eliminatedLegend} />
             <LegendBadge colorClassName="bg-wc-amber shadow-[0_0_12px_rgba(255,182,73,0.7)]" label={TEXT.liveLegend} pulse />
           </div>
@@ -612,9 +605,10 @@ function PodiumTeamCard({
         : "border-[#CD7F32]/45 bg-[linear-gradient(180deg,rgba(205,127,50,0.22),rgba(205,127,50,0.07))] text-[#f0b27a]";
 
   return (
-    <div
+    <TeamLink
+      team={team}
       className={[
-        "relative overflow-hidden rounded-[1.4rem] border p-4 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]",
+        "relative block overflow-hidden rounded-[1.4rem] border p-4 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] transition hover:brightness-110",
         toneClass,
         featured ? "sm:-translate-y-3 sm:scale-[1.04]" : "",
       ].join(" ")}
@@ -642,7 +636,7 @@ function PodiumTeamCard({
       <p className="mt-2 truncate text-sm font-black text-wc-fg1" title={team.name_he ?? team.name}>
         {team.name_he ?? team.name}
       </p>
-    </div>
+    </TeamLink>
   );
 }
 
@@ -1111,31 +1105,39 @@ function SeedRow({
 
   return (
     <div className={`flex items-center justify-between gap-1.5 px-2 py-1.5 ${borderClass} ${bgClass}`}>
-      <div className={`flex min-w-0 items-center gap-1 ${textClass}`}>
-        {seed.kind === "team" && seed.team.logo_url ? (
-          <Image
-            src={seed.team.logo_url}
-            alt={seed.team.name}
-            width={12}
-            height={9}
-            style={{ width: 12, height: 9 }}
-            className="rounded-sm object-cover"
-            unoptimized
-          />
-        ) : (
-          <div className="h-[9px] w-3 shrink-0 rounded-sm bg-white/10" />
-        )}
-        <span
-          className={`truncate whitespace-nowrap ${seed.kind === "team" ? "text-[10px]" : "text-[9px]"}`}
-          title={seed.kind === "team" ? seed.team.name_he ?? seed.team.name : seed.labelHe}
-        >
-          {seed.kind === "team" ? (
-            seed.team.name_he ?? seed.team.name
+      {seed.kind === "team" ? (
+        <TeamLink team={seed.team} className={`flex min-w-0 items-center gap-1 ${textClass} hover:text-wc-neon`}>
+          {seed.team.logo_url ? (
+            <Image
+              src={seed.team.logo_url}
+              alt={seed.team.name}
+              width={12}
+              height={9}
+              style={{ width: 12, height: 9 }}
+              className="rounded-sm object-cover"
+              unoptimized
+            />
           ) : (
-            <PlaceholderSeedLabel seed={seed} />
+            <div className="h-[9px] w-3 shrink-0 rounded-sm bg-white/10" />
           )}
-        </span>
-      </div>
+          <span
+            className="truncate whitespace-nowrap text-[10px]"
+            title={seed.team.name_he ?? seed.team.name}
+          >
+            {seed.team.name_he ?? seed.team.name}
+          </span>
+        </TeamLink>
+      ) : (
+        <div className={`flex min-w-0 items-center gap-1 ${textClass}`}>
+          <div className="h-[9px] w-3 shrink-0 rounded-sm bg-white/10" />
+          <span
+            className="truncate whitespace-nowrap text-[9px]"
+            title={seed.labelHe}
+          >
+            <PlaceholderSeedLabel seed={seed} />
+          </span>
+        </div>
+      )}
 
       {score !== null && (
         <div dir="ltr" className={`flex shrink-0 items-center gap-0.5 text-[10px] ${textClass}`}>
@@ -1178,19 +1180,21 @@ function PlaceholderSeedPart({
     <>
       {showDivider ? <span className="opacity-60">/</span> : null}
       {part.kind === "team" ? (
-        part.team.logo_url ? (
-          <Image
-            src={part.team.logo_url}
-            alt={part.team.name}
-            width={12}
-            height={9}
-            style={{ width: 12, height: 9 }}
-            className="h-[9px] w-3 rounded-[2px] object-cover"
-            unoptimized
-          />
-        ) : (
-          <span className="text-[9px]">{part.team.name_he ?? part.team.name}</span>
-        )
+        <TeamLink team={part.team} className="inline-flex min-w-0 items-center hover:text-wc-neon">
+          {part.team.logo_url ? (
+            <Image
+              src={part.team.logo_url}
+              alt={part.team.name}
+              width={12}
+              height={9}
+              style={{ width: 12, height: 9 }}
+              className="h-[9px] w-3 rounded-[2px] object-cover"
+              unoptimized
+            />
+          ) : (
+            <span className="text-[9px]">{part.team.name_he ?? part.team.name}</span>
+          )}
+        </TeamLink>
       ) : (
         <span className="text-[9px]">{part.labelHe}</span>
       )}
@@ -1279,7 +1283,10 @@ function GroupTable({
                 >
                   <td className="py-3 pe-2 ps-4 font-semibold text-wc-fg2">{entry.rank}</td>
                   <td className="px-2 py-3">
-                    <div className="flex min-w-0 items-center gap-2">
+                    <TeamLink
+                      team={entry.team}
+                      className="flex min-w-0 items-center gap-2 rounded-xl transition hover:bg-white/5"
+                    >
                       {entry.team.logo_url ? (
                         <Image
                           src={entry.team.logo_url}
@@ -1302,7 +1309,7 @@ function GroupTable({
                         </div>
                         <StatusPill display={statusDisplay} />
                       </div>
-                    </div>
+                    </TeamLink>
                   </td>
                   <td className="px-2 py-3 text-center text-wc-fg2">{entry.played}</td>
                   <td className="px-2 py-3 text-center text-wc-fg2">{entry.won}</td>
@@ -1419,7 +1426,10 @@ function BestThirdRow({
     >
       <td className={`py-3 pe-2 ps-4 font-semibold ${rankClassName}`}>{entry.rank}</td>
       <td className="px-3 py-3">
-        <div className="flex min-w-0 items-center gap-2">
+        <TeamLink
+          team={entry.team}
+          className="flex min-w-0 items-center gap-2 rounded-xl transition hover:bg-white/5"
+        >
           {entry.team.logo_url ? (
             <Image
               src={entry.team.logo_url}
@@ -1434,7 +1444,7 @@ function BestThirdRow({
             <div className="h-3 w-4 rounded-sm bg-white/10" />
           )}
           <span className="truncate font-semibold text-wc-fg1">{entry.team.name_he ?? entry.team.name}</span>
-        </div>
+        </TeamLink>
       </td>
       <td className="px-3 py-3 text-center text-wc-fg2">{entry.played}</td>
       <td className="px-3 py-3 text-center font-bold text-wc-fg1">{entry.pts}</td>

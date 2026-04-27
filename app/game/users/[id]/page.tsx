@@ -180,7 +180,7 @@ export default async function OpponentPredictionsPage({
       }>
     ).map((team) => [
       team.id,
-      { name: team.name_he ?? team.name, logoUrl: team.logo_url ?? null },
+      { id: team.id, name: team.name_he ?? team.name, logoUrl: team.logo_url ?? null },
     ]),
   );
 
@@ -189,6 +189,7 @@ export default async function OpponentPredictionsPage({
       ? teamsById.get(tournamentResult.data.predicted_winner_team_id) ?? null
       : null;
   const visibleWinnerName = tournamentStarted ? winnerTeam?.name ?? null : null;
+  const visibleWinnerTeamId = tournamentStarted ? winnerTeam?.id ?? null : null;
   const visibleWinnerLogoUrl = tournamentStarted ? winnerTeam?.logoUrl ?? null : null;
   const visibleTopScorer = tournamentStarted
     ? tournamentResult.data?.predicted_top_scorer_name ?? null
@@ -249,6 +250,7 @@ export default async function OpponentPredictionsPage({
               kind="winner"
               label="זוכת הטורניר"
               value={visibleWinnerName}
+              teamId={visibleWinnerTeamId}
               logoUrl={visibleWinnerLogoUrl}
               hidden={!tournamentStarted}
               locked
