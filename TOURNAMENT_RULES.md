@@ -23,6 +23,7 @@ Primary implementation:
 
 Group positions and best-third-place positions are locked only when they are mathematically settled, not just because the UI wants to show a stable state.
 Qualification and elimination status can be settled before the exact group position is settled. In that case the UI should show a qualified/eliminated pill without a locked-place label.
+Scenario analysis for pending group matches runs through the same head-to-head and overall tie-break pipeline as the live table, so a team can be marked qualified when every remaining win/draw/loss path keeps it in the top two even if its exact rank can still move.
 
 ## Annex C and knockout progression
 

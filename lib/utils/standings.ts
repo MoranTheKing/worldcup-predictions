@@ -70,6 +70,7 @@ type MatchStats = {
 };
 
 type PendingGroupMatch = {
+  match: TournamentMatch;
   homeTeamId: string;
   awayTeamId: string;
 };
@@ -104,6 +105,11 @@ type GroupStandingContext = {
 };
 
 const THIRD_PLACE_QUALIFIERS = 8;
+const PENDING_MATCH_SCENARIOS = [
+  { homeScore: 1, awayScore: 0 },
+  { homeScore: 0, awayScore: 0 },
+  { homeScore: 0, awayScore: 1 },
+] as const;
 
 function isCompletedGroupMatch(match: TournamentMatch): boolean {
   return (
@@ -334,69 +340,117 @@ function buildPendingMatches(matches: TournamentMatch[]): PendingGroupMatch[] {
   return matches
     .filter((match) => isPendingGroupMatch(match))
     .map((match) => ({
+      match,
       homeTeamId: match.home_team_id!,
       awayTeamId: match.away_team_id!,
     }));
 }
 
-function clonePoints(pointsById: Map<string, number>): Map<string, number> {
-  return new Map(pointsById);
+function applyScenarioScore(
+  teamsById: Map<string, TournamentTeam>,
+  homeTeamId: string,
+  awayTeamId: string,
+  homeScore: number,
+  awayScore: number,
+) {
+  const home = teamsById.get(homeTeamId);
+  const away = teamsById.get(awayTeamId);
+  if (!home || !away) return;
+
+  home.goals_for += homeScore;
+  home.goals_against += awayScore;
+  away.goals_for += awayScore;
+  away.goals_against += homeScore;
+  home.played_count += 1;
+  away.played_count += 1;
+
+  if (homeScore > awayScore) {
+    home.points += 3;
+  } else if (homeScore < awayScore) {
+    away.points += 3;
+  } else {
+    home.points += 1;
+    away.points += 1;
+  }
 }
 
-function enumeratePointScenarios(
-  basePointsById: Map<string, number>,
-  pendingMatches: PendingGroupMatch[],
-): Map<string, number>[] {
-  const scenarios: Map<string, number>[] = [];
+function buildScenarioMatch(
+  pendingMatch: PendingGroupMatch,
+  homeScore: number,
+  awayScore: number,
+): TournamentMatch {
+  return {
+    ...pendingMatch.match,
+    status: "finished",
+    home_score: homeScore,
+    away_score: awayScore,
+  };
+}
 
-  function walk(index: number, pointsById: Map<string, number>) {
+function buildScenarioStandings(
+  teams: TournamentTeam[],
+  completedMatches: TournamentMatch[],
+  scenarioMatches: TournamentMatch[],
+): TeamStanding[] {
+  const teamsById = new Map(teams.map((team) => [team.id, { ...team }]));
+
+  for (const match of scenarioMatches) {
+    if (match.home_team_id === null || match.away_team_id === null) continue;
+    if (match.home_score === null || match.away_score === null) continue;
+    applyScenarioScore(
+      teamsById,
+      match.home_team_id,
+      match.away_team_id,
+      match.home_score,
+      match.away_score,
+    );
+  }
+
+  const allScenarioMatches = [...completedMatches, ...scenarioMatches];
+  const entries = [...teamsById.values()].map((team) => buildStandingEntry(team, allScenarioMatches));
+  return withRanks(sortEntriesByStandings(entries, allScenarioMatches, true));
+}
+
+function enumerateStandingScenarios(
+  teams: TournamentTeam[],
+  completedMatches: TournamentMatch[],
+  pendingMatches: PendingGroupMatch[],
+): TeamStanding[][] {
+  const scenarios: TeamStanding[][] = [];
+
+  if (pendingMatches.length === 0) {
+    scenarios.push(buildScenarioStandings(teams, completedMatches, []));
+    return scenarios;
+  }
+
+  function walk(index: number, scenarioMatches: TournamentMatch[]) {
     if (index >= pendingMatches.length) {
-      scenarios.push(clonePoints(pointsById));
+      scenarios.push(buildScenarioStandings(teams, completedMatches, scenarioMatches));
       return;
     }
 
-    const { homeTeamId, awayTeamId } = pendingMatches[index];
+    const pendingMatch = pendingMatches[index];
 
-    const homeWin = clonePoints(pointsById);
-    homeWin.set(homeTeamId, (homeWin.get(homeTeamId) ?? 0) + 3);
-    walk(index + 1, homeWin);
-
-    const draw = clonePoints(pointsById);
-    draw.set(homeTeamId, (draw.get(homeTeamId) ?? 0) + 1);
-    draw.set(awayTeamId, (draw.get(awayTeamId) ?? 0) + 1);
-    walk(index + 1, draw);
-
-    const awayWin = clonePoints(pointsById);
-    awayWin.set(awayTeamId, (awayWin.get(awayTeamId) ?? 0) + 3);
-    walk(index + 1, awayWin);
+    for (const score of PENDING_MATCH_SCENARIOS) {
+      walk(index + 1, [
+        ...scenarioMatches,
+        buildScenarioMatch(pendingMatch, score.homeScore, score.awayScore),
+      ]);
+    }
   }
 
-  walk(0, clonePoints(basePointsById));
+  walk(0, []);
   return scenarios;
 }
 
-function rankScenario(teamIds: string[], pointsById: Map<string, number>): Map<string, ScenarioRank> {
+function rankScenario(standings: TeamStanding[]): Map<string, ScenarioRank> {
   const scenarioRanks = new Map<string, ScenarioRank>();
 
-  for (const teamId of teamIds) {
-    const points = pointsById.get(teamId) ?? 0;
-    let higherCount = 0;
-    let equalCount = 0;
-
-    for (const otherTeamId of teamIds) {
-      const otherPoints = pointsById.get(otherTeamId) ?? 0;
-
-      if (otherPoints > points) {
-        higherCount += 1;
-      } else if (otherTeamId !== teamId && otherPoints === points) {
-        equalCount += 1;
-      }
-    }
-
-    scenarioRanks.set(teamId, {
-      points,
-      bestRank: higherCount + 1,
-      worstRank: higherCount + equalCount + 1,
+  for (const entry of standings) {
+    scenarioRanks.set(entry.team.id, {
+      points: entry.pts,
+      bestRank: entry.rank,
+      worstRank: entry.rank,
     });
   }
 
@@ -408,9 +462,9 @@ function buildScenarioSummary(
   matches: TournamentMatch[],
 ): GroupScenarioSummary {
   const teamIds = teams.map((team) => team.id);
-  const currentPointsById = new Map(teams.map((team) => [team.id, team.points]));
+  const completedMatches = matches.filter((match) => isCompletedGroupMatch(match));
   const pendingMatches = buildPendingMatches(matches);
-  const scenarios = enumeratePointScenarios(currentPointsById, pendingMatches);
+  const scenarios = enumerateStandingScenarios(teams, completedMatches, pendingMatches);
 
   const teamStates = new Map<string, TeamScenarioState>(
     teamIds.map((teamId) => [
@@ -423,7 +477,7 @@ function buildScenarioSummary(
         guaranteedAtLeastThird: true,
         guaranteedTop2: true,
         minThirdPlacePoints: null,
-        maxPossiblePoints: currentPointsById.get(teamId) ?? 0,
+        maxPossiblePoints: teams.find((team) => team.id === teamId)?.points ?? 0,
         maxThirdPlacePoints: null,
       },
     ]),
@@ -432,8 +486,8 @@ function buildScenarioSummary(
   let minThirdPlacePoints = Number.POSITIVE_INFINITY;
   let maxThirdPlacePoints = Number.NEGATIVE_INFINITY;
 
-  for (const scenario of scenarios) {
-    const ranks = rankScenario(teamIds, scenario);
+  for (const scenarioStandings of scenarios) {
+    const ranks = rankScenario(scenarioStandings);
 
     for (const teamId of teamIds) {
       const state = teamStates.get(teamId);

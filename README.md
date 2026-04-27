@@ -340,6 +340,7 @@ Brevo Free מוגבל בכמות יומית לכל החשבון, לכן ביום
 
 - Group tables now display guaranteed qualification/elimination even when the exact group rank is not locked yet. Example: a team can show "הבטיחה העפלה" while still being able to finish first or second.
 - Locked rank labels remain separate: when the exact position is mathematically fixed, the row still shows `מקום N`.
+- Pending group-match scenarios now use the same tie-break ranking pipeline as the visible table instead of only comparing points, so edge cases with one remaining match correctly identify teams already guaranteed to finish in the top two.
 
 ## Schedule sync - 2026-04-26
 
