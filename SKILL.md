@@ -32,6 +32,7 @@ Key rules to remember:
 - `/game/leaderboard` is the global league and should share the private league leaderboard surface: live prediction chips, winner/top-scorer columns, projected live deltas, and profile-total realtime refreshes.
 - Dev Tools match-clock ranges are phase-aware: first half allows 0-60 and displays 45+, second half allows 46-105 and displays 90+, and knockout extra time allows 91-135 with 120+ display for stoppage.
 - Match schedule syncs must follow FIFA's official match order. Only update `match_number` and `date_time`, and relink existing prediction/bet references when a fixture's number changes. Do not swap home/away sides, statuses, scores, odds, or placeholders.
+- For kickoff audits, prefer FIFA's official Scores & Fixtures API (`https://api.fifa.com/api/v3/calendar/matches`, World Cup `idCompetition=17`, `idSeason=285023`) over prose articles. Convert the API UTC `Date` to Israel time (`+03:00` during the tournament).
 - Dev Tools owns local odds editing, random odds seeding, and current-user-only random prediction filling. Keep these routes localhost-only and never use them for bulk production user prediction generation.
 - Dev Tools `Clear All Match Data` is intentionally destructive in local dev: it resets matches, odds, all prediction tables, legacy bets, and profile totals so league leaderboards return to zero while memberships remain.
 

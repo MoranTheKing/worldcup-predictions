@@ -342,6 +342,7 @@ Brevo Free מוגבל בכמות יומית לכל החשבון, לכן ביום
 - The correction changes only `match_number` and `date_time`. Team sides, knockout placeholders, scores, statuses and odds are unchanged.
 - Confirmed reference fixes: Brazil vs Haiti is match #29 at `2026-06-20T03:30:00+03:00`; Turkey vs Paraguay is match #31 at `2026-06-20T06:00:00+03:00`; Norway vs France is match #61.
 - `20260426000028_align_knockout_kickoffs_israel.sql` then aligns knockout matches #74-#90 to the Israel-time knockout list by match number. This makes July 4 contain only match #88 at `01:00` and match #89 at `20:00`.
+- `20260427000029_align_knockout_kickoffs_with_fifa_api.sql` corrects #74-#90 again against FIFA's official Scores & Fixtures API (`api.fifa.com/api/v3/calendar/matches`, `idCompetition=17`, `idSeason=285023`). This fixes the July 3/4 drift: #86 is `2026-07-04T01:00:00+03:00`, #87 is `2026-07-04T04:30:00+03:00`, #88 is `2026-07-03T21:00:00+03:00`, #89 is `2026-07-05T00:00:00+03:00`, and #90 is `2026-07-04T20:00:00+03:00`.
 - Dev Tools keeps the existing controls but its match table now uses an LTR scroll container with an RTL table and a narrower minimum width so the horizontal overflow behaves predictably.
 
 ## Joker and live table update - 2026-04-26
