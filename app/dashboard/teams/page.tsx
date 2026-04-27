@@ -324,6 +324,18 @@ function EmptyPanel({ title, description }: { title: string; description: string
 }
 
 function getStatus(team: TournamentTeamRecord, standing: TeamStanding | null) {
+  if (standing?.lockedRank !== null && standing?.lockedRank !== undefined) {
+    return {
+      label: `מקום ${standing.lockedRank}`,
+      className:
+        standing.lockedRank <= 2
+          ? "bg-[rgba(95,255,123,0.14)] text-wc-neon"
+          : standing.lockedRank >= 4
+            ? "bg-[rgba(255,92,130,0.14)] text-wc-danger"
+            : "bg-white/8 text-wc-fg3",
+    };
+  }
+
   if (team.is_eliminated === true || standing?.status === "eliminated") {
     return {
       label: "הודחה",

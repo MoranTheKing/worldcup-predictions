@@ -211,6 +211,12 @@ export default async function TeamPage({ params }: { params: Promise<{ id: strin
         >
           כל הנבחרות
         </Link>
+        <Link
+          href="/dashboard/stats"
+          className="rounded-full border border-white/10 bg-white/8 px-3 py-1.5 text-xs font-bold text-wc-fg2 transition hover:border-wc-neon/40 hover:text-wc-neon"
+        >
+          טבלאות וסטט׳
+        </Link>
       </div>
 
       <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-[linear-gradient(135deg,rgba(111,60,255,0.26),rgba(255,47,166,0.12)_48%,rgba(8,14,29,0.94))] shadow-[0_28px_80px_rgba(0,0,0,0.38)]">
@@ -258,7 +264,19 @@ export default async function TeamPage({ params }: { params: Promise<{ id: strin
                 href={`/dashboard/teams/${encodeURIComponent(id)}/stats`}
                 className="rounded-[1.05rem] border border-white/10 bg-white/8 px-3 py-3 text-center text-sm font-black text-wc-fg1 transition hover:border-wc-neon/40 hover:text-wc-neon"
               >
-                סטטיסטיקות
+                סטט׳ שחקנים
+              </Link>
+              <Link
+                href={`/dashboard/teams/${encodeURIComponent(id)}/team-stats`}
+                className="rounded-[1.05rem] border border-white/10 bg-white/8 px-3 py-3 text-center text-sm font-black text-wc-fg1 transition hover:border-wc-neon/40 hover:text-wc-neon"
+              >
+                סטט׳ קבוצתית
+              </Link>
+              <Link
+                href="/dashboard/stats"
+                className="rounded-[1.05rem] border border-white/10 bg-white/8 px-3 py-3 text-center text-sm font-black text-wc-fg1 transition hover:border-wc-neon/40 hover:text-wc-neon"
+              >
+                טבלאות
               </Link>
             </div>
           </div>
@@ -591,6 +609,7 @@ function NextMatchCard({ match, teamId }: { match: TeamMatch; teamId: string }) 
 
 function GroupMiniRow({ entry, activeTeamId }: { entry: TeamStanding; activeTeamId: string }) {
   const isActive = entry.team.id === activeTeamId;
+  const standingDisplay = getStandingDisplay(entry);
 
   return (
     <tr className={`border-b border-white/6 last:border-0 ${isActive ? "bg-[rgba(95,255,123,0.08)]" : ""}`}>
@@ -601,9 +620,9 @@ function GroupMiniRow({ entry, activeTeamId }: { entry: TeamStanding; activeTeam
             <SmallFlag logoUrl={entry.team.logo_url} name={entry.team.name_he ?? entry.team.name} />
             <span className="truncate">{entry.team.name_he ?? entry.team.name}</span>
           </TeamLink>
-          {entry.status !== "pending" ? (
-            <span className={`hidden rounded-full px-2 py-0.5 text-[10px] font-black sm:inline-flex ${getStandingStatusClass(entry.status)}`}>
-              {getStandingStatusLabel(entry.status)}
+          {standingDisplay ? (
+            <span className={`hidden rounded-full px-2 py-0.5 text-[10px] font-black sm:inline-flex ${standingDisplay.className}`}>
+              {standingDisplay.label}
             </span>
           ) : null}
         </div>
@@ -985,16 +1004,28 @@ function getTeamStatus(team: TournamentTeamRecord, standing: TeamStanding | null
   };
 }
 
-function getStandingStatusLabel(status: TeamStanding["status"]) {
-  if (status === "qualified") return "העפילה";
-  if (status === "eliminated") return "הודחה";
-  return "פתוח";
-}
+function getStandingDisplay(entry: TeamStanding) {
+  if (entry.lockedRank !== null) {
+    return {
+      label: `מקום ${entry.lockedRank}`,
+      className:
+        entry.lockedRank <= 2
+          ? "bg-[rgba(95,255,123,0.14)] text-wc-neon"
+          : entry.lockedRank >= 4
+            ? "bg-[rgba(255,92,130,0.14)] text-wc-danger"
+            : "bg-white/8 text-wc-fg3",
+    };
+  }
 
-function getStandingStatusClass(status: TeamStanding["status"]) {
-  if (status === "qualified") return "bg-[rgba(95,255,123,0.14)] text-wc-neon";
-  if (status === "eliminated") return "bg-[rgba(255,92,130,0.14)] text-wc-danger";
-  return "bg-white/8 text-wc-fg3";
+  if (entry.status === "qualified") {
+    return { label: "העפילה", className: "bg-[rgba(95,255,123,0.14)] text-wc-neon" };
+  }
+
+  if (entry.status === "eliminated") {
+    return { label: "הודחה", className: "bg-[rgba(255,92,130,0.14)] text-wc-danger" };
+  }
+
+  return null;
 }
 
 function getTopPlayers(players: TeamPlayer[]) {

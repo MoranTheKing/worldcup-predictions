@@ -42,5 +42,9 @@ Key rules to remember:
 - Team hub pages now include `/dashboard/teams`, `/dashboard/teams/[id]`, `/dashboard/teams/[id]/squad`, and `/dashboard/teams/[id]/stats`. Keep the main team page focused, and put detailed player/team API stats on the stats route.
 - Team profile score displays are team-perspective RTL: the viewed team's goals must remain on the visual right side, including recent-form and match cards.
 - API-ready team profile data lives in migration `20260427000030_add_team_api_profile_fields.sql`: outright odds, coach name, player appearances/minutes/cards, and five pre-tournament `team_recent_matches`.
+- Global stat tables live at `/dashboard/stats` and must stay prominent in the main dashboard navigation. Use it for top scorers, assists, yellow/red cards, top-scorer odds, team leaders, and tournament-winning odds.
+- Team stats are split by purpose: `/dashboard/teams/[id]/team-stats` for team-level numbers and `/dashboard/teams/[id]/stats` for individual player stats.
+- When a group is final or a rank is locked, team-hub tables should show `מקום N` exactly like the tournament page. Use LTR-isolated signed numbers for goal difference so negative values display as `-4`, never `4-`.
+- Top-scorer odds live on `players.top_scorer_odds` from migration `20260427000031_add_top_scorer_odds.sql`; Dev Tools can randomize both team outright odds and top-scorer odds through the localhost-only route.
 
 If the user invokes this skill without any other guidance, ask them what they want to build or design, ask some questions, and act as an expert designer who outputs HTML artifacts _or_ production code, depending on the need.

@@ -114,3 +114,11 @@ The team hub now has three public routes:
 - `/dashboard/teams/[id]/stats` separates team statistics from individual player statistics, including goals, assists, appearances, minutes, yellow cards, and red cards.
 
 The `team_recent_matches` table is reserved for the five pre-tournament form matches. Tournament matches and pre-tournament form share the same RTL score rendering rule: from the viewed team's perspective, the team's goals are rendered on the visual right side and the opponent's goals on the visual left side.
+
+The visible statistics surface is split intentionally:
+
+- `/dashboard/stats` is the prominent global tables page, available from the main dashboard navigation as `טבלאות`. It owns tournament-wide leaders: goals, assists, yellow cards, red cards, top-scorer odds, team attack/defense, points, and outright odds.
+- `/dashboard/teams/[id]/team-stats` owns team-level metrics for one team.
+- `/dashboard/teams/[id]/stats` owns individual player metrics for one team.
+
+When a group is final, team-hub group tables must show exact locked positions only (`מקום 1` through `מקום 4`) and should match `/dashboard/tournament`. Negative goal differences must render in LTR numeric isolation so `-4` never flips to `4-`.

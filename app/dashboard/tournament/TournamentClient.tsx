@@ -1315,7 +1315,9 @@ function GroupTable({
                   <td className="px-2 py-3 text-center text-wc-fg2">{entry.won}</td>
                   <td className="px-2 py-3 text-center text-wc-fg2">{entry.drawn}</td>
                   <td className="px-2 py-3 text-center text-wc-fg2">{entry.lost}</td>
-                  <td className="px-2 py-3 text-center text-wc-fg2">{entry.gd}</td>
+                  <td className="px-2 py-3 text-center text-wc-fg2">
+                    <SignedNumber value={entry.gd} />
+                  </td>
                   <td className="py-3 pe-4 ps-2 text-center font-bold text-wc-fg1">{entry.pts}</td>
                 </tr>
               );
@@ -1448,7 +1450,9 @@ function BestThirdRow({
       </td>
       <td className="px-3 py-3 text-center text-wc-fg2">{entry.played}</td>
       <td className="px-3 py-3 text-center font-bold text-wc-fg1">{entry.pts}</td>
-      <td className="px-3 py-3 text-center text-wc-fg2">{entry.gd}</td>
+      <td className="px-3 py-3 text-center text-wc-fg2">
+        <SignedNumber value={entry.gd} />
+      </td>
       <td className="px-3 py-3 text-center text-wc-fg2">{entry.gf}</td>
       <td className="py-3 pe-4 ps-2 text-center">
         <StatusPill display={statusDisplay} />
@@ -1463,6 +1467,15 @@ function StatusPill({ display }: { display: StatusDisplay | null }) {
   return (
     <span className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold leading-4 ${display.pillClassName}`}>
       {display.label}
+    </span>
+  );
+}
+
+function SignedNumber({ value }: { value: number }) {
+  const formatted = value > 0 ? `+${value}` : String(value);
+  return (
+    <span dir="ltr" className="inline-block" style={{ unicodeBidi: "plaintext" }}>
+      {formatted}
     </span>
   );
 }

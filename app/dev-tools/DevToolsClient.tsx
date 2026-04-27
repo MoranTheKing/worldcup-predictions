@@ -476,6 +476,31 @@ function DevToolsClientInner({ matches, error }: Props) {
     await persistDrafts(nextDrafts, "נוצרו ונשמרו יחסי הימורים אקראיים לכל המשחקים.");
   }
 
+  async function randomizeOutrightOdds() {
+    if (!confirm("ליצור יחסי זכייה לנבחרות ויחסי מלך שערים אקראיים?")) {
+      return;
+    }
+
+    setBulkSaving(true);
+    setMessage(null);
+
+    try {
+      const res = await fetch("/api/dev/outright-odds/randomize", { method: "POST" });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setMessage(`Error: ${body.error ?? res.statusText}`);
+        return;
+      }
+
+      const body = await res.json().catch(() => ({}));
+      refreshWithMessage(
+        `נוצרו יחסי זכייה ל-${body.teamsUpdated ?? 0} נבחרות ויחסי מלך שערים ל-${body.playersUpdated ?? 0} שחקנים.`,
+      );
+    } finally {
+      setBulkSaving(false);
+    }
+  }
+
   async function randomizeAll() {
     if (!confirm("למלא את כל המשחקים בתוצאות אקראיות ולסנכרן מיד את כל הטורניר?")) return;
 
@@ -600,6 +625,13 @@ function DevToolsClientInner({ matches, error }: Props) {
               className="rounded-2xl border border-[rgba(245,197,24,0.42)] bg-[rgba(245,197,24,0.1)] px-4 py-3 text-sm font-bold text-[#F5D56B] transition hover:bg-[rgba(245,197,24,0.18)] disabled:opacity-50"
             >
               יחסים אקראיים
+            </button>
+            <button
+              onClick={randomizeOutrightOdds}
+              disabled={pending}
+              className="rounded-2xl border border-[rgba(111,60,255,0.55)] bg-[rgba(111,60,255,0.16)] px-4 py-3 text-sm font-bold text-[#C4B5FD] transition hover:bg-[rgba(111,60,255,0.26)] disabled:opacity-50"
+            >
+              יחס נבחרות/מלך שערים
             </button>
             <button
               onClick={finishAll}

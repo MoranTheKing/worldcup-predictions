@@ -18,12 +18,16 @@ export async function POST(request: Request) {
     outrightBetsReset,
     legacyBetsReset,
     profilesReset,
+    teamOddsReset,
+    playerOddsReset,
   ] = await Promise.all([
     deleteRows("predictions", "user_id"),
     deleteRows("tournament_predictions", "user_id"),
     deleteRows("outright_bets", "user_id"),
     deleteRows("bets", "user_id"),
     resetProfileScores(),
+    resetTeamOutrightOdds(),
+    resetPlayerTopScorerOdds(),
   ]);
 
   if (isResetError(predictionsReset)) return errorResponse(predictionsReset.error);
@@ -31,6 +35,8 @@ export async function POST(request: Request) {
   if (isResetError(outrightBetsReset)) return errorResponse(outrightBetsReset.error);
   if (isResetError(legacyBetsReset)) return errorResponse(legacyBetsReset.error);
   if (isResetError(profilesReset)) return errorResponse(profilesReset.error);
+  if (isResetError(teamOddsReset)) return errorResponse(teamOddsReset.error);
+  if (isResetError(playerOddsReset)) return errorResponse(playerOddsReset.error);
 
   // Explicitly wipe resolved team slots from all knockout matches so they
   // revert to placeholder display before the sync rebuilds them.
@@ -82,6 +88,8 @@ export async function POST(request: Request) {
     outrightBetsReset: outrightBetsReset.count,
     legacyBetsReset: legacyBetsReset.count,
     profilesReset: profilesReset.count,
+    teamOddsReset: teamOddsReset.count,
+    playerOddsReset: playerOddsReset.count,
   });
 
   async function deleteRows(table: string, nonNullColumn: string): Promise<ResetResult> {
@@ -98,6 +106,26 @@ export async function POST(request: Request) {
     const { error, count: updatedCount } = await supabase
       .from("profiles")
       .update({ total_score: 0 }, { count: "exact" })
+      .not("id", "is", null);
+
+    if (error) return { error: error.message };
+    return { count: updatedCount ?? 0 };
+  }
+
+  async function resetTeamOutrightOdds(): Promise<ResetResult> {
+    const { error, count: updatedCount } = await supabase
+      .from("teams")
+      .update({ outright_odds: null, outright_odds_updated_at: null }, { count: "exact" })
+      .not("id", "is", null);
+
+    if (error) return { error: error.message };
+    return { count: updatedCount ?? 0 };
+  }
+
+  async function resetPlayerTopScorerOdds(): Promise<ResetResult> {
+    const { error, count: updatedCount } = await supabase
+      .from("players")
+      .update({ top_scorer_odds: null, top_scorer_odds_updated_at: null }, { count: "exact" })
       .not("id", "is", null);
 
     if (error) return { error: error.message };

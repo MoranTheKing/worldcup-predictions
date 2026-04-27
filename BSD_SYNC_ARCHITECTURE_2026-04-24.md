@@ -207,6 +207,19 @@ match_odds_snapshots
 prediction_scoring_runs
 ```
 
+API-ready stats fields already exposed by the app:
+
+- `teams.outright_odds`, `teams.outright_odds_updated_at`, `teams.coach_name`, `teams.coach_updated_at`.
+- `players.goals`, `players.assists`, `players.appearances`, `players.minutes_played`, `players.yellow_cards`, `players.red_cards`.
+- `players.top_scorer_odds`, `players.top_scorer_odds_updated_at` from `20260427000031_add_top_scorer_odds.sql`.
+- `team_recent_matches` stores the five pre-tournament form matches for team pages.
+
+Visible stat surfaces:
+
+- `/dashboard/stats` is the global prominent tables page for player leaders, card leaders, top-scorer odds, team leaders, and outright odds.
+- `/dashboard/teams/[id]/team-stats` is the per-team statistics page.
+- `/dashboard/teams/[id]/stats` is the per-team player statistics page.
+
 ### 4. Public Views ו-Realtime
 
 כיום `/dashboard/tournament` קורא מ-views ציבוריים מצומצמים:

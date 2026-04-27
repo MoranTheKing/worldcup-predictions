@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import type { ReactNode } from "react";
 import { createClient } from "@/lib/supabase/server";
 import {
   attachTeamsToMatches,
@@ -31,6 +32,8 @@ type TeamPlayer = {
   minutes_played?: number | null;
   yellow_cards?: number | null;
   red_cards?: number | null;
+  top_scorer_odds?: number | string | null;
+  top_scorer_odds_updated_at?: string | null;
 };
 
 type TeamStats = {
@@ -88,7 +91,7 @@ export default async function TeamStatsPage({ params }: { params: Promise<{ id: 
       .order("date_time", { ascending: true }),
     supabase
       .from("players")
-      .select("id, name, position, goals, assists, appearances, minutes_played, yellow_cards, red_cards")
+      .select("id, name, position, goals, assists, appearances, minutes_played, yellow_cards, red_cards, top_scorer_odds, top_scorer_odds_updated_at")
       .eq("team_id", id)
       .order("goals", { ascending: false })
       .order("assists", { ascending: false }),
@@ -139,6 +142,18 @@ export default async function TeamStatsPage({ params }: { params: Promise<{ id: 
         >
           סגל ומאמן
         </Link>
+        <Link
+          href={`/dashboard/teams/${encodeURIComponent(id)}/team-stats`}
+          className="rounded-full border border-white/10 bg-white/8 px-3 py-1.5 text-xs font-bold text-wc-fg2 transition hover:border-wc-neon/40 hover:text-wc-neon"
+        >
+          סטט׳ קבוצתית
+        </Link>
+        <Link
+          href="/dashboard/stats"
+          className="rounded-full border border-white/10 bg-white/8 px-3 py-1.5 text-xs font-bold text-wc-fg2 transition hover:border-wc-neon/40 hover:text-wc-neon"
+        >
+          טבלאות כלליות
+        </Link>
       </div>
 
       <section className="rounded-[2rem] border border-white/10 bg-[linear-gradient(135deg,rgba(255,47,166,0.14),rgba(111,60,255,0.22)_46%,rgba(8,14,29,0.96))] p-5 shadow-[0_28px_80px_rgba(0,0,0,0.38)] md:p-7">
@@ -168,7 +183,7 @@ export default async function TeamStatsPage({ params }: { params: Promise<{ id: 
           <SectionHeader title="סטטיסטיקה קבוצתית" eyebrow="טורניר נוכחי" />
           <div className="mt-4 grid gap-3">
             <MetricRow label="נקודות בבית" value={String(standing?.pts ?? 0)} />
-            <MetricRow label="הפרש שערים" value={formatSignedNumber(stats.goalDifference)} />
+            <MetricRow label="הפרש שערים" valueNode={<SignedNumber value={stats.goalDifference} />} />
             <MetricRow label="משחקים בלייב" value={String(stats.liveCount)} />
             <MetricRow label="משחקים עתידיים" value={String(stats.scheduledCount)} />
             <MetricRow label="מאמן" value={team.coach_name ?? "טרם סונכרן"} />
@@ -236,11 +251,19 @@ function InfoStat({ label, value, sub }: { label: string; value: string; sub: st
   );
 }
 
-function MetricRow({ label, value }: { label: string; value: string }) {
+function MetricRow({
+  label,
+  value,
+  valueNode,
+}: {
+  label: string;
+  value?: string;
+  valueNode?: ReactNode;
+}) {
   return (
     <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-black/14 px-4 py-3">
       <span className="text-sm font-bold text-wc-fg2">{label}</span>
-      <span className="text-lg font-black text-wc-fg1">{value}</span>
+      <span className="text-lg font-black text-wc-fg1">{valueNode ?? value}</span>
     </div>
   );
 }
@@ -261,7 +284,7 @@ function StatsTable({
       </div>
       {players.length > 0 ? (
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[34rem] text-sm">
+          <table className="w-full min-w-[40rem] text-sm">
             <thead>
               <tr className="border-b border-white/8 text-wc-fg3">
                 <th className="px-3 py-2 text-start">שחקן</th>
@@ -270,6 +293,7 @@ function StatsTable({
                 <th className="px-3 py-2 text-center">בישולים</th>
                 <th className="px-3 py-2 text-center">{mode === "attack" ? "הופעות" : "צהובים"}</th>
                 <th className="px-3 py-2 text-center">{mode === "attack" ? "דקות" : "אדומים"}</th>
+                <th className="px-3 py-2 text-center">יחס מלך שערים</th>
               </tr>
             </thead>
             <tbody>
@@ -285,6 +309,7 @@ function StatsTable({
                   <td className={`px-3 py-2 text-center ${mode === "discipline" ? "text-wc-danger" : "text-wc-fg2"}`}>
                     {mode === "attack" ? player.minutes_played ?? 0 : player.red_cards ?? 0}
                   </td>
+                  <td className="px-3 py-2 text-center font-black text-wc-neon">{formatOdds(player.top_scorer_odds)}</td>
                 </tr>
               ))}
             </tbody>
@@ -392,6 +417,11 @@ function formatOdds(value: number | string | null | undefined) {
   return numeric.toFixed(2);
 }
 
-function formatSignedNumber(value: number) {
-  return value > 0 ? `+${value}` : String(value);
+function SignedNumber({ value }: { value: number }) {
+  const formatted = value > 0 ? `+${value}` : String(value);
+  return (
+    <span dir="ltr" className="inline-block" style={{ unicodeBidi: "plaintext" }}>
+      {formatted}
+    </span>
+  );
 }

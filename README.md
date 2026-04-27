@@ -279,6 +279,9 @@ Brevo Free מוגבל בכמות יומית לכל החשבון, לכן ביום
 - `20260426000026_sync_match_schedule_with_kan.sql`
 - `20260426000027_correct_schedule_from_fifa.sql`
 - `20260426000028_align_knockout_kickoffs_israel.sql`
+- `20260427000029_align_knockout_kickoffs_with_fifa_api.sql`
+- `20260427000030_add_team_api_profile_fields.sql`
+- `20260427000031_add_top_scorer_odds.sql`
 
 את `20260424000021_public_tournament_projection.sql` צריך להריץ לפני בדיקת `/dashboard/tournament` כמשתמש לא רשום. בלי ה-migration הזה, הדף כבר לא ישתמש ב-service-role, אבל Supabase לא יכיר את ה-views הציבוריים ולכן לא יחזיר נתוני טורניר ל-anon.
 
@@ -372,3 +375,14 @@ Brevo Free מוגבל בכמות יומית לכל החשבון, לכן ביום
 - Unused group-stage Joker cards stop showing `זמין` once the group stage is closed or a knockout match has started; they show an expired state instead.
 - Legacy/non-group `is_joker_applied` values are ignored for scoring and display, so a knockout prediction cannot receive a Joker x2 multiplier.
 - Group live standings score pills render from the row team's perspective with the row team's goals on the visual right side.
+
+## Stats tables visibility update - 2026-04-27
+
+- Added a prominent global stats route at `/dashboard/stats`, reachable from the main dashboard navigation as `טבלאות`. It shows top scorers, assists, yellow cards, red cards, top-scorer odds, team attack/defense/points, and tournament-winning odds.
+- Added `/dashboard/teams/[id]/team-stats` as a separate team-statistics page. `/dashboard/teams/[id]/stats` now remains focused on individual player statistics.
+- Team pages link directly to squad, player stats, team stats, and global tables so the statistics tables are no longer hidden.
+- Finished group tables display exact locked places (`מקום 1`, `מקום 2`, `מקום 3`, `מקום 4`) when the final rank is known, matching the tournament page behavior instead of showing only qualified/eliminated.
+- Goal-difference values use an LTR-safe signed-number component so negative values render as `-4`, not `4-`.
+- Added migration `20260427000031_add_top_scorer_odds.sql` for `players.top_scorer_odds` and `players.top_scorer_odds_updated_at`.
+- Dev Tools now includes a localhost-only button that seeds random team outright odds and top-scorer odds through `/api/dev/outright-odds/randomize`.
+- Dev Tools `Clear All Match Data` also clears `teams.outright_odds` and player `top_scorer_odds` so local development resets all odds surfaces.
