@@ -851,3 +851,11 @@ raw_error
 - The current manual run synced 96 recent-form rows across 35 teams. Teams without rows generally mean BSD returned no finished national-team events for the exact team alias, not a UI bug.
 - This remains Supabase-first: dashboard pages read `team_recent_matches`; regular browsers do not call BSD `/api/events/` directly.
 - BSD image URLs such as `/img/player/{id}/` and `/img/manager/{id}/` are public image fetches, not authenticated JSON API calls. They still hit BSD's image host from the browser, so a later production optimization can proxy/cache them through Next image optimization, Supabase Storage, or Cloudflare R2.
+
+## Implemented odds/outrights sync slice - 2026-04-27
+
+- Added `POST /api/admin/bzzoiro/sync-odds`, protected by localhost in dev or a bearer admin/cron secret in production. It fetches BSD `/api/events/` server-side, matches events to local teams by BSD IDs or normalized names, and writes `matches.home_odds`, `matches.draw_odds`, and `matches.away_odds` when all three odds are present.
+- A manual run checked 104 local matches and updated 24 match-odds rows; 48 matched events had no odds yet and 32 had no event match, which is expected while the provider feed is incomplete.
+- The browser never calls BSD for odds. Dev Tools triggers the local route, and public pages continue to consume Supabase.
+- Outright prediction odds are locked at save time from Supabase (`teams.outright_odds`, `players.top_scorer_odds`) and finalized by `POST /api/admin/finalize-tournament`.
+- The recent-form sync now translates opponent names before writing `team_recent_matches`; verified sample: Jordan's recent-form row stores `ניגריה` instead of `Nigeria`.

@@ -3,6 +3,7 @@ import { canUseJokerOnMatch } from "@/lib/game/boosters";
 
 export type PredictionDirection = "home" | "draw" | "away";
 export type PredictionHitKind = "miss" | "direction" | "exact";
+export type OutrightPredictionType = "winner" | "scorer";
 
 export type ScoringPrediction = {
   home_score_guess: number | null;
@@ -92,6 +93,25 @@ export function getBasePointsForOdds(odds: number | string | null | undefined) {
   if (value <= 5) return 5;
   if (value <= 10) return 7;
   return 10;
+}
+
+export function calculateOutrightPoints(type: OutrightPredictionType, odds: number) {
+  const value = normalizeOdds(odds);
+  if (value === null) return 0;
+
+  if (type === "winner") {
+    if (value <= 6) return 10;
+    if (value <= 15) return 15;
+    if (value <= 30) return 25;
+    if (value <= 100) return 50;
+    return 150;
+  }
+
+  if (value <= 10) return 10;
+  if (value <= 25) return 15;
+  if (value <= 50) return 25;
+  if (value <= 150) return 50;
+  return 150;
 }
 
 function getDirectionBonus(stage: string) {

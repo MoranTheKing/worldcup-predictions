@@ -186,22 +186,51 @@ export async function clearUnfinishedMatchScoring(
   };
 }
 
-async function refreshProfileTotals(supabase: SupabaseClient, userIds: string[]) {
+export async function refreshProfileTotals(supabase: SupabaseClient, userIds: string[]) {
   if (userIds.length === 0) return 0;
 
-  const { data, error } = await supabase
-    .from("predictions")
-    .select("user_id, points_earned")
-    .in("user_id", userIds);
+  const [matchPointsResult, outrightPointsResult] = await Promise.all([
+    supabase
+      .from("predictions")
+      .select("user_id, points_earned")
+      .in("user_id", userIds),
+    supabase
+      .from("tournament_predictions")
+      .select("user_id, winner_points_earned, scorer_points_earned")
+      .in("user_id", userIds),
+  ]);
 
-  if (error) {
-    throw new Error(error.message);
+  if (matchPointsResult.error) {
+    throw new Error(matchPointsResult.error.message);
+  }
+
+  if (outrightPointsResult.error && outrightPointsResult.error.code !== "42703") {
+    throw new Error(outrightPointsResult.error.message);
   }
 
   const totals = new Map<string, number>();
-  for (const row of (data ?? []) as Array<{ user_id: string | null; points_earned: number | null }>) {
+  for (const row of (matchPointsResult.data ?? []) as Array<{
+    user_id: string | null;
+    points_earned: number | null;
+  }>) {
     if (typeof row.user_id !== "string") continue;
     totals.set(row.user_id, (totals.get(row.user_id) ?? 0) + (row.points_earned ?? 0));
+  }
+
+  if (!outrightPointsResult.error) {
+    for (const row of (outrightPointsResult.data ?? []) as Array<{
+      user_id: string | null;
+      winner_points_earned: number | null;
+      scorer_points_earned: number | null;
+    }>) {
+      if (typeof row.user_id !== "string") continue;
+      totals.set(
+        row.user_id,
+        (totals.get(row.user_id) ?? 0) +
+          (row.winner_points_earned ?? 0) +
+          (row.scorer_points_earned ?? 0),
+      );
+    }
   }
 
   let updatedProfiles = 0;

@@ -435,3 +435,13 @@ Brevo Free מוגבל בכמות יומית לכל החשבון, לכן ביום
 - Team detail pages consume `team_recent_matches` for the five latest pre-tournament/recent form matches, while tournament matches still come from the local `matches` table.
 - Added `/dashboard/players/[id]` as the player profile route. Player names in global leaderboards, team stats, squad cards, and formation tokens now link to that profile.
 - `/dashboard/stats` no longer advertises a raw synced-player count in the hero; it shows table count instead, because the BSD roster can exceed 1000 records.
+
+## Outrights scoring and server-side odds sync - 2026-04-27
+
+- Added migration `20260427000034_add_outright_scoring_columns.sql` for locked outright odds and final winner/top-scorer points on `tournament_predictions`.
+- `lib/game/scoring.ts` now exports `calculateOutrightPoints("winner" | "scorer", odds)`. Both outrights use the unified `10/15/25/50/150` point scale with separate thresholds for tournament winner and top scorer.
+- `/game/predictions` shows the potential reward while choosing tournament winner and top scorer; saving locks the current `teams.outright_odds` and `players.top_scorer_odds`.
+- Added secure `POST /api/admin/finalize-tournament` to finalize outrights, write `winner_points_earned`/`scorer_points_earned`, and refresh `profiles.total_score`.
+- Added secure server-side `POST /api/admin/bzzoiro/sync-odds` for BSD match-odds pulls. Browsers still read Supabase; BSD API calls stay on server routes.
+- Recent-form sync now stores Hebrew opponent names and Hebrew friendly labels. A manual sync verified Jordan vs Nigeria as `ניגריה`.
+- Dev Tools adds scorer-odds random/reset, player-stat randomization, `Clear Tournament`, and BSD odds sync buttons.

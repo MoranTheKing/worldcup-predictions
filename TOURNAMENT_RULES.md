@@ -173,3 +173,19 @@ When a group is final, team-hub group tables must show exact locked positions on
 - The browser must never call BSD directly. The route fetches BSD data server-side with `Authorization: Token`, writes flags/coach/roster/photo URLs into Supabase, and then revalidates dashboard/team/stat paths.
 - Team-name matching must keep aliases for real-world naming drift, including `Czech Republic/Czechia`, `Bosnia and Herzegovina/Bosnia & Herzegovina`, `Turkey/Turkiye`, `USA/United States`, `Republic of Korea/South Korea`, and `Côte d'Ivoire/Ivory Coast`.
 - In Hebrew UI, goal chips are number-first (`8 חובה`, `10 זכות`) and full match cards should be clickable to the match detail page while nested team links keep their own destination.
+
+## Outrights scoring rule - 2026-04-27
+
+Tournament winner and top scorer now share one high-variance points scale: `10`, `15`, `25`, `50`, `150`.
+
+Winner thresholds: `<= 6.00` gives 10, `<= 15.00` gives 15, `<= 30.00` gives 25, `<= 100.00` gives 50, and `> 100.00` gives 150.
+
+Top-scorer thresholds: `<= 10.00` gives 10, `<= 25.00` gives 15, `<= 50.00` gives 25, `<= 150.00` gives 50, and `> 150.00` gives 150.
+
+Prediction saves must lock current odds into `tournament_predictions.predicted_winner_odds` and `tournament_predictions.predicted_scorer_odds`. Finalization writes `winner_points_earned` and `scorer_points_earned`, then recomputes profile totals from match predictions plus outright points.
+
+## Server-side sync additions - 2026-04-27
+
+- BSD recent-form opponents must be stored/displayed in Hebrew via the shared team-name translator.
+- BSD match odds can be pulled through secure `POST /api/admin/bzzoiro/sync-odds`; client components must not call BSD directly.
+- Dev-only tournament reset clears match results, bracket slots, cached tournament stats, player stats, prediction points and profile totals while keeping predictions and odds intact.

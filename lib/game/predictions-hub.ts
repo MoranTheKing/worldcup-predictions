@@ -31,11 +31,11 @@ export async function loadPredictionsHubData(userId: string | null): Promise<Pre
       .order("date_time", { ascending: true }),
     admin
       .from("teams")
-      .select("id, name, name_he, logo_url, group_letter")
+      .select("id, name, name_he, logo_url, group_letter, outright_odds")
       .order("name_he", { ascending: true }),
     admin
       .from("players")
-      .select("id, name, team_id, position")
+      .select("id, name, team_id, position, top_scorer_odds")
       .order("name", { ascending: true }),
   ]);
 
@@ -54,6 +54,7 @@ export async function loadPredictionsHubData(userId: string | null): Promise<Pre
     name: (team as { name: string }).name,
     name_he: (team as { name_he?: string | null }).name_he ?? null,
     logo_url: (team as { logo_url?: string | null }).logo_url ?? null,
+    outright_odds: (team as { outright_odds?: number | string | null }).outright_odds ?? null,
   }));
 
   const players: PickerPlayer[] = (playersData ?? []).map((player) => ({
@@ -63,6 +64,8 @@ export async function loadPredictionsHubData(userId: string | null): Promise<Pre
       ? String((player as { team_id: unknown }).team_id)
       : null,
     position: (player as { position?: string | null }).position ?? null,
+    top_scorer_odds:
+      (player as { top_scorer_odds?: number | string | null }).top_scorer_odds ?? null,
   }));
 
   let existingPredictions: MatchPredictionRow[] = [];
@@ -79,7 +82,9 @@ export async function loadPredictionsHubData(userId: string | null): Promise<Pre
         .eq("user_id", userId),
       admin
         .from("tournament_predictions")
-        .select("predicted_winner_team_id, predicted_top_scorer_name")
+        .select(
+          "predicted_winner_team_id, predicted_top_scorer_name, predicted_winner_odds, predicted_scorer_odds, winner_points_earned, scorer_points_earned",
+        )
         .eq("user_id", userId)
         .maybeSingle(),
       getUserJokerUsage(admin, userId),

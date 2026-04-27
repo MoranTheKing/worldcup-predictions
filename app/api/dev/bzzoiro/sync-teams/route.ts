@@ -7,6 +7,7 @@ import {
   getBzzoiroPublicImageUrl,
   type BzzoiroPage,
 } from "@/lib/bzzoiro/client";
+import { translateTeamNameToHebrew } from "@/lib/i18n/team-names";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 type BzzoiroTeam = {
@@ -157,7 +158,7 @@ export async function POST(request: Request) {
       safeBzzoiroPaginated<BzzoiroPlayer>("/players/", { national_team: remote.id }),
       safeBzzoiroPaginated<BzzoiroEvent>("/events/", {
         team: getEventTeamSearchName(local, remote),
-        date_from: "2025-01-01",
+        date_from: "2024-01-01",
         date_to: recentMatchesDateTo,
         status: "finished",
       }),
@@ -427,10 +428,10 @@ function buildRecentMatchRows(
 
       return {
         team_id: local.id,
-        opponent_name: opponentName,
+        opponent_name: translateTeamNameToHebrew(opponentName),
         opponent_logo_url: getBzzoiroPublicImageUrl("team", opponent?.id),
         played_at: event.event_date,
-        competition: event.league?.name ?? "Friendly",
+        competition: normalizeCompetitionName(event.league?.name),
         team_score: teamScore,
         opponent_score: opponentScore,
         result: getRecentMatchResult(teamScore, opponentScore),
@@ -439,6 +440,17 @@ function buildRecentMatchRows(
         updated_at: new Date().toISOString(),
       };
     });
+}
+
+function normalizeCompetitionName(value: string | null | undefined) {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  if (!normalized || normalized.includes("friendly") || normalized.includes("friendlies")) {
+    return "משחק הכנה";
+  }
+  if (normalized.includes("world cup") && normalized.includes("qual")) {
+    return "מוקדמות המונדיאל";
+  }
+  return value ?? "משחק הכנה";
 }
 
 function getEventTeamSide(event: BzzoiroEvent, teamNames: Set<string>) {

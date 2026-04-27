@@ -20,6 +20,10 @@ export type MatchPredictionRow = {
 export type TournamentPredRow = {
   predicted_winner_team_id: string | null;
   predicted_top_scorer_name: string | null;
+  predicted_winner_odds?: number | string | null;
+  predicted_scorer_odds?: number | string | null;
+  winner_points_earned?: number | null;
+  scorer_points_earned?: number | null;
 };
 
 type JokerSelectionState = {

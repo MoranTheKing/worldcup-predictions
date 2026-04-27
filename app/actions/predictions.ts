@@ -203,24 +203,50 @@ export async function upsertTournamentPrediction(
 
   const winnerTeamId = parseUuidField(formData.get("winner_team_id"));
   const topScorerName = normalizeText(formData.get("top_scorer"));
+  const topScorerPlayerId = parseIntegerField(formData.get("top_scorer_player_id"));
 
   if (winnerTeamId === false) {
     return { error: "נבחרה קבוצה לא תקינה לזכייה בטורניר." };
   }
 
-  const payload = {
+  if (topScorerPlayerId === false) {
+    return { error: "נבחר מלך שערים לא תקין." };
+  }
+
+  const [winnerOdds, scorerOdds] = await Promise.all([
+    getTeamOutrightOdds(admin, winnerTeamId),
+    getTopScorerOdds(admin, topScorerPlayerId, topScorerName),
+  ]);
+
+  const basePayload = {
     user_id: user.id,
     predicted_winner_team_id: winnerTeamId,
     predicted_top_scorer_name: topScorerName,
   };
 
-  const { error: tournamentError } = await admin
+  const payload = {
+    ...basePayload,
+    predicted_winner_odds: winnerOdds,
+    predicted_scorer_odds: scorerOdds,
+    winner_points_earned: 0,
+    scorer_points_earned: 0,
+  };
+
+  let { error: tournamentError } = await admin
     .from("tournament_predictions")
     .upsert(payload, { onConflict: "user_id" });
 
+  if (tournamentError?.code === "42703") {
+    const fallbackResult = await admin
+      .from("tournament_predictions")
+      .upsert(basePayload, { onConflict: "user_id" });
+
+    tournamentError = fallbackResult.error;
+  }
+
   const { error: outrightMirrorError } = await admin
     .from("outright_bets")
-    .upsert(payload, { onConflict: "user_id" });
+    .upsert(basePayload, { onConflict: "user_id" });
 
   if (tournamentError && outrightMirrorError) {
     console.error(
@@ -342,6 +368,93 @@ function parseUuidField(value: FormDataEntryValue | null): string | null | false
   )
     ? normalized
     : false;
+}
+
+function parseIntegerField(value: FormDataEntryValue | null): number | null | false {
+  const normalized = value?.toString().trim();
+
+  if (!normalized) {
+    return null;
+  }
+
+  const parsed = Number.parseInt(normalized, 10);
+  return Number.isInteger(parsed) ? parsed : false;
+}
+
+async function getTeamOutrightOdds(
+  supabase: ReturnType<typeof createAdminClient>,
+  teamId: string | null,
+) {
+  if (!teamId) return null;
+
+  const { data, error } = await supabase
+    .from("teams")
+    .select("outright_odds")
+    .eq("id", teamId)
+    .maybeSingle();
+
+  if (error) {
+    console.error(
+      "[upsertTournamentPrediction] winner odds lookup error:",
+      formatSupabaseError(error),
+    );
+    return null;
+  }
+
+  return normalizeOddsValue((data as { outright_odds?: number | string | null } | null)?.outright_odds);
+}
+
+async function getTopScorerOdds(
+  supabase: ReturnType<typeof createAdminClient>,
+  playerId: number | null,
+  playerName: string | null,
+) {
+  const byId =
+    playerId !== null
+      ? await supabase
+          .from("players")
+          .select("top_scorer_odds")
+          .eq("id", playerId)
+          .maybeSingle()
+      : null;
+
+  if (byId?.error) {
+    console.error(
+      "[upsertTournamentPrediction] scorer odds by id error:",
+      formatSupabaseError(byId.error),
+    );
+  } else {
+    const odds = normalizeOddsValue(
+      (byId?.data as { top_scorer_odds?: number | string | null } | null)?.top_scorer_odds,
+    );
+    if (odds !== null) return odds;
+  }
+
+  if (!playerName) return null;
+
+  const { data, error } = await supabase
+    .from("players")
+    .select("top_scorer_odds")
+    .eq("name", playerName)
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error(
+      "[upsertTournamentPrediction] scorer odds lookup error:",
+      formatSupabaseError(error),
+    );
+    return null;
+  }
+
+  return normalizeOddsValue((data as { top_scorer_odds?: number | string | null } | null)?.top_scorer_odds);
+}
+
+function normalizeOddsValue(value: number | string | null | undefined) {
+  const parsed = typeof value === "string" ? Number.parseFloat(value) : value;
+  return typeof parsed === "number" && Number.isFinite(parsed) && parsed >= 1
+    ? Math.round(parsed * 100) / 100
+    : null;
 }
 
 function formatSupabaseError(error: SupabaseLikeError | null) {

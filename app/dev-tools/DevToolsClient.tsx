@@ -531,6 +531,125 @@ function DevToolsClientInner({ matches, teams, error }: Props) {
     }
   }
 
+  async function randomizeTopScorerOdds() {
+    if (!confirm("ליצור יחסי מלך שערים אקראיים לכל השחקנים?")) {
+      return;
+    }
+
+    setBulkSaving(true);
+    setMessage(null);
+
+    try {
+      const res = await fetch("/api/dev/outright-odds/scorers", { method: "POST" });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setMessage(`Error: ${body.error ?? res.statusText}`);
+        return;
+      }
+
+      const body = await res.json().catch(() => ({}));
+      refreshWithMessage(`נוצרו יחסי מלך שערים אקראיים ל-${body.updated ?? 0} שחקנים.`);
+    } finally {
+      setBulkSaving(false);
+    }
+  }
+
+  async function resetTopScorerOdds() {
+    if (!confirm("לאפס את יחסי מלך השערים של כל השחקנים?")) {
+      return;
+    }
+
+    setBulkSaving(true);
+    setMessage(null);
+
+    try {
+      const res = await fetch("/api/dev/outright-odds/scorers", { method: "DELETE" });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setMessage(`Error: ${body.error ?? res.statusText}`);
+        return;
+      }
+
+      const body = await res.json().catch(() => ({}));
+      refreshWithMessage(`אופסו יחסי מלך שערים ל-${body.reset ?? 0} שחקנים.`);
+    } finally {
+      setBulkSaving(false);
+    }
+  }
+
+  async function randomizePlayerStats() {
+    if (!confirm("ליצור סטטיסטיקות אקראיות לכל השחקנים?")) {
+      return;
+    }
+
+    setBulkSaving(true);
+    setMessage(null);
+
+    try {
+      const res = await fetch("/api/dev/players/randomize-stats", { method: "POST" });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setMessage(`Error: ${body.error ?? res.statusText}`);
+        return;
+      }
+
+      const body = await res.json().catch(() => ({}));
+      refreshWithMessage(`נוצרו סטטיסטיקות אקראיות ל-${body.updated ?? 0} שחקנים.`);
+    } finally {
+      setBulkSaving(false);
+    }
+  }
+
+  async function clearTournament() {
+    if (!confirm("לאפס רק את מצב הטורניר? תוצאות, טבלאות, סטטיסטיקות, ניקוד ובראקט יאופסו, אבל ניחושים ויחסים יישארו.")) {
+      return;
+    }
+
+    setBulkSaving(true);
+    setMessage(null);
+
+    try {
+      const res = await fetch("/api/dev/tournament/clear", { method: "POST" });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setMessage(`Error: ${body.error ?? res.statusText}`);
+        return;
+      }
+
+      const body = await res.json().catch(() => ({}));
+      refreshWithMessage(
+        `הטורניר אופס: ${body.matchesReset ?? 0} משחקים, ${body.teamsReset ?? 0} נבחרות ו-${body.playersReset ?? 0} שחקנים.`,
+      );
+    } finally {
+      setBulkSaving(false);
+    }
+  }
+
+  async function syncBzzoiroOdds() {
+    if (!confirm("לסנכרן יחסי הימורים למשחקים מה-BSD API? אם אין נתונים זמינים, לא ישתנה כלום.")) {
+      return;
+    }
+
+    setBulkSaving(true);
+    setMessage(null);
+
+    try {
+      const res = await fetch("/api/admin/bzzoiro/sync-odds", { method: "POST" });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setMessage(`Error: ${body.error ?? res.statusText}`);
+        return;
+      }
+
+      const body = await res.json().catch(() => ({}));
+      refreshWithMessage(
+        `סנכרון יחסים הסתיים: עודכנו ${body.updated ?? 0} מתוך ${body.checked ?? 0} משחקים.`,
+      );
+    } finally {
+      setBulkSaving(false);
+    }
+  }
+
   async function saveTeamOutrightOdds() {
     setBulkSaving(true);
     setMessage(null);
@@ -770,6 +889,27 @@ function DevToolsClientInner({ matches, teams, error }: Props) {
               יחס נבחרות/מלך שערים
             </button>
             <button
+              onClick={randomizeTopScorerOdds}
+              disabled={pending}
+              className="rounded-2xl border border-[rgba(236,72,153,0.5)] bg-[rgba(236,72,153,0.12)] px-4 py-3 text-sm font-bold text-pink-200 transition hover:bg-[rgba(236,72,153,0.2)] disabled:opacity-50"
+            >
+              רנדום יחסי מלך שערים
+            </button>
+            <button
+              onClick={randomizePlayerStats}
+              disabled={pending}
+              className="rounded-2xl border border-[rgba(20,184,166,0.46)] bg-[rgba(20,184,166,0.11)] px-4 py-3 text-sm font-bold text-teal-200 transition hover:bg-[rgba(20,184,166,0.2)] disabled:opacity-50"
+            >
+              רנדום סטט׳ שחקנים
+            </button>
+            <button
+              onClick={syncBzzoiroOdds}
+              disabled={pending}
+              className="rounded-2xl border border-[rgba(125,211,252,0.5)] bg-[rgba(125,211,252,0.1)] px-4 py-3 text-sm font-bold text-sky-200 transition hover:bg-[rgba(125,211,252,0.18)] disabled:opacity-50"
+            >
+              סנכרון יחסים BSD
+            </button>
+            <button
               onClick={syncBzzoiroTeams}
               disabled={pending}
               className="rounded-2xl border border-[rgba(34,211,238,0.42)] bg-[rgba(34,211,238,0.1)] px-4 py-3 text-sm font-bold text-cyan-200 transition hover:bg-[rgba(34,211,238,0.18)] disabled:opacity-50"
@@ -789,6 +929,13 @@ function DevToolsClientInner({ matches, teams, error }: Props) {
               className="rounded-2xl border border-[rgba(95,255,123,0.32)] bg-[rgba(95,255,123,0.14)] px-4 py-3 text-sm font-bold text-wc-neon transition hover:bg-[rgba(95,255,123,0.22)] disabled:opacity-50"
             >
               Save All Matches
+            </button>
+            <button
+              onClick={clearTournament}
+              disabled={pending}
+              className="rounded-2xl border border-[rgba(168,85,247,0.62)] bg-[rgba(168,85,247,0.14)] px-4 py-3 text-sm font-bold text-purple-200 transition hover:bg-[rgba(168,85,247,0.24)] disabled:opacity-50"
+            >
+              Clear Tournament
             </button>
             <button
               onClick={clearAll}
@@ -849,6 +996,20 @@ function DevToolsClientInner({ matches, teams, error }: Props) {
                 className="rounded-xl border border-[rgba(255,92,130,0.45)] bg-[rgba(255,92,130,0.12)] px-4 py-2 text-xs font-black text-wc-danger transition hover:bg-[rgba(255,92,130,0.22)] disabled:opacity-50"
               >
                 אפס יחסי נבחרות
+              </button>
+              <button
+                onClick={randomizeTopScorerOdds}
+                disabled={pending}
+                className="rounded-xl border border-[rgba(236,72,153,0.5)] bg-[rgba(236,72,153,0.12)] px-4 py-2 text-xs font-black text-pink-200 transition hover:bg-[rgba(236,72,153,0.22)] disabled:opacity-50"
+              >
+                רנדום מלך שערים
+              </button>
+              <button
+                onClick={resetTopScorerOdds}
+                disabled={pending}
+                className="rounded-xl border border-[rgba(255,92,130,0.45)] bg-[rgba(255,92,130,0.12)] px-4 py-2 text-xs font-black text-wc-danger transition hover:bg-[rgba(255,92,130,0.22)] disabled:opacity-50"
+              >
+                אפס מלך שערים
               </button>
             </div>
           </div>

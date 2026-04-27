@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import PlayerLink from "@/components/PlayerLink";
 import TeamLink from "@/components/TeamLink";
 import { GoalsForAgainst } from "@/components/StatNumbers";
+import { translateTeamNameToHebrew } from "@/lib/i18n/team-names";
 import { createClient } from "@/lib/supabase/server";
 import {
   attachTeamsToMatches,
@@ -887,8 +888,8 @@ function buildFormItems(
 
     return {
       key: `recent-${match.id}`,
-      stageLabel: match.competition ?? "משחק הכנה",
-      opponentName: match.opponent_name,
+      stageLabel: translateCompetitionLabel(match.competition),
+      opponentName: translateTeamNameToHebrew(match.opponent_name),
       opponentLogo: match.opponent_logo_url,
       dateLabel: formatShortDateTime(match.played_at),
       score: {
@@ -972,6 +973,29 @@ function getRecentOutcome(result: "win" | "draw" | "loss") {
     return resultOutcome("הפסד", "L", "loss", "text-wc-danger", "bg-[rgba(255,92,130,0.14)] text-wc-danger");
   }
   return resultOutcome("תיקו", "D", "draw", "text-wc-amber", "bg-[rgba(255,182,73,0.14)] text-wc-amber");
+}
+
+function translateCompetitionLabel(value: string | null | undefined) {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  if (!normalized || normalized.includes("friendly") || normalized.includes("friendlies")) {
+    return "משחק הכנה";
+  }
+  if (normalized.includes("world cup") && normalized.includes("qual")) {
+    return "מוקדמות המונדיאל";
+  }
+  if (normalized.includes("world cup")) {
+    return "מונדיאל";
+  }
+  if (normalized.includes("nations league")) {
+    return "ליגת האומות";
+  }
+  if (normalized.includes("euro")) {
+    return "יורו";
+  }
+  if (normalized.includes("africa cup")) {
+    return "אליפות אפריקה";
+  }
+  return value ?? "משחק הכנה";
 }
 
 function liveOutcome(
