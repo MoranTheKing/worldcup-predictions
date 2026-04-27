@@ -69,10 +69,12 @@ const TEXT = {
   remainingTeams: "נבחרות שנותרו",
   lockedPositionLegend: "מיקום סופי נעול",
   qualifiedLegend: "העפלה ודאית",
+  securedThirdLegend: "לפחות מקום 3",
   eliminatedLegend: "הדחה ודאית",
   liveLegend: "נבחרת שמשחקת עכשיו",
   lockedPosition: "מקום",
   qualified: "הבטיחה העפלה",
+  securedAtLeastThird: "לפחות מקום 3",
   eliminated: "הודחה",
   group: "בית",
   team: "נבחרת",
@@ -139,6 +141,7 @@ const STATUS_META: Record<StandingStatus, { rowClassName: string }> = {
 const QUALIFIED_PILL_CLASS = "bg-[rgba(95,255,123,0.14)] text-wc-neon";
 const ELIMINATED_PILL_CLASS = "bg-[rgba(255,92,130,0.14)] text-wc-danger";
 const LOCKED_POSITION_PILL_CLASS = "bg-white/8 text-wc-fg2";
+const SECURED_THIRD_PILL_CLASS = "bg-[rgba(255,182,73,0.16)] text-wc-amber";
 const CONNECTOR_CLASS = "bg-[rgba(255,255,255,0.18)]";
 const CARD_WIDTH_CLASS = "mx-auto w-[148px] min-w-[140px] max-w-[152px]";
 const TOP_HALF_BRANCHES: readonly QuarterBranchConfig[] = [
@@ -265,6 +268,10 @@ function getGroupStatusDisplay(
     return { label: TEXT.eliminated, pillClassName: ELIMINATED_PILL_CLASS };
   }
 
+  if (entry.guaranteedAtLeastRank === 3) {
+    return { label: TEXT.securedAtLeastThird, pillClassName: SECURED_THIRD_PILL_CLASS };
+  }
+
   return null;
 }
 
@@ -382,6 +389,7 @@ export default function TournamentClient({
           <div className="mt-6 flex flex-wrap gap-3 text-xs">
             <LegendBadge colorClassName="bg-white/25" label={TEXT.lockedPositionLegend} />
             <LegendBadge colorClassName="bg-wc-neon shadow-[0_0_12px_rgba(95,255,123,0.7)]" label={TEXT.qualifiedLegend} />
+            <LegendBadge colorClassName="bg-wc-amber shadow-[0_0_12px_rgba(255,182,73,0.7)]" label={TEXT.securedThirdLegend} />
             <LegendBadge colorClassName="bg-wc-danger shadow-[0_0_12px_rgba(255,92,130,0.7)]" label={TEXT.eliminatedLegend} />
             <LegendBadge colorClassName="bg-wc-amber shadow-[0_0_12px_rgba(255,182,73,0.7)]" label={TEXT.liveLegend} pulse />
           </div>

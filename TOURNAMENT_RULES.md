@@ -25,6 +25,7 @@ Group positions and best-third-place positions are locked only when they are mat
 Qualification and elimination status can be settled before the exact group position is settled. In that case the UI should show a qualified/eliminated pill without a locked-place label.
 Scenario analysis for pending group matches runs through the same head-to-head and overall tie-break pipeline as the live table, so a team can be marked qualified when every remaining result path keeps it in the top two even if its exact rank can still move.
 Late-group scenarios include scoreline variants, not only win/draw/loss directions, because goal difference and goals scored can change qualification certainty.
+If every remaining result path keeps a team at least third, but qualification through the best-third table is not yet guaranteed, the group table shows an intermediate `לפחות מקום 3` badge.
 
 ## Annex C and knockout progression
 

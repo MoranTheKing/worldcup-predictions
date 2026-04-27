@@ -42,6 +42,7 @@ export type TeamStanding = {
   team: TournamentTeam;
   rank: number;
   lockedRank: number | null;
+  guaranteedAtLeastRank: number | null;
   isLocked: boolean;
   played: number;
   won: number;
@@ -317,6 +318,7 @@ function buildStandingEntry(team: TournamentTeam, matches: TournamentMatch[]): T
     team,
     rank: 0,
     lockedRank: null,
+    guaranteedAtLeastRank: null,
     isLocked: false,
     played: stats.played || team.played_count,
     won: stats.won,
@@ -764,10 +766,17 @@ export function buildTournamentStandings(
             : null;
 
         const lockedRank = terminalLockedRank ?? scenarioLockedRank ?? allPlayedLockedRank ?? null;
+        const guaranteedAtLeastRank =
+          teamState &&
+          Number.isFinite(teamState.worstPossibleRank) &&
+          teamState.worstPossibleRank <= 3
+            ? teamState.worstPossibleRank
+            : null;
 
         return {
           ...entry,
           lockedRank,
+          guaranteedAtLeastRank,
           isLocked: lockedRank !== null,
           status: determineGroupStatus(entry.team.id, letter, groupSummaries),
         };
