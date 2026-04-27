@@ -10,6 +10,7 @@ import UserAvatar from "@/components/UserAvatar";
 const NAV_ITEMS = [
   { href: "/dashboard/matches", icon: "🎯", label: "משחקים" },
   { href: "/dashboard/tournament", icon: "🏆", label: "טורניר" },
+  { href: "/dashboard/teams", icon: "⚑", label: "נבחרות" },
   { href: "/dashboard/stats", icon: "📊", label: "טבלאות" },
   { href: "/game", icon: "📝", label: "ניחושים" },
 ];
@@ -212,7 +213,7 @@ export default function DashboardShell({ children }: Props) {
       ) : null}
 
       <nav className="fixed inset-x-0 bottom-0 z-20 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] md:hidden">
-        <div className="wc-glass grid grid-cols-4 rounded-[1.75rem] px-2 py-2">
+        <div className="wc-glass grid grid-cols-5 rounded-[1.75rem] px-2 py-2">
           {NAV_ITEMS.map(({ href, icon, label }) => {
             const active = isActive(href);
 

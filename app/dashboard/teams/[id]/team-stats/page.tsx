@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
+import { GoalsForAgainst, SignedNumber } from "@/components/StatNumbers";
 import TeamLink from "@/components/TeamLink";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -138,7 +139,11 @@ export default async function TeamGroupStatsPage({ params }: { params: Promise<{
 
       <section className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <InfoStat label="מאזן" value={`${stats.wins}-${stats.draws}-${stats.losses}`} sub={`${stats.played} משחקים ששוחקו`} />
-        <InfoStat label="שערי זכות/חובה" value={`${stats.goalsFor}:${stats.goalsAgainst}`} sub={`ממוצע ${formatAverage(stats.goalsFor, stats.played)} שערים למשחק`} />
+        <InfoStat
+          label="שערי זכות / חובה"
+          valueNode={<GoalsForAgainst goalsFor={stats.goalsFor} goalsAgainst={stats.goalsAgainst} />}
+          sub={`ממוצע ${formatAverage(stats.goalsFor, stats.played)} שערי זכות למשחק`}
+        />
         <InfoStat label="הפרש שערים" valueNode={<SignedNumber value={stats.goalDifference} />} sub="מוצג בכיוון מספרי תקין" />
         <InfoStat label="יחס זכייה" value={formatOdds(team.outright_odds)} sub={team.outright_odds_updated_at ? "עודכן מה-API" : "טרם עודכן"} />
       </section>
@@ -171,7 +176,7 @@ export default async function TeamGroupStatsPage({ params }: { params: Promise<{
                     <th className="px-3 py-2 text-start">נבחרת</th>
                     <th className="px-3 py-2 text-center">סטטוס</th>
                     <th className="px-3 py-2 text-center">מאזן</th>
-                    <th className="px-3 py-2 text-center">שערים</th>
+                    <th className="px-3 py-2 text-center">זכות / חובה</th>
                     <th className="px-3 py-2 text-center">הפרש</th>
                     <th className="px-3 py-2 text-center">נק׳</th>
                   </tr>
@@ -192,7 +197,9 @@ export default async function TeamGroupStatsPage({ params }: { params: Promise<{
                         </span>
                       </td>
                       <td className="px-3 py-2 text-center text-wc-fg2" dir="ltr">{entry.won}-{entry.drawn}-{entry.lost}</td>
-                      <td className="px-3 py-2 text-center text-wc-fg2" dir="ltr">{entry.gf}:{entry.ga}</td>
+                      <td className="px-3 py-2 text-center text-wc-fg2">
+                        <GoalsForAgainst goalsFor={entry.gf} goalsAgainst={entry.ga} />
+                      </td>
                       <td className="px-3 py-2 text-center text-wc-fg2"><SignedNumber value={entry.gd} /></td>
                       <td className="px-3 py-2 text-center font-black text-wc-fg1">{entry.pts}</td>
                     </tr>
@@ -215,7 +222,7 @@ export default async function TeamGroupStatsPage({ params }: { params: Promise<{
                 <th className="px-3 py-2 text-start">שלב</th>
                 <th className="px-3 py-2 text-center">משחקים</th>
                 <th className="px-3 py-2 text-center">מאזן</th>
-                <th className="px-3 py-2 text-center">שערים</th>
+                <th className="px-3 py-2 text-center">זכות / חובה</th>
                 <th className="px-3 py-2 text-center">הפרש</th>
               </tr>
             </thead>
@@ -225,7 +232,9 @@ export default async function TeamGroupStatsPage({ params }: { params: Promise<{
                   <td className="px-3 py-2 font-black text-wc-fg1">{row.stage}</td>
                   <td className="px-3 py-2 text-center text-wc-fg2">{row.played}</td>
                   <td className="px-3 py-2 text-center text-wc-fg2" dir="ltr">{row.wins}-{row.draws}-{row.losses}</td>
-                  <td className="px-3 py-2 text-center text-wc-fg2" dir="ltr">{row.goalsFor}:{row.goalsAgainst}</td>
+                  <td className="px-3 py-2 text-center text-wc-fg2">
+                    <GoalsForAgainst goalsFor={row.goalsFor} goalsAgainst={row.goalsAgainst} />
+                  </td>
                   <td className="px-3 py-2 text-center text-wc-fg2"><SignedNumber value={row.goalsFor - row.goalsAgainst} /></td>
                 </tr>
               ))}
@@ -326,14 +335,6 @@ function SmallFlag({ team }: { team: Pick<TournamentTeamRecord, "name" | "name_h
   );
 }
 
-function SignedNumber({ value }: { value: number }) {
-  const formatted = value > 0 ? `+${value}` : String(value);
-  return (
-    <span dir="ltr" className="inline-block" style={{ unicodeBidi: "plaintext" }}>
-      {formatted}
-    </span>
-  );
-}
 
 function buildTeamStats(matches: TeamMatch[], teamId: string): TeamStats {
   const initial: TeamStats = {

@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
+import { GoalsForAgainst, SignedNumber } from "@/components/StatNumbers";
 import { createClient } from "@/lib/supabase/server";
 import {
   attachTeamsToMatches,
@@ -173,7 +174,11 @@ export default async function TeamStatsPage({ params }: { params: Promise<{ id: 
 
       <section className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <InfoStat label="מאזן" value={`${stats.wins}-${stats.draws}-${stats.losses}`} sub={`${stats.played} משחקים ששוחקו`} />
-        <InfoStat label="שערי זכות" value={String(stats.goalsFor)} sub={`${stats.goalsAgainst} שערי חובה`} />
+        <InfoStat
+          label="שערי זכות / חובה"
+          valueNode={<GoalsForAgainst goalsFor={stats.goalsFor} goalsAgainst={stats.goalsAgainst} />}
+          sub="מוצג לפי הנבחרת הזו"
+        />
         <InfoStat label="רשת נקייה" value={String(stats.cleanSheets)} sub={`${stats.failedToScore} משחקים ללא שער זכות`} />
         <InfoStat label="יחס זכייה" value={formatOdds(team.outright_odds)} sub={standing ? `מקום ${standing.rank} בבית` : "טרם דורגה בבית"} />
       </section>
@@ -241,11 +246,21 @@ function SectionHeader({ title, eyebrow }: { title: string; eyebrow?: string }) 
   );
 }
 
-function InfoStat({ label, value, sub }: { label: string; value: string; sub: string }) {
+function InfoStat({
+  label,
+  value,
+  valueNode,
+  sub,
+}: {
+  label: string;
+  value?: string;
+  valueNode?: ReactNode;
+  sub: string;
+}) {
   return (
     <div className="rounded-[1.35rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.055),rgba(255,255,255,0.025))] p-4">
       <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-wc-fg3">{label}</p>
-      <p className="mt-2 font-sans text-3xl font-black tracking-normal text-wc-fg1">{value}</p>
+      <p className="mt-2 font-sans text-3xl font-black tracking-normal text-wc-fg1">{valueNode ?? value}</p>
       <p className="mt-1 text-xs text-wc-fg3">{sub}</p>
     </div>
   );
@@ -415,13 +430,4 @@ function formatOdds(value: number | string | null | undefined) {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) return String(value);
   return numeric.toFixed(2);
-}
-
-function SignedNumber({ value }: { value: number }) {
-  const formatted = value > 0 ? `+${value}` : String(value);
-  return (
-    <span dir="ltr" className="inline-block" style={{ unicodeBidi: "plaintext" }}>
-      {formatted}
-    </span>
-  );
 }

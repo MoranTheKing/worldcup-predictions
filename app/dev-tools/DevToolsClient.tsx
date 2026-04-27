@@ -14,7 +14,17 @@ import {
 
 export type DevMatchRow = MatchWithTeams;
 
-type Props = { matches: DevMatchRow[]; error: string | null };
+export type DevTeamOddsRow = {
+  id: string;
+  name: string;
+  name_he: string | null;
+  logo_url: string | null;
+  group_letter: string | null;
+  outright_odds?: number | string | null;
+  outright_odds_updated_at?: string | null;
+};
+
+type Props = { matches: DevMatchRow[]; teams: DevTeamOddsRow[]; error: string | null };
 
 type Filter = "all" | "scheduled" | "live" | "finished";
 
@@ -246,22 +256,24 @@ function buildScheduledReset(match: DevMatchRow) {
   });
 }
 
-export default function DevToolsClient({ matches, error }: Props) {
+export default function DevToolsClient({ matches, teams, error }: Props) {
   const resetKey = useMemo(
     () =>
-      matches
+      `${matches
         .map(
           (match) =>
             `${match.match_number}:${match.status}:${match.match_phase}:${match.minute}:${match.home_score}:${match.away_score}:${match.home_odds}:${match.draw_odds}:${match.away_odds}:${match.home_team_id}:${match.away_team_id}:${match.home_placeholder}:${match.away_placeholder}:${match.is_extra_time}:${match.home_penalty_score}:${match.away_penalty_score}`,
         )
-        .join("|"),
-    [matches],
+        .join("|")}::${teams
+        .map((team) => `${team.id}:${team.outright_odds}:${team.outright_odds_updated_at}`)
+        .join("|")}`,
+    [matches, teams],
   );
 
-  return <DevToolsClientInner key={resetKey} matches={matches} error={error} />;
+  return <DevToolsClientInner key={resetKey} matches={matches} teams={teams} error={error} />;
 }
 
-function DevToolsClientInner({ matches, error }: Props) {
+function DevToolsClientInner({ matches, teams, error }: Props) {
   const router = useRouter();
   const [refreshPending, startTransition] = useTransition();
   const [busyId, setBusyId] = useState<number | null>(null);
@@ -269,6 +281,7 @@ function DevToolsClientInner({ matches, error }: Props) {
   const [message, setMessage] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
   const [drafts, setDrafts] = useState<DevMatchRow[]>(matches);
+  const [teamOddsDrafts, setTeamOddsDrafts] = useState<DevTeamOddsRow[]>(teams);
 
   const pending = refreshPending || bulkSaving;
 
@@ -286,6 +299,23 @@ function DevToolsClientInner({ matches, error }: Props) {
     () => drafts.filter((match) => filter === "all" || match.status === filter),
     [drafts, filter],
   );
+
+  const sortedTeamOddsDrafts = useMemo(
+    () =>
+      teamOddsDrafts
+        .slice()
+        .sort((left, right) =>
+          (left.group_letter ?? "").localeCompare(right.group_letter ?? "", "he") ||
+          (left.name_he ?? left.name).localeCompare(right.name_he ?? right.name, "he"),
+        ),
+    [teamOddsDrafts],
+  );
+
+  function updateTeamOddsDraft(teamId: string, value: number | null) {
+    setTeamOddsDrafts((current) =>
+      current.map((team) => (team.id === teamId ? { ...team, outright_odds: value } : team)),
+    );
+  }
 
   function updateDraft(matchNumber: number, recipe: (match: DevMatchRow) => DevMatchRow) {
     setDrafts((current) =>
@@ -501,6 +531,64 @@ function DevToolsClientInner({ matches, error }: Props) {
     }
   }
 
+  async function saveTeamOutrightOdds() {
+    setBulkSaving(true);
+    setMessage(null);
+
+    try {
+      const res = await fetch("/api/dev/outright-odds/teams", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          teams: teamOddsDrafts.map((team) => ({
+            id: team.id,
+            outright_odds:
+              team.outright_odds === null || team.outright_odds === ""
+                ? null
+                : Number(team.outright_odds),
+          })),
+        }),
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setMessage(`Error: ${body.error ?? res.statusText}`);
+        return;
+      }
+
+      const body = await res.json().catch(() => ({}));
+      refreshWithMessage(`נשמרו יחסי זכייה ל-${body.updated ?? teamOddsDrafts.length} נבחרות.`);
+    } finally {
+      setBulkSaving(false);
+    }
+  }
+
+  async function resetTeamOutrightOdds() {
+    if (!confirm("לאפס את יחסי הזכייה של כל הנבחרות?")) {
+      return;
+    }
+
+    setBulkSaving(true);
+    setMessage(null);
+    setTeamOddsDrafts((current) =>
+      current.map((team) => ({ ...team, outright_odds: null, outright_odds_updated_at: null })),
+    );
+
+    try {
+      const res = await fetch("/api/dev/outright-odds/teams", { method: "DELETE" });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setMessage(`Error: ${body.error ?? res.statusText}`);
+        return;
+      }
+
+      const body = await res.json().catch(() => ({}));
+      refreshWithMessage(`אופסו יחסי זכייה ל-${body.reset ?? teamOddsDrafts.length} נבחרות.`);
+    } finally {
+      setBulkSaving(false);
+    }
+  }
+
   async function randomizeAll() {
     if (!confirm("למלא את כל המשחקים בתוצאות אקראיות ולסנכרן מיד את כל הטורניר?")) return;
 
@@ -675,6 +763,69 @@ function DevToolsClientInner({ matches, error }: Props) {
             {error}
           </div>
         )}
+
+        <section className="mb-4 rounded-[1.5rem] border border-white/10 bg-white/[0.035] p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="wc-kicker text-[0.68rem]">Outright odds</p>
+              <h2 className="mt-1 text-xl font-black text-wc-fg1">יחסי זכייה לנבחרות</h2>
+              <p className="mt-1 max-w-2xl text-xs leading-6 text-wc-fg3">
+                עריכה ידנית של יחס זכייה לכל נבחרת. מלך השערים יישאר לסנכרון API בהמשך.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={saveTeamOutrightOdds}
+                disabled={pending}
+                className="rounded-xl border border-[rgba(95,255,123,0.32)] bg-[rgba(95,255,123,0.14)] px-4 py-2 text-xs font-black text-wc-neon transition hover:bg-[rgba(95,255,123,0.22)] disabled:opacity-50"
+              >
+                שמור יחסי נבחרות
+              </button>
+              <button
+                onClick={resetTeamOutrightOdds}
+                disabled={pending}
+                className="rounded-xl border border-[rgba(255,92,130,0.45)] bg-[rgba(255,92,130,0.12)] px-4 py-2 text-xs font-black text-wc-danger transition hover:bg-[rgba(255,92,130,0.22)] disabled:opacity-50"
+              >
+                אפס יחסי נבחרות
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-4 max-h-[22rem] overflow-auto rounded-2xl border border-white/10">
+            <div className="grid min-w-[52rem] grid-cols-[5rem_1fr_9rem_8rem] border-b border-white/8 bg-white/[0.025] px-3 py-2 text-xs font-black text-wc-fg3">
+              <span>בית</span>
+              <span>נבחרת</span>
+              <span className="text-center">יחס זכייה</span>
+              <span className="text-center">עודכן</span>
+            </div>
+            {sortedTeamOddsDrafts.map((team) => (
+              <div
+                key={team.id}
+                className="grid min-w-[52rem] grid-cols-[5rem_1fr_9rem_8rem] items-center border-b border-white/6 px-3 py-2 text-sm last:border-0"
+              >
+                <span className="text-xs font-bold text-wc-fg3">{team.group_letter ?? "-"}</span>
+                <span className="font-bold text-wc-fg1">{team.name_he ?? team.name}</span>
+                <input
+                  dir="ltr"
+                  type="number"
+                  min="1"
+                  max="9999.99"
+                  step="0.01"
+                  value={team.outright_odds ?? ""}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    updateTeamOddsDraft(team.id, value === "" ? null : Number(value));
+                  }}
+                  disabled={pending}
+                  className="mx-auto w-24 rounded-xl border border-white/10 bg-black/30 px-2 py-2 text-center text-xs font-black text-wc-fg1 outline-none transition focus:border-wc-neon disabled:opacity-40"
+                />
+                <span className="text-center text-[11px] text-wc-fg3">
+                  {team.outright_odds_updated_at ? "כן" : "טרם"}
+                </span>
+              </div>
+            ))}
+          </div>
+        </section>
 
         <div className="mb-4 inline-flex rounded-2xl p-1.5 wc-glass">
           {(["all", "scheduled", "live", "finished"] as const).map((value) => (

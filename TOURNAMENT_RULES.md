@@ -121,4 +121,25 @@ The visible statistics surface is split intentionally:
 - `/dashboard/teams/[id]/team-stats` owns team-level metrics for one team.
 - `/dashboard/teams/[id]/stats` owns individual player metrics for one team.
 
+## RTL numeric and team stats display
+
+All signed numeric values in tables should use `SignedNumber` from `components/StatNumbers.tsx`. This is required for goal difference and live/projected deltas so negative numbers render as `-4`, not `4-`.
+
+Team goal totals should not be displayed as `GF:GA` in Hebrew UI. Use `GoalsForAgainst` or explicit labels for `שערי זכות` and `שערי חובה`, because `10:5` is ambiguous in RTL.
+
+## Squad and API-ready roster fields
+
+The squad route `/dashboard/teams/[id]/squad` is the visual roster surface: coach card, formation, player avatars, shirt numbers, and grouped squad cards. Player photos and shirt numbers are stored in `players.photo_url` and `players.shirt_number` from migration `20260427000032_add_player_roster_visual_fields.sql`.
+
+External API sync should write into Supabase first. UI pages should read from Supabase and reuse existing realtime/refresh paths rather than calling the external football API directly from client components.
+
+## Dev odds controls
+
+Dev Tools has two separate odds flows:
+
+- match 1/X/2 odds: `matches.home_odds`, `matches.draw_odds`, `matches.away_odds`
+- tournament outright odds: `teams.outright_odds`
+
+Manual team outright editing and reset are handled by localhost-only `/api/dev/outright-odds/teams`. Top-scorer odds remain random/API-fed and should not be manually maintained per player in the current UI.
+
 When a group is final, team-hub group tables must show exact locked positions only (`מקום 1` through `מקום 4`) and should match `/dashboard/tournament`. Negative goal differences must render in LTR numeric isolation so `-4` never flips to `4-`.

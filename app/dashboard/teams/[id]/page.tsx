@@ -1,7 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import type { ReactNode } from "react";
 import TeamLink from "@/components/TeamLink";
+import { GoalsForAgainst } from "@/components/StatNumbers";
 import { createClient } from "@/lib/supabase/server";
 import {
   attachTeamsToMatches,
@@ -297,7 +299,11 @@ export default async function TeamPage({ params }: { params: Promise<{ id: strin
 
       <section className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <InfoStat label="משחקים ששוחקו" value={String(stats.played)} sub={`${stats.scheduledCount} משחקים עתידיים`} />
-        <InfoStat label="שערי זכות" value={String(stats.goalsFor)} sub={`${stats.goalsAgainst} שערי חובה`} />
+        <InfoStat
+          label="שערי זכות / חובה"
+          valueNode={<GoalsForAgainst goalsFor={stats.goalsFor} goalsAgainst={stats.goalsAgainst} />}
+          sub="מוצג לפי הנבחרת הזו"
+        />
         <InfoStat label="רשת נקייה" value={String(stats.cleanSheets)} sub="במשחקים שהסתיימו" />
         <InfoStat label="דירוג פיפ״א" value={String(team.fifa_ranking ?? "-")} sub="דירוג עולמי נוכחי" />
       </section>
@@ -345,7 +351,7 @@ export default async function TeamPage({ params }: { params: Promise<{ id: strin
                       <th className="px-3 py-2 text-start">#</th>
                       <th className="px-3 py-2 text-start">נבחרת</th>
                       <th className="px-3 py-2 text-center">מאזן</th>
-                      <th className="px-3 py-2 text-center">שערים</th>
+                      <th className="px-3 py-2 text-center">זכות / חובה</th>
                       <th className="px-3 py-2 text-center">נק׳</th>
                     </tr>
                   </thead>
@@ -487,11 +493,21 @@ function TeamFlag({
   );
 }
 
-function InfoStat({ label, value, sub }: { label: string; value: string; sub: string }) {
+function InfoStat({
+  label,
+  value,
+  valueNode,
+  sub,
+}: {
+  label: string;
+  value?: string;
+  valueNode?: ReactNode;
+  sub: string;
+}) {
   return (
     <div className="rounded-[1.35rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.055),rgba(255,255,255,0.025))] p-4">
       <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-wc-fg3">{label}</p>
-      <p className="mt-2 font-sans text-3xl font-black tracking-normal text-wc-fg1">{value}</p>
+      <p className="mt-2 font-sans text-3xl font-black tracking-normal text-wc-fg1">{valueNode ?? value}</p>
       <p className="mt-1 text-xs text-wc-fg3">{sub}</p>
     </div>
   );
@@ -630,8 +646,8 @@ function GroupMiniRow({ entry, activeTeamId }: { entry: TeamStanding; activeTeam
       <td className="px-3 py-2 text-center text-wc-fg2" dir="ltr">
         {entry.won}-{entry.drawn}-{entry.lost}
       </td>
-      <td className="px-3 py-2 text-center text-wc-fg2" dir="ltr">
-        {entry.gf}:{entry.ga}
+      <td className="px-3 py-2 text-center text-wc-fg2">
+        <GoalsForAgainst goalsFor={entry.gf} goalsAgainst={entry.ga} />
       </td>
       <td className="px-3 py-2 text-center font-black text-wc-fg1">{entry.pts}</td>
     </tr>

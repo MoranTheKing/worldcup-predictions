@@ -816,3 +816,11 @@ raw_error
 - `team_recent_matches` stores five pre-tournament form matches per team, with result, score, opponent, competition, source, and date.
 - These fields are introduced by `supabase/migrations/20260427000030_add_team_api_profile_fields.sql`.
 - RTL rule for API consumers: when rendering scores from a selected team's perspective, pass team goals first and render them on the visual right side. Do not reuse home-away LTR score order inside team profile cards.
+
+## Team roster visuals and odds controls - 2026-04-27
+
+- `supabase/migrations/20260427000032_add_player_roster_visual_fields.sql` adds `players.photo_url` and `players.shirt_number` for the squad page. The API sync should fill those fields together with player position and stats.
+- `/dashboard/teams/[id]/squad` now renders a coach card, formation pitch, player avatars/photos, shirt numbers, and compact player stats. If the API lacks a photo, the UI falls back to initials.
+- Team and global stats tables should render goal totals as explicit `זכות` and `חובה`, not `GF:GA` or `10:5`, to avoid RTL ambiguity.
+- Dev Tools now has manual team outright odds editing and reset via `/api/dev/outright-odds/teams`. Top-scorer odds remain random/API-fed until the external player feed is connected.
+- API sync can start with a source-ID mapping phase: store external team, match, and player identifiers, then sync match clocks/scores, odds, rosters, coach data, recent form, and player stats into Supabase. Browser UI should continue reading Supabase only.

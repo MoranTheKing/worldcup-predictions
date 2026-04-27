@@ -46,5 +46,9 @@ Key rules to remember:
 - Team stats are split by purpose: `/dashboard/teams/[id]/team-stats` for team-level numbers and `/dashboard/teams/[id]/stats` for individual player stats.
 - When a group is final or a rank is locked, team-hub tables should show `מקום N` exactly like the tournament page. Use LTR-isolated signed numbers for goal difference so negative values display as `-4`, never `4-`.
 - Top-scorer odds live on `players.top_scorer_odds` from migration `20260427000031_add_top_scorer_odds.sql`; Dev Tools can randomize both team outright odds and top-scorer odds through the localhost-only route.
+- Team and stats tables should show goals as explicit `זכות` / `חובה` chips, not `10:5`, because colon-separated scores are easy to misread in Hebrew RTL.
+- `/dashboard/teams` must remain accessible from the main dashboard navigation; do not hide the all-teams directory behind a small secondary link.
+- `/dashboard/teams/[id]/squad` should feel like a sports app roster page: coach card, formation pitch, player avatar/photo, shirt number, and compact stats. Player photos and shirt numbers use `players.photo_url` and `players.shirt_number` from migration `20260427000032_add_player_roster_visual_fields.sql`.
+- Dev Tools has manual `teams.outright_odds` editing and reset through `/api/dev/outright-odds/teams`. Keep top-scorer odds random/API-fed for now rather than adding manual per-player controls.
 
 If the user invokes this skill without any other guidance, ask them what they want to build or design, ask some questions, and act as an expert designer who outputs HTML artifacts _or_ production code, depending on the need.

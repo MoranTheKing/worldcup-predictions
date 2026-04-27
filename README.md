@@ -282,6 +282,7 @@ Brevo Free מוגבל בכמות יומית לכל החשבון, לכן ביום
 - `20260427000029_align_knockout_kickoffs_with_fifa_api.sql`
 - `20260427000030_add_team_api_profile_fields.sql`
 - `20260427000031_add_top_scorer_odds.sql`
+- `20260427000032_add_player_roster_visual_fields.sql`
 
 את `20260424000021_public_tournament_projection.sql` צריך להריץ לפני בדיקת `/dashboard/tournament` כמשתמש לא רשום. בלי ה-migration הזה, הדף כבר לא ישתמש ב-service-role, אבל Supabase לא יכיר את ה-views הציבוריים ולכן לא יחזיר נתוני טורניר ל-anon.
 
@@ -386,3 +387,15 @@ Brevo Free מוגבל בכמות יומית לכל החשבון, לכן ביום
 - Added migration `20260427000031_add_top_scorer_odds.sql` for `players.top_scorer_odds` and `players.top_scorer_odds_updated_at`.
 - Dev Tools now includes a localhost-only button that seeds random team outright odds and top-scorer odds through `/api/dev/outright-odds/randomize`.
 - Dev Tools `Clear All Match Data` also clears `teams.outright_odds` and player `top_scorer_odds` so local development resets all odds surfaces.
+
+## Team UX refinement - 2026-04-27
+
+- `/dashboard/teams` is now a first-class dashboard navigation item, so the all-teams page is no longer hidden behind a small link.
+- The all-teams page is a compact team directory instead of duplicating the full live tournament table. Full standings remain on `/dashboard/tournament`; team cards show status, group, rank and outright odds.
+- Team and stats tables show goals as explicit `זכות` and `חובה` chips instead of ambiguous `10:5` text in RTL.
+- Goal-difference numbers use the shared `components/StatNumbers.tsx` signed-number component everywhere they appear, so negative values render as `-4`.
+- Tournament-winner picks in the locked prediction view link to the selected team's page through `TeamLink`.
+- `/dashboard/teams/[id]/squad` now has a sports-app style squad surface: coach card, visual formation, player avatars, shirt numbers, and per-player mini stats.
+- Added `supabase/migrations/20260427000032_add_player_roster_visual_fields.sql` for `players.photo_url` and `players.shirt_number`, so the future API sync can fill player photos and numbers.
+- Dev Tools now supports manual editing and resetting of `teams.outright_odds` through `/api/dev/outright-odds/teams`; top-scorer odds remain API/random-seed only for now.
+- API sync planning can begin from the current schema: map external team/player/match IDs, sync odds/coach/roster/form into the API-ready columns, then let existing realtime/UI surfaces consume Supabase rather than calling external APIs from the browser.

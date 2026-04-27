@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { isLocalServerRequest } from "@/lib/security/local-request";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { attachTeamsToMatches } from "@/lib/tournament/matches";
-import DevToolsClient, { type DevMatchRow } from "./DevToolsClient";
+import DevToolsClient, { type DevMatchRow, type DevTeamOddsRow } from "./DevToolsClient";
 
 export const dynamic = "force-dynamic";
 
@@ -38,7 +38,7 @@ export default async function DevToolsPage() {
       .order("date_time", { ascending: true }),
     supabase
       .from("teams")
-      .select("id, name, name_he, logo_url, group_letter")
+      .select("id, name, name_he, logo_url, group_letter, outright_odds, outright_odds_updated_at")
       .order("name", { ascending: true }),
   ]);
 
@@ -47,5 +47,11 @@ export default async function DevToolsPage() {
     teamsData ?? [],
   ) as DevMatchRow[];
 
-  return <DevToolsClient matches={rows} error={error?.message ?? null} />;
+  return (
+    <DevToolsClient
+      matches={rows}
+      teams={(teamsData ?? []) as DevTeamOddsRow[]}
+      error={error?.message ?? null}
+    />
+  );
 }

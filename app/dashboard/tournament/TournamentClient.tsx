@@ -8,6 +8,7 @@ import type {
 import { useDevLiveRefresh } from "@/lib/dev/live-refresh";
 import type { StandingStatus, TeamStanding } from "@/lib/utils/standings";
 import TeamLink from "@/components/TeamLink";
+import { SignedNumber } from "@/components/StatNumbers";
 import Image from "next/image";
 import { useMemo, useState } from "react";
 
@@ -1467,15 +1468,6 @@ function StatusPill({ display }: { display: StatusDisplay | null }) {
   return (
     <span className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold leading-4 ${display.pillClassName}`}>
       {display.label}
-    </span>
-  );
-}
-
-function SignedNumber({ value }: { value: number }) {
-  const formatted = value > 0 ? `+${value}` : String(value);
-  return (
-    <span dir="ltr" className="inline-block" style={{ unicodeBidi: "plaintext" }}>
-      {formatted}
     </span>
   );
 }

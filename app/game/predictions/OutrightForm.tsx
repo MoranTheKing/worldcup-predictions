@@ -8,6 +8,7 @@ import {
 } from "@/app/actions/predictions";
 import PlayerPicker from "@/components/pickers/PlayerPicker";
 import TeamPicker from "@/components/pickers/TeamPicker";
+import TeamLink from "@/components/TeamLink";
 
 export type PickerTeam = {
   id: string;
@@ -99,9 +100,16 @@ export default function OutrightForm({
               ) : (
                 <div className="h-7 w-10 rounded-[6px] bg-white/8" />
               )}
-              <div className="text-2xl font-black text-wc-fg1">
-                {selectedTeam ? selectedTeam.name_he ?? selectedTeam.name : "לא נבחרה"}
-              </div>
+              {selectedTeam ? (
+                <TeamLink
+                  team={selectedTeam}
+                  className="min-w-0 truncate text-2xl font-black text-wc-fg1 transition hover:text-wc-neon"
+                >
+                  {selectedTeam.name_he ?? selectedTeam.name}
+                </TeamLink>
+              ) : (
+                <div className="text-2xl font-black text-wc-fg1">לא נבחרה</div>
+              )}
             </div>
           </div>
 

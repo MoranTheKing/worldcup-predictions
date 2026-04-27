@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { GoalsForAgainst, SignedNumber } from "@/components/StatNumbers";
 import TeamLink from "@/components/TeamLink";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -28,7 +29,6 @@ type PlayerRecord = {
   yellow_cards?: number | null;
   red_cards?: number | null;
   top_scorer_odds?: number | string | null;
-  top_scorer_odds_updated_at?: string | null;
 };
 
 type PlayerTableMode = "goals" | "assists" | "yellow" | "red" | "topScorerOdds";
@@ -66,7 +66,7 @@ export default async function DashboardStatsPage() {
         .order("date_time", { ascending: true }),
       supabase
         .from("players")
-        .select("id, name, team_id, position, goals, assists, appearances, minutes_played, yellow_cards, red_cards, top_scorer_odds, top_scorer_odds_updated_at")
+        .select("id, name, team_id, position, goals, assists, appearances, minutes_played, yellow_cards, red_cards, top_scorer_odds")
         .order("goals", { ascending: false })
         .order("assists", { ascending: false }),
     ]);
@@ -78,18 +78,12 @@ export default async function DashboardStatsPage() {
   const teams = (teamsData ?? []) as TournamentTeamRecord[];
   const players = ((playersData ?? []) as PlayerRecord[]).filter((player) => player.name);
   const teamsById = new Map(teams.map((team) => [team.id, team]));
-  const matches = attachTeamsToMatches(
-    (matchesData ?? []) as TournamentMatchRecord[],
-    teams,
-  );
+  const matches = attachTeamsToMatches((matchesData ?? []) as TournamentMatchRecord[], teams);
   const groupMatches = getGroupMatches(matches);
-  const tournamentTeams = buildTournamentTeams(
-    teams as TournamentTeamStateRow[],
-    groupMatches,
-  );
+  const tournamentTeams = buildTournamentTeams(teams as TournamentTeamStateRow[], groupMatches);
   const tournament = buildTournamentStandings(tournamentTeams, groupMatches);
   const standings = Object.values(tournament.groupStandings).flat();
-  const standingsByTeamId = new Map(standings.map((entry) => [entry.team.id, entry]));
+  const liveMatches = matches.filter((match) => match.status === "live").length;
 
   const scorers = sortPlayers(players, "goals").slice(0, 15);
   const assisters = sortPlayers(players, "assists").slice(0, 15);
@@ -112,7 +106,7 @@ export default async function DashboardStatsPage() {
         </Link>
         <Link
           href="/dashboard/teams"
-          className="rounded-full border border-white/10 bg-white/8 px-3 py-1.5 text-xs font-bold text-wc-fg2 transition hover:border-wc-neon/40 hover:text-wc-neon"
+          className="rounded-full border border-wc-neon/30 bg-[rgba(95,255,123,0.11)] px-4 py-2 text-xs font-black text-wc-neon transition hover:border-wc-neon/55 hover:bg-[rgba(95,255,123,0.17)]"
         >
           כל הנבחרות
         </Link>
@@ -126,36 +120,71 @@ export default async function DashboardStatsPage() {
               טבלאות וסטטיסטיקות
             </h1>
             <p className="mt-3 max-w-3xl text-sm leading-7 text-wc-fg2">
-              מרכז אחד ובולט למלכי שערים, בישולים, כרטיסים, יחסי מלך שערים וסטטיסטיקות קבוצתיות.
+              מרכז נקי לכל טבלאות המובילים: שחקנים, נבחרות ויחסים. שערי זכות וחובה מוצגים בנפרד כדי שלא יהיה בלבול RTL.
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 sm:min-w-[26rem]">
+          <div className="grid grid-cols-3 gap-2 sm:min-w-[28rem]">
             <SummaryStat label="שחקנים" value={String(players.length)} />
             <SummaryStat label="נבחרות" value={String(teams.length)} />
-            <SummaryStat label="העפילו" value={String([...standingsByTeamId.values()].filter((entry) => entry.status === "qualified").length)} accent="text-wc-neon" />
-            <SummaryStat label="הודחו" value={String(tournament.eliminatedCount)} accent="text-wc-danger" />
+            <SummaryStat label="משחקי לייב" value={String(liveMatches)} accent="text-cyan-300" />
           </div>
         </div>
       </section>
 
-      <section className="mt-5 grid gap-5 xl:grid-cols-2">
-        <PlayerLeaderTable title="מלך השערים" eyebrow="שערים" players={scorers} teamsById={teamsById} mode="goals" />
-        <PlayerLeaderTable title="מלך הבישולים" eyebrow="בישולים" players={assisters} teamsById={teamsById} mode="assists" />
-        <PlayerLeaderTable title="צהובים" eyebrow="משמעת" players={yellows} teamsById={teamsById} mode="yellow" />
-        <PlayerLeaderTable title="אדומים" eyebrow="משמעת" players={reds} teamsById={teamsById} mode="red" />
+      <nav className="mt-5 grid gap-2 rounded-[1.35rem] border border-white/10 bg-white/[0.035] p-2 sm:grid-cols-3">
+        <SectionJump href="#players" title="שחקנים" subtitle="שערים, בישולים וכרטיסים" />
+        <SectionJump href="#teams" title="נבחרות" subtitle="התקפה, הגנה ונקודות" />
+        <SectionJump href="#odds" title="יחסים" subtitle="זכייה ומלך שערים" />
+      </nav>
+
+      <section id="players" className="mt-5 scroll-mt-24">
+        <SectionBand title="טבלאות שחקנים" eyebrow="Player leaders" />
+        <div className="mt-3 grid gap-5 xl:grid-cols-2">
+          <PlayerLeaderTable title="מלך השערים" eyebrow="שערים אישיים" players={scorers} teamsById={teamsById} mode="goals" />
+          <PlayerLeaderTable title="מלך הבישולים" eyebrow="בישולים" players={assisters} teamsById={teamsById} mode="assists" />
+          <PlayerLeaderTable title="צהובים" eyebrow="משמעת" players={yellows} teamsById={teamsById} mode="yellow" />
+          <PlayerLeaderTable title="אדומים" eyebrow="משמעת" players={reds} teamsById={teamsById} mode="red" />
+        </div>
       </section>
 
-      <section className="mt-5 grid gap-5 xl:grid-cols-[0.85fr_1.15fr]">
-        <PlayerLeaderTable title="יחסי מלך שערים" eyebrow="API odds" players={topScorerOdds} teamsById={teamsById} mode="topScorerOdds" />
-        <TeamLeaderTable title="יחסי זכייה בטורניר" eyebrow="נבחרות" entries={oddsTeams} teamsById={teamsById} mode="odds" />
+      <section id="teams" className="mt-6 scroll-mt-24">
+        <SectionBand title="טבלאות נבחרות" eyebrow="Team leaders" />
+        <div className="mt-3 grid gap-5 xl:grid-cols-3">
+          <TeamLeaderTable title="התקפה" eyebrow="ממויין לפי שערי זכות" entries={attackTeams} teamsById={teamsById} mode="attack" />
+          <TeamLeaderTable title="הגנה" eyebrow="ממויין לפי שערי חובה" entries={defenseTeams} teamsById={teamsById} mode="defense" />
+          <TeamLeaderTable title="נקודות" eyebrow="שלב הבתים" entries={pointsTeams} teamsById={teamsById} mode="points" />
+        </div>
       </section>
 
-      <section className="mt-5 grid gap-5 xl:grid-cols-3">
-        <TeamLeaderTable title="התקפה" eyebrow="שערי זכות" entries={attackTeams} teamsById={teamsById} mode="attack" />
-        <TeamLeaderTable title="הגנה" eyebrow="שערי חובה" entries={defenseTeams} teamsById={teamsById} mode="defense" />
-        <TeamLeaderTable title="טבלת נקודות" eyebrow="שלב הבתים" entries={pointsTeams} teamsById={teamsById} mode="points" />
+      <section id="odds" className="mt-6 scroll-mt-24">
+        <SectionBand title="טבלאות יחסים" eyebrow="API odds" />
+        <div className="mt-3 grid gap-5 xl:grid-cols-[0.85fr_1.15fr]">
+          <PlayerLeaderTable title="יחסי מלך שערים" eyebrow="יתעדכן מה-API" players={topScorerOdds} teamsById={teamsById} mode="topScorerOdds" />
+          <TeamLeaderTable title="יחסי זכייה בטורניר" eyebrow="נבחרות" entries={oddsTeams} teamsById={teamsById} mode="odds" />
+        </div>
       </section>
+    </div>
+  );
+}
+
+function SectionJump({ href, title, subtitle }: { href: string; title: string; subtitle: string }) {
+  return (
+    <a
+      href={href}
+      className="rounded-[1.05rem] border border-white/10 bg-white/[0.045] px-4 py-3 transition hover:border-wc-neon/35 hover:bg-white/[0.075]"
+    >
+      <span className="block text-sm font-black text-wc-fg1">{title}</span>
+      <span className="mt-1 block text-[11px] font-semibold text-wc-fg3">{subtitle}</span>
+    </a>
+  );
+}
+
+function SectionBand({ title, eyebrow }: { title: string; eyebrow: string }) {
+  return (
+    <div className="rounded-[1.35rem] border border-white/10 bg-[linear-gradient(90deg,rgba(95,255,123,0.09),rgba(111,60,255,0.12),rgba(255,255,255,0.03))] px-4 py-3">
+      <p className="wc-kicker text-[0.68rem]">{eyebrow}</p>
+      <h2 className="mt-1 font-sans text-2xl font-black tracking-normal text-wc-fg1">{title}</h2>
     </div>
   );
 }
@@ -265,13 +294,13 @@ function TeamLeaderTable({
     <section className="overflow-hidden rounded-[1.75rem] border border-white/10 bg-white/[0.035]">
       <TableHeader title={title} eyebrow={eyebrow} />
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[34rem] text-sm">
+        <table className="w-full min-w-[36rem] text-sm">
           <thead>
             <tr className="border-b border-white/8 text-wc-fg3">
               <th className="px-3 py-2 text-start">#</th>
               <th className="px-3 py-2 text-start">נבחרת</th>
               <th className="px-3 py-2 text-center">מאזן</th>
-              <th className="px-3 py-2 text-center">שערים</th>
+              <th className="px-3 py-2 text-center">זכות / חובה</th>
               <th className="px-3 py-2 text-center">הפרש</th>
               <th className="px-3 py-2 text-center">נק׳</th>
               <th className="px-3 py-2 text-center">יחס זכייה</th>
@@ -290,8 +319,12 @@ function TeamLeaderTable({
                     </TeamLink>
                   </td>
                   <td className="px-3 py-2 text-center text-wc-fg2" dir="ltr">{entry.won}-{entry.drawn}-{entry.lost}</td>
-                  <td className={`px-3 py-2 text-center ${mode === "attack" || mode === "defense" ? "font-black text-wc-neon" : "text-wc-fg2"}`} dir="ltr">
-                    {entry.gf}:{entry.ga}
+                  <td className="px-3 py-2 text-center">
+                    <GoalsForAgainst
+                      goalsFor={entry.gf}
+                      goalsAgainst={entry.ga}
+                      highlight={mode === "attack" ? "for" : mode === "defense" ? "against" : "none"}
+                    />
                   </td>
                   <td className="px-3 py-2 text-center text-wc-fg2">
                     <SignedNumber value={entry.gd} />
@@ -347,15 +380,6 @@ function EmptyPanel({ title, description }: { title: string; description: string
       <p className="text-sm font-black text-wc-fg1">{title}</p>
       <p className="mt-1 text-xs leading-6 text-wc-fg3">{description}</p>
     </div>
-  );
-}
-
-function SignedNumber({ value }: { value: number }) {
-  const formatted = value > 0 ? `+${value}` : String(value);
-  return (
-    <span dir="ltr" className="inline-block" style={{ unicodeBidi: "plaintext" }}>
-      {formatted}
-    </span>
   );
 }
 

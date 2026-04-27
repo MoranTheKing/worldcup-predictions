@@ -57,6 +57,7 @@ export async function POST(request: Request) {
   revalidatePath("/dashboard", "layout");
   revalidatePath("/dashboard/teams");
   revalidatePath("/dashboard/stats");
+  revalidatePath("/dev-tools");
 
   return NextResponse.json({
     teamsUpdated: teamRows.length,
