@@ -859,3 +859,9 @@ raw_error
 - The browser never calls BSD for odds. Dev Tools triggers the local route, and public pages continue to consume Supabase.
 - Outright prediction odds are locked at save time from Supabase (`teams.outright_odds`, `players.top_scorer_odds`) and finalized by `POST /api/admin/finalize-tournament`.
 - The recent-form sync now translates opponent names before writing `team_recent_matches`; verified sample: Jordan's recent-form row stores `ניגריה` instead of `Nigeria`.
+
+## Outright picker and player-feed pagination - 2026-04-27
+
+- Tournament-winner and top-scorer pickers display their current possible reward inline as `+N`; missing odds intentionally render as `+0`.
+- Player-based top-scorer lists and Dev randomization endpoints must paginate `players` in batches so synced rosters above 1000 rows are not silently truncated.
+- Picker UI reads player photos from `players.photo_url`; the browser still reads Supabase data only and does not call BSD JSON APIs directly.

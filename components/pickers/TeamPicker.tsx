@@ -8,6 +8,8 @@ export type PickerTeam = {
   name: string;
   name_he: string | null;
   logo_url: string | null;
+  outright_odds?: number | string | null;
+  reward_points?: number | null;
 };
 
 interface Props {
@@ -80,6 +82,7 @@ export default function TeamPicker({
           <span className={`truncate ${selectedTeam ? "text-wc-fg1" : "text-wc-fg3"}`}>
             {selectedTeam ? selectedTeam.name_he ?? selectedTeam.name : placeholder}
           </span>
+          {selectedTeam ? <RewardBadge points={selectedTeam.reward_points} /> : null}
         </span>
         <span className="text-[11px] text-wc-fg3">{open ? "⌃" : "⌄"}</span>
       </button>
@@ -115,26 +118,29 @@ export default function TeamPicker({
                       setOpen(false);
                       setSearch("");
                     }}
-                    className={`flex w-full items-center gap-3 px-4 py-2.5 text-right text-sm transition ${
+                    className={`flex w-full items-center justify-between gap-3 px-4 py-2.5 text-right text-sm transition ${
                       isSelected
                         ? "bg-[rgba(95,255,123,0.12)] text-wc-neon"
                         : "text-wc-fg1 hover:bg-white/6"
                     }`}
                   >
-                    {team.logo_url ? (
-                      <Image
-                        src={team.logo_url}
-                        alt=""
-                        width={22}
-                        height={15}
-                        className="h-[15px] w-[22px] flex-shrink-0 rounded-[3px] object-cover"
-                        style={{ height: 15, width: 22 }}
-                        unoptimized
-                      />
-                    ) : (
-                      <span className="h-[15px] w-[22px] rounded-[3px] bg-white/8" />
-                    )}
-                    <span className="truncate">{displayName}</span>
+                    <span className="flex min-w-0 items-center gap-3">
+                      {team.logo_url ? (
+                        <Image
+                          src={team.logo_url}
+                          alt=""
+                          width={22}
+                          height={15}
+                          className="h-[15px] w-[22px] flex-shrink-0 rounded-[3px] object-cover"
+                          style={{ height: 15, width: 22 }}
+                          unoptimized
+                        />
+                      ) : (
+                        <span className="h-[15px] w-[22px] rounded-[3px] bg-white/8" />
+                      )}
+                      <span className="truncate">{displayName}</span>
+                    </span>
+                    <RewardBadge points={team.reward_points} />
                   </button>
                 </li>
               );
@@ -143,5 +149,18 @@ export default function TeamPicker({
         </div>
       ) : null}
     </div>
+  );
+}
+
+function RewardBadge({ points }: { points?: number | null }) {
+  const value = Number.isFinite(Number(points)) ? Number(points) : 0;
+
+  return (
+    <span
+      dir="ltr"
+      className="inline-flex flex-shrink-0 items-center rounded-full border border-wc-neon/20 bg-[rgba(95,255,123,0.12)] px-2.5 py-1 font-sans text-[11px] font-black tracking-normal text-wc-neon"
+    >
+      +{value}
+    </span>
   );
 }

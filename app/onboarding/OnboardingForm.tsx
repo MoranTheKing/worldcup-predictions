@@ -31,12 +31,15 @@ import {
   getNicknameTakenError,
   normalizeNicknameInput,
 } from "@/lib/profile/nickname";
+import { calculateOutrightPoints } from "@/lib/game/scoring";
 
 type Team = {
   id: string;
   logo_url: string | null;
   name: string;
   name_he: string | null;
+  outright_odds?: number | string | null;
+  reward_points?: number | null;
 };
 
 type Player = {
@@ -44,6 +47,9 @@ type Player = {
   name: string;
   position: string | null;
   team_id: string | null;
+  photo_url?: string | null;
+  top_scorer_odds?: number | string | null;
+  reward_points?: number | null;
 };
 
 type OnboardingFormProps = {
@@ -94,9 +100,14 @@ export default function OnboardingForm({
   const avatarOptions = useMemo(() => getAvatarOptions(initialAvatarUrl), [initialAvatarUrl]);
   const sortedTeams = useMemo(
     () =>
-      [...teams].sort((left, right) =>
-        (left.name_he ?? left.name).localeCompare(right.name_he ?? right.name, "he"),
-      ),
+      [...teams]
+        .sort((left, right) =>
+          (left.name_he ?? left.name).localeCompare(right.name_he ?? right.name, "he"),
+        )
+        .map((team) => ({
+          ...team,
+          reward_points: getOutrightRewardPoints("winner", team.outright_odds),
+        })),
     [teams],
   );
   const initialSelectedPlayer =
@@ -128,6 +139,40 @@ export default function OnboardingForm({
   );
   const [nicknameMessage, setNicknameMessage] = useState(
     initialNickname ? "הכינוי מוכן. אפשר להמשיך או לשנות אותו." : getNicknameHelperText(),
+  );
+
+  const sortedPlayers = useMemo(
+    () =>
+      [...players]
+        .sort((left, right) => {
+          const leftOdds = normalizeOdds(left.top_scorer_odds);
+          const rightOdds = normalizeOdds(right.top_scorer_odds);
+
+          if (leftOdds !== rightOdds) {
+            if (leftOdds === null) return 1;
+            if (rightOdds === null) return -1;
+            return leftOdds - rightOdds;
+          }
+
+          const leftWinner = left.team_id === winnerId;
+          const rightWinner = right.team_id === winnerId;
+
+          if (leftWinner && !rightWinner) return -1;
+          if (!leftWinner && rightWinner) return 1;
+          return left.name.localeCompare(right.name);
+        })
+        .map((player) => ({
+          ...player,
+          reward_points: getOutrightRewardPoints("scorer", player.top_scorer_odds),
+        })),
+    [players, winnerId],
+  );
+  const selectedPlayerValue = useMemo(
+    () =>
+      sortedPlayers.find((player) => player.id === selectedPlayer?.id) ??
+      sortedPlayers.find((player) => player.name === topScorerName) ??
+      selectedPlayer,
+    [selectedPlayer, sortedPlayers, topScorerName],
   );
 
   const hasPlayers = players.length > 0;
@@ -527,10 +572,11 @@ export default function OnboardingForm({
 
               {hasPlayers ? (
                 <PlayerPicker
-                  players={players}
+                  players={sortedPlayers}
                   winnerId={winnerId}
-                  value={selectedPlayer}
+                  value={selectedPlayerValue}
                   fallbackLabel={topScorerName || undefined}
+                  preserveOrder
                   onChange={selectPlayer}
                 />
               ) : (
@@ -661,4 +707,14 @@ export default function OnboardingForm({
       </form>
     </main>
   );
+}
+
+function getOutrightRewardPoints(type: "winner" | "scorer", odds: number | string | null | undefined) {
+  const normalized = normalizeOdds(odds);
+  return normalized === null ? 0 : calculateOutrightPoints(type, normalized);
+}
+
+function normalizeOdds(value: number | string | null | undefined) {
+  const parsed = typeof value === "string" ? Number.parseFloat(value) : value;
+  return typeof parsed === "number" && Number.isFinite(parsed) && parsed >= 1 ? parsed : null;
 }

@@ -17,6 +17,7 @@ export type PickerTeam = {
   name_he: string | null;
   logo_url: string | null;
   outright_odds?: number | string | null;
+  reward_points?: number | null;
 };
 
 export type PickerPlayer = {
@@ -24,7 +25,9 @@ export type PickerPlayer = {
   name: string;
   team_id: string | null;
   position: string | null;
+  photo_url?: string | null;
   top_scorer_odds?: number | string | null;
+  reward_points?: number | null;
 };
 
 export default function OutrightForm({
@@ -60,16 +63,54 @@ export default function OutrightForm({
     initialTopScorerPlayer,
   );
 
+  const sortedTeams = useMemo(
+    () =>
+      [...teams]
+        .sort((left, right) =>
+          (left.name_he ?? left.name).localeCompare(right.name_he ?? right.name, "he"),
+        )
+        .map((team) => ({
+          ...team,
+          reward_points: getOutrightReward("winner", team.outright_odds).points,
+        })),
+    [teams],
+  );
+
+  const sortedPlayers = useMemo(
+    () =>
+      [...players].sort((left, right) => {
+        const leftOdds = normalizeOdds(left.top_scorer_odds);
+        const rightOdds = normalizeOdds(right.top_scorer_odds);
+
+        if (leftOdds !== rightOdds) {
+          if (leftOdds === null) return 1;
+          if (rightOdds === null) return -1;
+          return leftOdds - rightOdds;
+        }
+
+        const leftWinner = left.team_id === winnerId;
+        const rightWinner = right.team_id === winnerId;
+
+        if (leftWinner && !rightWinner) return -1;
+        if (!leftWinner && rightWinner) return 1;
+        return left.name.localeCompare(right.name);
+      }).map((player) => ({
+        ...player,
+        reward_points: getOutrightReward("scorer", player.top_scorer_odds).points,
+      })),
+    [players, winnerId],
+  );
+
   const selectedTeam = useMemo(
-    () => teams.find((team) => team.id === winnerId) ?? null,
-    [teams, winnerId],
+    () => sortedTeams.find((team) => team.id === winnerId) ?? null,
+    [sortedTeams, winnerId],
   );
   const selectedPlayer = useMemo(
     () =>
-      players.find((player) => player.id === topScorerPlayerId) ??
-      players.find((player) => player.name === topScorerName) ??
+      sortedPlayers.find((player) => player.id === topScorerPlayerId) ??
+      sortedPlayers.find((player) => player.name === topScorerName) ??
       null,
-    [players, topScorerName, topScorerPlayerId],
+    [sortedPlayers, topScorerName, topScorerPlayerId],
   );
   const winnerReward = getOutrightReward(
     "winner",
@@ -78,27 +119,6 @@ export default function OutrightForm({
   const scorerReward = getOutrightReward(
     "scorer",
     selectedPlayer?.top_scorer_odds ?? existing?.predicted_scorer_odds,
-  );
-
-  const sortedTeams = useMemo(
-    () =>
-      [...teams].sort((left, right) =>
-        (left.name_he ?? left.name).localeCompare(right.name_he ?? right.name, "he"),
-      ),
-    [teams],
-  );
-
-  const sortedPlayers = useMemo(
-    () =>
-      [...players].sort((left, right) => {
-        const leftWinner = left.team_id === winnerId;
-        const rightWinner = right.team_id === winnerId;
-
-        if (leftWinner && !rightWinner) return -1;
-        if (!leftWinner && rightWinner) return 1;
-        return left.name.localeCompare(right.name);
-      }),
-    [players, winnerId],
   );
 
   if (isLocked) {
@@ -200,25 +220,13 @@ export default function OutrightForm({
             winnerId={winnerId}
             value={selectedPlayer}
             fallbackLabel={selectedPlayer ? undefined : topScorerName || undefined}
+            preserveOrder
             onChange={(player) => {
               setTopScorerName(player?.name ?? "");
               setTopScorerPlayerId(player?.id ?? null);
             }}
           />
         </div>
-      </div>
-
-      <div className="grid gap-3 sm:grid-cols-2">
-        <OutrightRewardPreview
-          title="ניקוד לזוכה"
-          reward={winnerReward}
-          emptyLabel="בחר נבחרת כדי לראות את הפרס"
-        />
-        <OutrightRewardPreview
-          title="ניקוד למלך השערים"
-          reward={scorerReward}
-          emptyLabel="בחר שחקן כדי לראות את הפרס"
-        />
       </div>
 
       {state?.error ? (
@@ -238,42 +246,7 @@ export default function OutrightForm({
 type OutrightReward = {
   odds: number;
   points: number;
-} | null;
-
-function OutrightRewardPreview({
-  title,
-  reward,
-  emptyLabel,
-}: {
-  title: string;
-  reward: OutrightReward;
-  emptyLabel: string;
-}) {
-  return (
-    <div className="rounded-[1.25rem] border border-white/10 bg-black/18 p-4">
-      <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-wc-fg3">
-        {title}
-      </div>
-      {reward ? (
-        <div className="mt-3 flex items-end justify-between gap-3">
-          <div>
-            <p className="font-sans text-3xl font-black tracking-normal text-wc-neon">
-              +{reward.points}
-            </p>
-            <p className="mt-1 text-xs text-wc-fg3">נקודות אם הפגיעה נכונה</p>
-          </div>
-          <span className="rounded-full border border-white/10 bg-white/8 px-3 py-1 text-xs font-black text-wc-fg2">
-            יחס {reward.odds.toFixed(2)}
-          </span>
-        </div>
-      ) : (
-        <p className="mt-3 rounded-2xl bg-white/[0.045] px-3 py-3 text-sm font-semibold text-wc-fg3">
-          {emptyLabel}
-        </p>
-      )}
-    </div>
-  );
-}
+};
 
 function OutrightRewardChip({
   reward,
@@ -282,22 +255,18 @@ function OutrightRewardChip({
   reward: OutrightReward;
   settledPoints?: number | null;
 }) {
-  if (!reward && !settledPoints) return null;
-
   return (
     <div className="mt-4 flex flex-wrap items-center gap-2 text-xs font-black">
-      {reward ? (
-        <span className="rounded-full bg-[rgba(95,255,123,0.14)] px-3 py-1 text-wc-neon">
-          פרס אפשרי +{reward.points}
-        </span>
-      ) : null}
-      {reward ? (
+      <span dir="ltr" className="rounded-full bg-[rgba(95,255,123,0.14)] px-3 py-1 text-wc-neon">
+        פרס אפשרי +{reward.points}
+      </span>
+      {reward.odds > 0 ? (
         <span className="rounded-full bg-white/8 px-3 py-1 text-wc-fg3">
           יחס {reward.odds.toFixed(2)}
         </span>
       ) : null}
       {settledPoints ? (
-        <span className="rounded-full bg-[rgba(245,197,24,0.14)] px-3 py-1 text-[#F5D56B]">
+        <span dir="ltr" className="rounded-full bg-[rgba(245,197,24,0.14)] px-3 py-1 text-[#F5D56B]">
           מומש +{settledPoints}
         </span>
       ) : null}
@@ -310,7 +279,12 @@ function getOutrightReward(
   odds: number | string | null | undefined,
 ): OutrightReward {
   const normalized = normalizeOdds(odds);
-  if (normalized === null) return null;
+  if (normalized === null) {
+    return {
+      odds: 0,
+      points: 0,
+    };
+  }
   return {
     odds: normalized,
     points: calculateOutrightPoints(type, normalized),

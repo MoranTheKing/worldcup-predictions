@@ -35,12 +35,12 @@ export default async function OnboardingPage({
     redirect(nextPath);
   }
 
-  const [{ data: teams }, { data: players }] = await Promise.all([
+  const [{ data: teams }, players] = await Promise.all([
     supabase
       .from("teams")
-      .select("id, name, name_he, logo_url")
+      .select("id, name, name_he, logo_url, outright_odds")
       .order("name_he", { ascending: true }),
-    supabase.from("players").select("id, name, team_id, position").order("name", { ascending: true }),
+    fetchAllOnboardingPlayers(supabase),
   ]);
 
   const oauthAvatarUrl =
@@ -58,6 +58,8 @@ export default async function OnboardingPage({
           name: string;
           position: string | null;
           team_id: string | null;
+          photo_url?: string | null;
+          top_scorer_odds?: number | string | null;
         }>)
       }
       teams={
@@ -66,12 +68,37 @@ export default async function OnboardingPage({
           logo_url: string | null;
           name: string;
           name_he: string | null;
+          outright_odds?: number | string | null;
         }>)
       }
       tournamentPrediction={onboardingStatus.tournamentPrediction}
       tournamentStarted={onboardingStatus.tournamentStarted}
     />
   );
+}
+
+async function fetchAllOnboardingPlayers(supabase: Awaited<ReturnType<typeof createClient>>) {
+  const rows: unknown[] = [];
+  const batchSize = 1000;
+
+  for (let from = 0; ; from += batchSize) {
+    const { data, error } = await supabase
+      .from("players")
+      .select("id, name, team_id, position, photo_url, top_scorer_odds")
+      .order("name", { ascending: true })
+      .range(from, from + batchSize - 1);
+
+    if (error) {
+      console.error("[OnboardingPage] players lookup error:", error.message);
+      return rows;
+    }
+
+    rows.push(...(data ?? []));
+
+    if (!data || data.length < batchSize) {
+      return rows;
+    }
+  }
 }
 
 function hasPendingTotpEnrollment(

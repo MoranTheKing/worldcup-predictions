@@ -13,14 +13,14 @@ export async function POST(request: Request) {
   if (blocked) return blocked;
 
   const supabase = createAdminClient();
-  const { data: players, error } = await supabase.from("players").select("id, position");
+  const playersResult = await fetchAllPlayersForStats(supabase);
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  if (playersResult.error) {
+    return NextResponse.json({ error: playersResult.error }, { status: 500 });
   }
 
   let updated = 0;
-  for (const player of (players ?? []) as PlayerSeed[]) {
+  for (const player of playersResult.players) {
     const stats = randomPlayerStats(player.position);
     const { data, error: updateError } = await supabase
       .from("players")
@@ -38,6 +38,28 @@ export async function POST(request: Request) {
 
   revalidatePlayerStatPaths();
   return NextResponse.json({ updated });
+}
+
+async function fetchAllPlayersForStats(supabase: ReturnType<typeof createAdminClient>) {
+  const players: PlayerSeed[] = [];
+  const batchSize = 1000;
+
+  for (let from = 0; ; from += batchSize) {
+    const { data, error } = await supabase
+      .from("players")
+      .select("id, position")
+      .range(from, from + batchSize - 1);
+
+    if (error) {
+      return { players, error: error.message };
+    }
+
+    players.push(...((data ?? []) as PlayerSeed[]));
+
+    if (!data || data.length < batchSize) {
+      return { players, error: null };
+    }
+  }
 }
 
 function randomPlayerStats(position: string | null | undefined) {

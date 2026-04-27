@@ -18,18 +18,18 @@ export async function POST(request: Request) {
   if (blocked) return blocked;
 
   const supabase = createAdminClient();
-  const [{ data: teams, error: teamsError }, { data: players, error: playersError }] =
+  const [{ data: teams, error: teamsError }, playersResult] =
     await Promise.all([
       supabase.from("teams").select("id, fifa_ranking"),
-      supabase.from("players").select("id, position"),
+      fetchAllPlayersForOdds(supabase),
     ]);
 
   if (teamsError) {
     return NextResponse.json({ error: teamsError.message }, { status: 500 });
   }
 
-  if (playersError) {
-    return NextResponse.json({ error: playersError.message }, { status: 500 });
+  if (playersResult.error) {
+    return NextResponse.json({ error: playersResult.error }, { status: 500 });
   }
 
   const updatedAt = new Date().toISOString();
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
     outright_odds: randomTeamOutrightOdds(team.fifa_ranking),
     outright_odds_updated_at: updatedAt,
   }));
-  const playerRows = ((players ?? []) as PlayerOddsSeed[]).map((player) => ({
+  const playerRows = playersResult.players.map((player) => ({
     id: player.id,
     top_scorer_odds: randomTopScorerOdds(player.position),
     top_scorer_odds_updated_at: updatedAt,
@@ -81,6 +81,28 @@ export async function POST(request: Request) {
     teamsUpdated: teamRows.length,
     playersUpdated: playerRows.length,
   });
+}
+
+async function fetchAllPlayersForOdds(supabase: ReturnType<typeof createAdminClient>) {
+  const players: PlayerOddsSeed[] = [];
+  const batchSize = 1000;
+
+  for (let from = 0; ; from += batchSize) {
+    const { data, error } = await supabase
+      .from("players")
+      .select("id, position")
+      .range(from, from + batchSize - 1);
+
+    if (error) {
+      return { players, error: error.message };
+    }
+
+    players.push(...((data ?? []) as PlayerOddsSeed[]));
+
+    if (!data || data.length < batchSize) {
+      return { players, error: null };
+    }
+  }
 }
 
 function randomTeamOutrightOdds(fifaRanking: number | null | undefined) {

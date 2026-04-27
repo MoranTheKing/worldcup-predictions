@@ -22,7 +22,7 @@ export type PredictionsHubData = {
 export async function loadPredictionsHubData(userId: string | null): Promise<PredictionsHubData> {
   const admin = createAdminClient();
 
-  const [{ data: matchesData }, { data: teamsData }, { data: playersData }] = await Promise.all([
+  const [{ data: matchesData }, { data: teamsData }, playersData] = await Promise.all([
     admin
       .from("matches")
       .select(
@@ -33,10 +33,7 @@ export async function loadPredictionsHubData(userId: string | null): Promise<Pre
       .from("teams")
       .select("id, name, name_he, logo_url, group_letter, outright_odds")
       .order("name_he", { ascending: true }),
-    admin
-      .from("players")
-      .select("id, name, team_id, position, top_scorer_odds")
-      .order("name", { ascending: true }),
+    fetchAllPickerPlayers(admin),
   ]);
 
   const allMatches = attachTeamsToMatches(
@@ -64,6 +61,7 @@ export async function loadPredictionsHubData(userId: string | null): Promise<Pre
       ? String((player as { team_id: unknown }).team_id)
       : null,
     position: (player as { position?: string | null }).position ?? null,
+    photo_url: (player as { photo_url?: string | null }).photo_url ?? null,
     top_scorer_odds:
       (player as { top_scorer_odds?: number | string | null }).top_scorer_odds ?? null,
   }));
@@ -135,4 +133,28 @@ export async function loadPredictionsHubData(userId: string | null): Promise<Pre
     groupJokerLimit: GROUP_JOKER_LIMIT,
     tournamentStarted,
   };
+}
+
+async function fetchAllPickerPlayers(admin: ReturnType<typeof createAdminClient>) {
+  const rows: unknown[] = [];
+  const batchSize = 1000;
+
+  for (let from = 0; ; from += batchSize) {
+    const { data, error } = await admin
+      .from("players")
+      .select("id, name, team_id, position, photo_url, top_scorer_odds")
+      .order("name", { ascending: true })
+      .range(from, from + batchSize - 1);
+
+    if (error) {
+      console.error("[loadPredictionsHubData] players lookup error:", error.message);
+      return rows;
+    }
+
+    rows.push(...(data ?? []));
+
+    if (!data || data.length < batchSize) {
+      return rows;
+    }
+  }
 }

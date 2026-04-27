@@ -13,10 +13,14 @@ export async function POST(request: Request) {
   if (blocked) return blocked;
 
   const supabase = createAdminClient();
-  const { data: players, error } = await supabase.from("players").select("id, position");
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  let players: PlayerOddsSeed[];
+  try {
+    players = await fetchAllPlayersForOdds(supabase);
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Failed to load players" },
+      { status: 500 },
+    );
   }
 
   const updatedAt = new Date().toISOString();
@@ -42,6 +46,28 @@ export async function POST(request: Request) {
 
   revalidateScorerOddsPaths();
   return NextResponse.json({ updated });
+}
+
+async function fetchAllPlayersForOdds(supabase: ReturnType<typeof createAdminClient>) {
+  const rows: PlayerOddsSeed[] = [];
+  const batchSize = 1000;
+
+  for (let from = 0; ; from += batchSize) {
+    const { data, error } = await supabase
+      .from("players")
+      .select("id, position")
+      .range(from, from + batchSize - 1);
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    rows.push(...(((data ?? []) as PlayerOddsSeed[])));
+
+    if (!data || data.length < batchSize) {
+      return rows;
+    }
+  }
 }
 
 export async function DELETE(request: Request) {

@@ -130,14 +130,27 @@ export async function completeOnboarding(
       return { error: "צריך לבחור מלך שערים." };
     }
 
-    const tournamentPayload = {
+    const [winnerOdds, scorerOdds] = await Promise.all([
+      getTeamOutrightOdds(admin, winnerTeamId),
+      getTopScorerOdds(admin, topScorerPlayerId, topScorerName),
+    ]);
+
+    const baseTournamentPayload = {
       user_id: user.id,
       predicted_winner_team_id: winnerTeamId,
       predicted_top_scorer_name: topScorerName,
     };
 
+    const tournamentPayload = {
+      ...baseTournamentPayload,
+      predicted_winner_odds: winnerOdds,
+      predicted_scorer_odds: scorerOdds,
+      winner_points_earned: 0,
+      scorer_points_earned: 0,
+    };
+
     const outrightPayload = {
-      ...tournamentPayload,
+      ...baseTournamentPayload,
       predicted_top_scorer_player_id: topScorerPlayerId,
     };
 
@@ -362,6 +375,65 @@ function normalizePlayerId(value: FormDataEntryValue | null) {
 
   const parsed = Number.parseInt(normalized, 10);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+async function getTeamOutrightOdds(admin: AdminClient, teamId: string) {
+  const { data, error } = await admin
+    .from("teams")
+    .select("outright_odds")
+    .eq("id", teamId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("[completeOnboarding] winner odds lookup error:", error.message);
+    return null;
+  }
+
+  return normalizeOddsValue((data as { outright_odds?: number | string | null } | null)?.outright_odds);
+}
+
+async function getTopScorerOdds(
+  admin: AdminClient,
+  playerId: number | null,
+  playerName: string,
+) {
+  if (playerId !== null) {
+    const { data, error } = await admin
+      .from("players")
+      .select("top_scorer_odds")
+      .eq("id", playerId)
+      .maybeSingle();
+
+    if (error) {
+      console.error("[completeOnboarding] scorer odds by id error:", error.message);
+    } else {
+      const odds = normalizeOddsValue(
+        (data as { top_scorer_odds?: number | string | null } | null)?.top_scorer_odds,
+      );
+      if (odds !== null) return odds;
+    }
+  }
+
+  const { data, error } = await admin
+    .from("players")
+    .select("top_scorer_odds")
+    .eq("name", playerName)
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error("[completeOnboarding] scorer odds lookup error:", error.message);
+    return null;
+  }
+
+  return normalizeOddsValue((data as { top_scorer_odds?: number | string | null } | null)?.top_scorer_odds);
+}
+
+function normalizeOddsValue(value: number | string | null | undefined) {
+  const parsed = typeof value === "string" ? Number.parseFloat(value) : value;
+  return typeof parsed === "number" && Number.isFinite(parsed) && parsed >= 1
+    ? Math.round(parsed * 100) / 100
+    : null;
 }
 
 function revalidateProfileViews() {

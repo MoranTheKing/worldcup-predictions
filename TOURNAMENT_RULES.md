@@ -184,6 +184,8 @@ Top-scorer thresholds: `<= 10.00` gives 10, `<= 25.00` gives 15, `<= 50.00` give
 
 Prediction saves must lock current odds into `tournament_predictions.predicted_winner_odds` and `tournament_predictions.predicted_scorer_odds`. Finalization writes `winner_points_earned` and `scorer_points_earned`, then recomputes profile totals from match predictions plus outright points.
 
+Outright pickers must show the possible reward inline inside the team/player search option itself, using LTR numeric isolation for `+N`. Missing odds are displayed as `+0`, not as an empty state. Top-scorer pickers load players in paginated batches so feeds above Supabase's default 1000-row response are fully visible with `players.photo_url` when available.
+
 ## Server-side sync additions - 2026-04-27
 
 - BSD recent-form opponents must be stored/displayed in Hebrew via the shared team-name translator.
