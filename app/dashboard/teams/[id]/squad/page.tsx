@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import PlayerLink from "@/components/PlayerLink";
 import { createClient } from "@/lib/supabase/server";
 import type { TournamentTeamRecord } from "@/lib/tournament/matches";
 
@@ -269,17 +270,23 @@ function FormationPitch({ lines }: { lines: FormationLine[] }) {
 
 function PlayerToken({ player }: { player: TeamPlayer }) {
   return (
-    <div className="w-24 rounded-[1.1rem] border border-white/12 bg-black/32 p-2 text-center shadow-[0_12px_28px_rgba(0,0,0,0.26)] backdrop-blur">
+    <PlayerLink
+      player={player}
+      className="block w-24 rounded-[1.1rem] border border-white/12 bg-black/32 p-2 text-center shadow-[0_12px_28px_rgba(0,0,0,0.26)] backdrop-blur transition hover:border-wc-neon/40 hover:bg-white/[0.07]"
+    >
       <PlayerAvatar player={player} size="sm" />
       <p className="mt-2 truncate text-xs font-black text-wc-fg1">{player.name}</p>
       <p className="text-[10px] font-bold text-wc-fg3">{getPositionLabel(player.position)}</p>
-    </div>
+    </PlayerLink>
   );
 }
 
 function PlayerCard({ player }: { player: TeamPlayer }) {
   return (
-    <article className="overflow-hidden rounded-[1.25rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.055),rgba(255,255,255,0.025))] p-3">
+    <PlayerLink
+      player={player}
+      className="block overflow-hidden rounded-[1.25rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.055),rgba(255,255,255,0.025))] p-3 transition hover:border-wc-neon/40 hover:bg-white/[0.065]"
+    >
       <div className="flex items-start gap-3">
         <PlayerAvatar player={player} size="lg" />
         <div className="min-w-0 flex-1">
@@ -300,7 +307,7 @@ function PlayerCard({ player }: { player: TeamPlayer }) {
           </div>
         </div>
       </div>
-    </article>
+    </PlayerLink>
   );
 }
 

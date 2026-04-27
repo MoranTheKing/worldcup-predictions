@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
+import PlayerLink from "@/components/PlayerLink";
 import TeamLink from "@/components/TeamLink";
 import { GoalsForAgainst } from "@/components/StatNumbers";
 import { createClient } from "@/lib/supabase/server";
@@ -679,12 +680,16 @@ function SquadPreview({ players, total }: { players: TeamPlayer[]; total: number
   return (
     <div className="mt-3 grid gap-2">
       {players.map((player) => (
-        <div key={player.id} className="flex items-center justify-between gap-3 rounded-xl bg-white/5 px-3 py-2">
+        <PlayerLink
+          key={player.id}
+          player={player}
+          className="flex items-center justify-between gap-3 rounded-xl bg-white/5 px-3 py-2 transition hover:bg-white/[0.085] hover:text-wc-neon"
+        >
           <span className="truncate text-sm font-bold text-wc-fg1">{player.name}</span>
           <span className="shrink-0 rounded-full bg-white/8 px-2 py-0.5 text-[10px] font-bold text-wc-fg3">
             {getPositionLabel(player.position)}
           </span>
-        </div>
+        </PlayerLink>
       ))}
       {total > players.length ? (
         <p className="pt-1 text-xs text-wc-fg3">ועוד {total - players.length} שחקנים בעמוד הסגל.</p>
@@ -697,7 +702,9 @@ function PlayerStatsRow({ player }: { player: TeamPlayer }) {
   return (
     <tr className="border-b border-white/6 last:border-0">
       <td className="px-3 py-2">
-        <p className="font-bold text-wc-fg1">{player.name}</p>
+        <PlayerLink player={player} className="font-bold text-wc-fg1 transition hover:text-wc-neon">
+          {player.name}
+        </PlayerLink>
         <p className="text-[11px] text-wc-fg3">{getPositionLabel(player.position)}</p>
       </td>
       <td className="px-3 py-2 text-center font-black text-wc-fg1">{player.goals ?? 0}</td>

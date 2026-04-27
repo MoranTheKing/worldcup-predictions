@@ -7,6 +7,7 @@ import CompactLeaderTable, {
   type CompactLeaderRow,
   type CompactLeaderTeam,
 } from "@/components/stats/CompactLeaderTable";
+import { getPlayerPageHref } from "@/components/PlayerLink";
 import { createClient } from "@/lib/supabase/server";
 import {
   attachTeamsToMatches,
@@ -314,6 +315,7 @@ function buildTeamPlayerRows(
     id: String(player.id),
     title: player.name,
     subtitle: getPositionLabel(player.position),
+    href: getPlayerPageHref(player.id),
     imageUrl: player.photo_url ?? null,
     imageAlt: player.name,
     team: toCompactTeam(team),

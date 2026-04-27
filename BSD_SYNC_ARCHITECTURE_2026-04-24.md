@@ -842,3 +842,12 @@ raw_error
 - The configured World Cup league currently returns placeholder teams as well as real teams, so the sync paginates and matches local teams by alias-normalized names. The checked alias set maps all 48 local teams, including `Czech Republic/Czechia` and `Bosnia and Herzegovina/Bosnia & Herzegovina`.
 - Dev Tools exposes this as `סנכרון נבחרות BSD`; it should be run only after the new migration exists in Supabase.
 - This foundation does not alter match scores/clocks yet. The production Worker should reuse the same server-side client pattern later for events/live/odds.
+
+## Implemented recent-form sync slice - 2026-04-27
+
+- The dev sync route now also reads BSD `/api/events/` with a server-side token for each matched national team.
+- Only finished events whose home or away team name exactly matches the local/BSD team aliases are inserted. This prevents broad API searches such as `United States` from saving unrelated club fixtures.
+- Synced recent matches are stored in `team_recent_matches` with `source = 'bzzoiro-events'`; each sync deletes and replaces only that source for the team, leaving any future manual source rows untouched.
+- The current manual run synced 96 recent-form rows across 35 teams. Teams without rows generally mean BSD returned no finished national-team events for the exact team alias, not a UI bug.
+- This remains Supabase-first: dashboard pages read `team_recent_matches`; regular browsers do not call BSD `/api/events/` directly.
+- BSD image URLs such as `/img/player/{id}/` and `/img/manager/{id}/` are public image fetches, not authenticated JSON API calls. They still hit BSD's image host from the browser, so a later production optimization can proxy/cache them through Next image optimization, Supabase Storage, or Cloudflare R2.

@@ -16,6 +16,7 @@ export type CompactLeaderRow = {
   id: string;
   title: string;
   subtitle?: string | null;
+  href?: string | null;
   imageUrl?: string | null;
   imageAlt?: string;
   team?: CompactLeaderTeam | null;
@@ -93,9 +94,24 @@ function LeaderRow({ row, rank }: { row: CompactLeaderRow; rank: number }) {
       </div>
 
       <div className="flex min-w-0 items-center gap-3">
-        <LeaderImage row={row} />
+        {row.href ? (
+          <Link href={row.href} className="shrink-0 rounded-2xl transition hover:opacity-80">
+            <LeaderImage row={row} />
+          </Link>
+        ) : (
+          <LeaderImage row={row} />
+        )}
         <div className="min-w-0">
-          <div className="truncate text-sm font-black text-wc-fg1">{row.title}</div>
+          {row.href ? (
+            <Link
+              href={row.href}
+              className="block truncate text-sm font-black text-wc-fg1 transition hover:text-wc-neon"
+            >
+              {row.title}
+            </Link>
+          ) : (
+            <div className="truncate text-sm font-black text-wc-fg1">{row.title}</div>
+          )}
           <div className="mt-1 flex min-w-0 items-center gap-2 text-[11px] font-semibold text-wc-fg3">
             {row.team ? <TeamChip team={row.team} /> : null}
             {row.subtitle ? <span className="truncate">{row.subtitle}</span> : null}

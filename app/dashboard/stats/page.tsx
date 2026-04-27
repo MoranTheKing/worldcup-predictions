@@ -3,6 +3,7 @@ import CompactLeaderTable, {
   type CompactLeaderRow,
   type CompactLeaderTeam,
 } from "@/components/stats/CompactLeaderTable";
+import { getPlayerPageHref } from "@/components/PlayerLink";
 import { createClient } from "@/lib/supabase/server";
 import {
   attachTeamsToMatches,
@@ -86,6 +87,7 @@ export default async function DashboardStatsPage() {
   const tournament = buildTournamentStandings(tournamentTeams, groupMatches);
   const standings = Object.values(tournament.groupStandings).flat();
   const liveMatches = matches.filter((match) => match.status === "live").length;
+  const tableCount = 9;
 
   const playerTables = [
     {
@@ -181,7 +183,7 @@ export default async function DashboardStatsPage() {
           </div>
 
           <div className="grid grid-cols-3 gap-2 sm:min-w-[28rem]">
-            <SummaryStat label="שחקנים" value={String(players.length)} />
+            <SummaryStat label="טבלאות" value={String(tableCount)} />
             <SummaryStat label="נבחרות" value={String(teams.length)} />
             <SummaryStat label="משחקי לייב" value={String(liveMatches)} accent="text-cyan-300" />
           </div>
@@ -294,6 +296,7 @@ function buildPlayerRows(
       id: String(player.id),
       title: player.name,
       subtitle: getPositionLabel(player.position),
+      href: getPlayerPageHref(player.id),
       imageUrl: player.photo_url ?? null,
       imageAlt: player.name,
       team: team ? toCompactTeam(team) : null,

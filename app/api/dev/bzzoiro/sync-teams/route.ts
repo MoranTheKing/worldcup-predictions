@@ -43,6 +43,31 @@ type BzzoiroPlayer = {
   } | null;
 };
 
+type BzzoiroEvent = {
+  id: number;
+  home_team: string;
+  away_team: string;
+  home_team_obj?: {
+    id?: number | null;
+    name?: string | null;
+    short_name?: string | null;
+  } | null;
+  away_team_obj?: {
+    id?: number | null;
+    name?: string | null;
+    short_name?: string | null;
+  } | null;
+  event_date: string;
+  league?: {
+    id?: number | null;
+    name?: string | null;
+    country?: string | null;
+  } | null;
+  status?: string | null;
+  home_score?: number | null;
+  away_score?: number | null;
+};
+
 type LocalTeam = {
   id: string;
   name: string;
@@ -118,15 +143,24 @@ export async function POST(request: Request) {
   const now = new Date().toISOString();
   let playersSynced = 0;
   let coachesSynced = 0;
+  let recentMatchesSynced = 0;
+  let teamsWithRecentMatches = 0;
   let legacyPlayersEnriched = 0;
   let legacyPlayersRemoved = 0;
   const playerSearchCache = new Map<string, BzzoiroPlayer | null>();
+  const recentMatchesDateTo = new Date().toISOString().slice(0, 10);
 
   for (const { local, remote } of matchedTeams) {
-    const [detail, managers, players, existingPlayersResult] = await Promise.all([
+    const [detail, managers, players, recentEvents, existingPlayersResult] = await Promise.all([
       safeBzzoiroGet<BzzoiroTeam>(`/teams/${remote.id}/`),
       safeBzzoiroPaginated<BzzoiroManager>("/managers/", { team_id: remote.id }),
       safeBzzoiroPaginated<BzzoiroPlayer>("/players/", { national_team: remote.id }),
+      safeBzzoiroPaginated<BzzoiroEvent>("/events/", {
+        team: getEventTeamSearchName(local, remote),
+        date_from: "2025-01-01",
+        date_to: recentMatchesDateTo,
+        status: "finished",
+      }),
       supabase
         .from("players")
         .select("id, name, bzzoiro_player_id")
@@ -157,6 +191,36 @@ export async function POST(request: Request) {
 
     if (coachName) {
       coachesSynced += 1;
+    }
+
+    const recentRows = buildRecentMatchRows(local, remote, recentEvents);
+    const { error: recentDeleteError } = await supabase
+      .from("team_recent_matches")
+      .delete()
+      .eq("team_id", local.id)
+      .eq("source", "bzzoiro-events");
+
+    if (recentDeleteError) {
+      return NextResponse.json(
+        { error: recentDeleteError.message, team: local.name },
+        { status: 500 },
+      );
+    }
+
+    if (recentRows.length > 0) {
+      const { error: recentInsertError } = await supabase
+        .from("team_recent_matches")
+        .insert(recentRows);
+
+      if (recentInsertError) {
+        return NextResponse.json(
+          { error: recentInsertError.message, team: local.name },
+          { status: 500 },
+        );
+      }
+
+      recentMatchesSynced += recentRows.length;
+      teamsWithRecentMatches += 1;
     }
 
     const existingPlayers = (existingPlayersResult.data ?? []) as LocalPlayer[];
@@ -236,6 +300,8 @@ export async function POST(request: Request) {
     matchedTeams: matchedTeams.length,
     unmatchedTeams: remoteTeams.length - matchedTeams.length,
     coachesSynced,
+    recentMatchesSynced,
+    teamsWithRecentMatches,
     playersSynced,
     legacyPlayersEnriched,
     legacyPlayersRemoved,
@@ -325,6 +391,87 @@ function buildPlayerRows(
         ...buildPlayerPayload(teamId, player, syncedAt),
       };
     });
+}
+
+function buildRecentMatchRows(
+  local: LocalTeam,
+  remote: BzzoiroTeam,
+  events: BzzoiroEvent[],
+) {
+  const teamNames = new Set(
+    [local.name, local.name_he, remote.name, remote.short_name, remote.country]
+      .map(normalizeName)
+      .filter(Boolean),
+  );
+
+  return events
+    .filter((event) => {
+      return (
+        String(event.status ?? "").toLowerCase() === "finished" &&
+        Number.isFinite(Number(event.home_score)) &&
+        Number.isFinite(Number(event.away_score)) &&
+        event.event_date &&
+        getEventTeamSide(event, teamNames) !== null
+      );
+    })
+    .sort((left, right) => {
+      return new Date(right.event_date).getTime() - new Date(left.event_date).getTime();
+    })
+    .slice(0, 5)
+    .map((event, index) => {
+      const isHome = getEventTeamSide(event, teamNames) === "home";
+      const opponentName = isHome ? event.away_team : event.home_team;
+      const opponent = isHome ? event.away_team_obj : event.home_team_obj;
+      const teamScore = Number(isHome ? event.home_score : event.away_score);
+      const opponentScore = Number(isHome ? event.away_score : event.home_score);
+
+      return {
+        team_id: local.id,
+        opponent_name: opponentName,
+        opponent_logo_url: getBzzoiroPublicImageUrl("team", opponent?.id),
+        played_at: event.event_date,
+        competition: event.league?.name ?? "Friendly",
+        team_score: teamScore,
+        opponent_score: opponentScore,
+        result: getRecentMatchResult(teamScore, opponentScore),
+        source: "bzzoiro-events",
+        sort_order: index + 1,
+        updated_at: new Date().toISOString(),
+      };
+    });
+}
+
+function getEventTeamSide(event: BzzoiroEvent, teamNames: Set<string>) {
+  if (
+    teamNames.has(normalizeName(event.home_team)) ||
+    teamNames.has(normalizeName(event.home_team_obj?.name)) ||
+    teamNames.has(normalizeName(event.home_team_obj?.short_name))
+  ) {
+    return "home";
+  }
+
+  if (
+    teamNames.has(normalizeName(event.away_team)) ||
+    teamNames.has(normalizeName(event.away_team_obj?.name)) ||
+    teamNames.has(normalizeName(event.away_team_obj?.short_name))
+  ) {
+    return "away";
+  }
+
+  return null;
+}
+
+function getRecentMatchResult(teamScore: number, opponentScore: number) {
+  if (teamScore > opponentScore) return "win";
+  if (teamScore < opponentScore) return "loss";
+  return "draw";
+}
+
+function getEventTeamSearchName(local: LocalTeam, remote: BzzoiroTeam) {
+  if (local.name === "Czech Republic") return "Czechia";
+  if (local.name === "Turkiye") return "Türkiye";
+  if (local.name === "Ivory Coast") return "Cote";
+  return remote.country || remote.name || local.name;
 }
 
 async function buildLegacyPlayerFallbackActions({
@@ -502,5 +649,6 @@ function revalidateSyncPaths() {
   revalidatePath("/dashboard/teams", "layout");
   revalidatePath("/dashboard/teams");
   revalidatePath("/dashboard/stats");
+  revalidatePath("/dashboard/players", "layout");
   revalidatePath("/dev-tools");
 }

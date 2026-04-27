@@ -16,39 +16,69 @@ import { buildTournamentStandings, type TeamStanding } from "@/lib/utils/standin
 
 export const dynamic = "force-dynamic";
 
+type TeamRecord = TournamentTeamRecord & {
+  bzzoiro_team_id?: string | null;
+  coach_name?: string | null;
+  bzzoiro_synced_at?: string | null;
+};
+
+type PlayerTeamRef = {
+  team_id: string | null;
+};
+
+type RecentMatchRecord = {
+  team_id: string;
+  result: "win" | "draw" | "loss";
+  played_at: string;
+};
+
+type TeamForm = {
+  count: number;
+  score: number;
+  wins: number;
+  draws: number;
+  losses: number;
+  items: Array<"W" | "D" | "L">;
+};
+
 export default async function TeamsIndexPage() {
   const supabase = await createClient();
 
-  const [{ data: teamsData }, { data: matchesData }] = await Promise.all([
-    supabase
-      .from("teams")
-      .select("id, name, name_he, logo_url, group_letter, fair_play_score, fifa_ranking, is_eliminated, outright_odds, outright_odds_updated_at")
-      .order("group_letter")
-      .order("name_he", { ascending: true }),
-    supabase
-      .from("matches")
-      .select(`
-        match_number,
-        stage,
-        status,
-        match_phase,
-        date_time,
-        minute,
-        home_team_id,
-        away_team_id,
-        home_placeholder,
-        away_placeholder,
-        home_score,
-        away_score,
-        is_extra_time,
-        home_penalty_score,
-        away_penalty_score
-      `)
-      .order("date_time", { ascending: true }),
-  ]);
+  const [{ data: teamsData }, { data: matchesData }, { data: playersData }, { data: recentMatchesData }] =
+    await Promise.all([
+      supabase
+        .from("teams")
+        .select("id, name, name_he, logo_url, group_letter, fair_play_score, fifa_ranking, is_eliminated, outright_odds, outright_odds_updated_at, bzzoiro_team_id, coach_name, bzzoiro_synced_at")
+        .order("group_letter")
+        .order("name_he", { ascending: true }),
+      supabase
+        .from("matches")
+        .select(`
+          match_number,
+          stage,
+          status,
+          match_phase,
+          date_time,
+          minute,
+          home_team_id,
+          away_team_id,
+          home_placeholder,
+          away_placeholder,
+          home_score,
+          away_score,
+          is_extra_time,
+          home_penalty_score,
+          away_penalty_score
+        `)
+        .order("date_time", { ascending: true }),
+      supabase.from("players").select("team_id"),
+      supabase
+        .from("team_recent_matches")
+        .select("team_id, result, played_at")
+        .order("played_at", { ascending: false }),
+    ]);
 
-  const teams = (teamsData ?? []) as TournamentTeamRecord[];
-  const teamsById = new Map(teams.map((team) => [team.id, team]));
+  const teams = (teamsData ?? []) as TeamRecord[];
   const matches = attachTeamsToMatches((matchesData ?? []) as TournamentMatchRecord[], teams);
   const groupMatches = getGroupMatches(matches);
   const tournamentTeams = buildTournamentTeams(teams as TournamentTeamStateRow[], groupMatches);
@@ -61,13 +91,40 @@ export default async function TeamsIndexPage() {
     }
   }
 
-  const groupLetters = [...new Set(teams.map((team) => team.group_letter).filter(Boolean))] as string[];
-  const groupCount = groupLetters.length;
+  const playersByTeamId = countPlayersByTeam((playersData ?? []) as PlayerTeamRef[]);
+  const recentByTeamId = groupRecentMatches((recentMatchesData ?? []) as RecentMatchRecord[]);
+  const teamsWithSquad = [...playersByTeamId.values()].filter((count) => count > 0).length;
+  const teamsWithCoach = teams.filter((team) => Boolean(team.coach_name)).length;
+  const teamsWithRecentForm = [...recentByTeamId.values()].filter((matches) => matches.length > 0).length;
+  const eliminatedTeams = teams.filter((team) => isTeamInactive(team, standingsByTeamId.get(team.id) ?? null)).length;
   const liveMatches = matches.filter((match) => match.status === "live").length;
   const oddsLeaders = teams
     .filter((team) => Number.isFinite(Number(team.outright_odds)))
     .sort((left, right) => Number(left.outright_odds) - Number(right.outright_odds))
     .slice(0, 6);
+  const formLeaders = teams
+    .map((team) => ({
+      team,
+      standing: standingsByTeamId.get(team.id) ?? null,
+      form: buildTeamForm(recentByTeamId.get(team.id) ?? []),
+    }))
+    .filter((item) => item.form.count > 0)
+    .sort((left, right) => right.form.score - left.form.score || getTeamName(left.team).localeCompare(getTeamName(right.team), "he"))
+    .slice(0, 6);
+  const directoryTeams = teams
+    .slice()
+    .sort((left, right) => {
+      const leftStanding = standingsByTeamId.get(left.id) ?? null;
+      const rightStanding = standingsByTeamId.get(right.id) ?? null;
+      const leftInactive = isTeamInactive(left, leftStanding);
+      const rightInactive = isTeamInactive(right, rightStanding);
+
+      if (leftInactive !== rightInactive) return leftInactive ? 1 : -1;
+      if ((left.group_letter ?? "") !== (right.group_letter ?? "")) {
+        return String(left.group_letter ?? "").localeCompare(String(right.group_letter ?? ""), "he");
+      }
+      return (leftStanding?.rank ?? 99) - (rightStanding?.rank ?? 99) || getTeamName(left).localeCompare(getTeamName(right), "he");
+    });
 
   return (
     <div className="wc-shell px-4 py-4 md:px-6 md:py-6" dir="rtl">
@@ -94,35 +151,42 @@ export default async function TeamsIndexPage() {
               כל הנבחרות
             </h1>
             <p className="mt-3 max-w-3xl text-sm leading-7 text-wc-fg2">
-              אינדקס נבחרות מהיר ונגיש. הטבלאות המלאות נשארות בעמוד הטורניר, וכאן מקבלים כניסה מהירה לפרופיל, סגל, סטטיסטיקות ויחסי זכייה.
+              מרכז אחד לכל הנבחרות: כניסה מהירה לפרופיל, סגל, סטטיסטיקות, כושר אחרון ויחסי זכייה. נבחרת שהודחה תישאר נגישה, אבל תופיע בשקט כדי לא להעמיס על העין.
             </p>
             <div className="mt-5 flex flex-wrap gap-2">
               <Link
-                href="/dashboard/tournament"
-                className="rounded-full border border-white/10 bg-white/8 px-4 py-2 text-xs font-black text-wc-fg1 transition hover:border-wc-neon/40 hover:text-wc-neon"
+                href="#all-teams"
+                className="rounded-full border border-wc-neon/30 bg-[rgba(95,255,123,0.11)] px-4 py-2 text-xs font-black text-wc-neon transition hover:border-wc-neon/55 hover:bg-[rgba(95,255,123,0.17)]"
               >
-                טבלאות הטורניר המלאות
+                כל הנבחרות
               </Link>
               <Link
                 href="/dashboard/stats#odds"
-                className="rounded-full border border-wc-neon/30 bg-[rgba(95,255,123,0.11)] px-4 py-2 text-xs font-black text-wc-neon transition hover:border-wc-neon/55 hover:bg-[rgba(95,255,123,0.17)]"
+                className="rounded-full border border-white/10 bg-white/8 px-4 py-2 text-xs font-black text-wc-fg1 transition hover:border-wc-neon/40 hover:text-wc-neon"
               >
-                טבלת יחסי זכייה
+                טבלאות היחסים
               </Link>
             </div>
           </div>
 
           <div className="grid grid-cols-3 gap-2 sm:min-w-[28rem]">
             <SummaryStat label="נבחרות" value={String(teams.length)} />
-            <SummaryStat label="בתים" value={String(groupCount)} accent="text-wc-neon" />
+            <SummaryStat label="פעילות" value={String(teams.length - eliminatedTeams)} accent="text-wc-neon" />
             <SummaryStat label="משחקי לייב" value={String(liveMatches)} accent="text-cyan-300" />
           </div>
         </div>
       </section>
 
+      <section className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <InsightCard label="סגלים מסונכרנים" value={`${teamsWithSquad}/${teams.length}`} sub="שחקנים ותמונות מה-API" />
+        <InsightCard label="מאמנים" value={`${teamsWithCoach}/${teams.length}`} sub="שם ותמונה כשיש מקור" />
+        <InsightCard label="כושר אחרון" value={`${teamsWithRecentForm}/${teams.length}`} sub="5 משחקים אחרונים לנבחרת" />
+        <InsightCard label="הודחו" value={String(eliminatedTeams)} sub="נשארות באפור בעמוד" tone="muted" />
+      </section>
+
       {oddsLeaders.length > 0 ? (
         <section className="mt-5 rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-4 md:p-5">
-          <SectionHeader title="מועמדות מובילות" eyebrow="יחסי זכייה" />
+          <SectionHeader title="יחסים מובילים" eyebrow="זכייה בטורניר" />
           <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
             {oddsLeaders.map((team, index) => (
               <TeamOddsCard
@@ -136,40 +200,38 @@ export default async function TeamsIndexPage() {
         </section>
       ) : null}
 
-      <section className="mt-5 grid gap-5 xl:grid-cols-2">
-        {groupLetters.map((groupLetter) => {
-          const groupTeams = teams
-            .filter((team) => team.group_letter === groupLetter)
-            .sort((left, right) => {
-              const leftStanding = standingsByTeamId.get(left.id);
-              const rightStanding = standingsByTeamId.get(right.id);
-              return (leftStanding?.rank ?? 99) - (rightStanding?.rank ?? 99);
-            });
+      <section className="mt-5 rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-4 md:p-5">
+        <SectionHeader title="כושר API" eyebrow="5 המשחקים האחרונים" />
+        {formLeaders.length > 0 ? (
+          <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+            {formLeaders.map(({ team, standing, form }) => (
+              <FormTeamCard key={team.id} team={team} standing={standing} form={form} />
+            ))}
+          </div>
+        ) : (
+          <EmptyPanel
+            title="עדיין אין משחקים אחרונים מסונכרנים"
+            description="אחרי סנכרון BSD, כאן יוצגו נבחרות עם כושר אחרון לפי משחקים רשמיים/ידידותיים שהסתיימו לפני הטורניר."
+          />
+        )}
+      </section>
 
-          return (
-            <div key={groupLetter} className="overflow-hidden rounded-[1.75rem] border border-white/10 bg-white/[0.035]">
-              <div className="flex items-center justify-between gap-3 border-b border-white/8 bg-white/[0.025] px-4 py-3">
-                <SectionHeader title={`בית ${groupLetter}`} eyebrow="נבחרות" />
-                <Link
-                  href="/dashboard/tournament"
-                  className="rounded-full bg-white/8 px-3 py-1 text-[11px] font-bold text-wc-fg3 transition hover:text-wc-neon"
-                >
-                  טבלה מלאה
-                </Link>
-              </div>
-
-              <div className="grid gap-2 p-3">
-                {groupTeams.map((team) => (
-                  <TeamDirectoryCard
-                    key={team.id}
-                    team={teamsById.get(team.id) ?? team}
-                    standing={standingsByTeamId.get(team.id) ?? null}
-                  />
-                ))}
-              </div>
-            </div>
-          );
-        })}
+      <section id="all-teams" className="mt-5 scroll-mt-24 rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-4 md:p-5">
+        <SectionHeader title="אינדקס הנבחרות" eyebrow="לחיצה לכל עמוד נבחרת" />
+        <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+          {directoryTeams.map((team) => {
+            const standing = standingsByTeamId.get(team.id) ?? null;
+            return (
+              <TeamDirectoryCard
+                key={team.id}
+                team={team}
+                standing={standing}
+                playerCount={playersByTeamId.get(team.id) ?? 0}
+                form={buildTeamForm(recentByTeamId.get(team.id) ?? [])}
+              />
+            );
+          })}
+        </div>
       </section>
     </div>
   );
@@ -178,30 +240,43 @@ export default async function TeamsIndexPage() {
 function TeamDirectoryCard({
   team,
   standing,
+  playerCount,
+  form,
 }: {
-  team: TournamentTeamRecord;
+  team: TeamRecord;
   standing: TeamStanding | null;
+  playerCount: number;
+  form: TeamForm;
 }) {
-  const displayName = team.name_he ?? team.name;
+  const displayName = getTeamName(team);
   const status = getStatus(team, standing);
+  const inactive = isTeamInactive(team, standing);
 
   return (
     <TeamLink
       team={team}
-      className="grid grid-cols-[auto_1fr_auto] items-center gap-3 rounded-[1.15rem] border border-white/10 bg-black/14 px-3 py-3 transition hover:border-wc-neon/35 hover:bg-white/[0.055]"
+      className={`grid grid-cols-[auto_1fr_auto] items-center gap-3 rounded-[1.15rem] border px-3 py-3 transition hover:border-wc-neon/35 hover:bg-white/[0.055] ${
+        inactive
+          ? "border-white/6 bg-white/[0.025] opacity-55 grayscale hover:opacity-80"
+          : "border-white/10 bg-black/14"
+      }`}
     >
-      <TeamLogo team={team} />
+      <TeamLogo team={team} muted={inactive} />
       <span className="min-w-0">
         <span className="block truncate text-sm font-black text-wc-fg1">{displayName}</span>
         <span className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-wc-fg3">
           <span className={`rounded-full px-2 py-0.5 font-black ${status.className}`}>{status.label}</span>
           {standing ? <span>מקום {standing.rank}</span> : null}
           {team.group_letter ? <span>בית {team.group_letter}</span> : null}
+          <span>{playerCount} שחקנים</span>
         </span>
       </span>
       <span className="text-left">
         <span className="block text-[10px] font-bold uppercase tracking-[0.14em] text-wc-fg3">יחס</span>
-        <span className="block font-sans text-xl font-black text-wc-neon">{formatOdds(team.outright_odds)}</span>
+        <span className={`block font-sans text-xl font-black ${inactive ? "text-wc-fg3" : "text-wc-neon"}`}>
+          {formatOdds(team.outright_odds)}
+        </span>
+        <FormDots form={form} compact />
       </span>
     </TeamLink>
   );
@@ -212,29 +287,72 @@ function TeamOddsCard({
   standing,
   rank,
 }: {
-  team: TournamentTeamRecord;
+  team: TeamRecord;
   standing: TeamStanding | null;
   rank: number;
 }) {
+  const inactive = isTeamInactive(team, standing);
+
   return (
     <TeamLink
       team={team}
-      className="grid grid-cols-[auto_1fr_auto] items-center gap-3 rounded-[1.1rem] border border-white/10 bg-black/14 px-3 py-3 transition hover:border-wc-neon/35 hover:bg-white/[0.055]"
+      className={`grid grid-cols-[auto_1fr_auto] items-center gap-3 rounded-[1.1rem] border px-3 py-3 transition hover:border-wc-neon/35 hover:bg-white/[0.055] ${
+        inactive ? "border-white/6 bg-white/[0.025] opacity-55 grayscale hover:opacity-80" : "border-white/10 bg-black/14"
+      }`}
     >
       <span className="grid h-8 w-8 place-items-center rounded-full bg-white/8 text-xs font-black text-wc-fg2">
         {rank}
       </span>
       <span className="flex min-w-0 items-center gap-2">
-        <TeamLogo team={team} />
+        <TeamLogo team={team} muted={inactive} />
         <span className="min-w-0">
-          <span className="block truncate text-sm font-black text-wc-fg1">{team.name_he ?? team.name}</span>
+          <span className="block truncate text-sm font-black text-wc-fg1">{getTeamName(team)}</span>
           <span className="block text-[11px] text-wc-fg3">
             {team.group_letter ? `בית ${team.group_letter}` : "ללא בית"}
             {standing ? ` · מקום ${standing.rank}` : ""}
           </span>
         </span>
       </span>
-      <span className="font-sans text-2xl font-black text-wc-neon">{formatOdds(team.outright_odds)}</span>
+      <span className={`font-sans text-2xl font-black ${inactive ? "text-wc-fg3" : "text-wc-neon"}`}>
+        {formatOdds(team.outright_odds)}
+      </span>
+    </TeamLink>
+  );
+}
+
+function FormTeamCard({
+  team,
+  standing,
+  form,
+}: {
+  team: TeamRecord;
+  standing: TeamStanding | null;
+  form: TeamForm;
+}) {
+  const inactive = isTeamInactive(team, standing);
+
+  return (
+    <TeamLink
+      team={team}
+      className={`rounded-[1.25rem] border p-4 transition hover:border-wc-neon/35 hover:bg-white/[0.055] ${
+        inactive ? "border-white/6 bg-white/[0.025] opacity-60 grayscale hover:opacity-85" : "border-white/10 bg-black/14"
+      }`}
+    >
+      <div className="flex items-center justify-between gap-3">
+        <span className="flex min-w-0 items-center gap-2">
+          <TeamLogo team={team} muted={inactive} />
+          <span className="truncate text-sm font-black text-wc-fg1">{getTeamName(team)}</span>
+        </span>
+        <span className="rounded-full bg-white/8 px-2 py-1 text-[10px] font-black text-wc-fg3">
+          {form.score} נק׳ כושר
+        </span>
+      </div>
+      <div className="mt-4 flex items-center justify-between gap-3">
+        <FormDots form={form} />
+        <span className="text-xs font-bold text-wc-fg3">
+          {form.wins} ניצ׳ · {form.draws} תיקו · {form.losses} הפס׳
+        </span>
+      </div>
     </TeamLink>
   );
 }
@@ -265,8 +383,39 @@ function SummaryStat({
   );
 }
 
-function TeamLogo({ team }: { team: TournamentTeamRecord }) {
-  const displayName = team.name_he ?? team.name;
+function InsightCard({
+  label,
+  value,
+  sub,
+  tone = "default",
+}: {
+  label: string;
+  value: string;
+  sub: string;
+  tone?: "default" | "muted";
+}) {
+  return (
+    <div className="rounded-[1.35rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.055),rgba(255,255,255,0.025))] p-4">
+      <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-wc-fg3">{label}</p>
+      <p className={`mt-2 font-sans text-3xl font-black tracking-normal ${tone === "muted" ? "text-wc-fg3" : "text-wc-neon"}`}>
+        {value}
+      </p>
+      <p className="mt-1 text-xs leading-5 text-wc-fg3">{sub}</p>
+    </div>
+  );
+}
+
+function EmptyPanel({ title, description }: { title: string; description: string }) {
+  return (
+    <div className="mt-4 rounded-2xl border border-dashed border-white/10 bg-white/[0.035] p-4">
+      <p className="text-sm font-black text-wc-fg1">{title}</p>
+      <p className="mt-1 text-xs leading-6 text-wc-fg3">{description}</p>
+    </div>
+  );
+}
+
+function TeamLogo({ team, muted = false }: { team: TeamRecord; muted?: boolean }) {
+  const displayName = getTeamName(team);
 
   return (
     <span className="grid h-8 w-11 shrink-0 place-items-center overflow-hidden rounded-md bg-white/10">
@@ -277,7 +426,7 @@ function TeamLogo({ team }: { team: TournamentTeamRecord }) {
           width={44}
           height={30}
           style={{ width: 44, height: 30 }}
-          className="h-full w-full object-cover"
+          className={`h-full w-full object-cover ${muted ? "grayscale" : ""}`}
           unoptimized
         />
       ) : (
@@ -287,35 +436,121 @@ function TeamLogo({ team }: { team: TournamentTeamRecord }) {
   );
 }
 
-function getStatus(team: TournamentTeamRecord, standing: TeamStanding | null) {
+function FormDots({ form, compact = false }: { form: TeamForm; compact?: boolean }) {
+  if (form.count === 0) {
+    return compact ? null : <span className="text-xs font-bold text-wc-fg3">אין כושר</span>;
+  }
+
+  return (
+    <span className={`inline-flex items-center gap-1 ${compact ? "mt-1 justify-end" : ""}`}>
+      {form.items.map((item, index) => (
+        <span
+          key={`${item}-${index}`}
+          className={`grid place-items-center rounded-full text-[10px] font-black ${
+            compact ? "h-4 w-4" : "h-6 w-6"
+          } ${getFormClass(item)}`}
+        >
+          {item}
+        </span>
+      ))}
+    </span>
+  );
+}
+
+function getStatus(team: TeamRecord, standing: TeamStanding | null) {
+  if (isTeamInactive(team, standing)) {
+    return {
+      label: "הודחה",
+      className: "bg-white/8 text-wc-fg3",
+    };
+  }
+
   if (standing?.lockedRank !== null && standing?.lockedRank !== undefined) {
     return {
       label: `מקום ${standing.lockedRank}`,
       className:
         standing.lockedRank <= 2
           ? "bg-[rgba(95,255,123,0.14)] text-wc-neon"
-          : standing.lockedRank >= 4
-            ? "bg-[rgba(255,92,130,0.14)] text-wc-danger"
-            : "bg-white/8 text-wc-fg3",
+          : "bg-white/8 text-wc-fg3",
     };
   }
 
-  if (team.is_eliminated === true || standing?.status === "eliminated") {
-    return {
-      label: "הודחה",
-      className: "bg-[rgba(255,92,130,0.14)] text-wc-danger",
-    };
-  }
   if (standing?.status === "qualified") {
     return {
       label: "הבטיחה העפלה",
       className: "bg-[rgba(95,255,123,0.14)] text-wc-neon",
     };
   }
+
   return {
     label: "פתוח",
     className: "bg-white/8 text-wc-fg3",
   };
+}
+
+function isTeamInactive(team: TeamRecord, standing: TeamStanding | null) {
+  return team.is_eliminated === true || standing?.status === "eliminated" || (standing?.lockedRank !== null && standing?.lockedRank !== undefined && standing.lockedRank >= 4);
+}
+
+function countPlayersByTeam(players: PlayerTeamRef[]) {
+  const counts = new Map<string, number>();
+
+  for (const player of players) {
+    if (!player.team_id) continue;
+    counts.set(player.team_id, (counts.get(player.team_id) ?? 0) + 1);
+  }
+
+  return counts;
+}
+
+function groupRecentMatches(matches: RecentMatchRecord[]) {
+  const groups = new Map<string, RecentMatchRecord[]>();
+
+  for (const match of matches) {
+    groups.set(match.team_id, [...(groups.get(match.team_id) ?? []), match]);
+  }
+
+  for (const [teamId, teamMatches] of groups) {
+    groups.set(
+      teamId,
+      teamMatches
+        .slice()
+        .sort((left, right) => new Date(right.played_at).getTime() - new Date(left.played_at).getTime())
+        .slice(0, 5),
+    );
+  }
+
+  return groups;
+}
+
+function buildTeamForm(matches: RecentMatchRecord[]): TeamForm {
+  const items = matches.slice(0, 5).map((match) => {
+    if (match.result === "win") return "W";
+    if (match.result === "loss") return "L";
+    return "D";
+  });
+  const wins = items.filter((item) => item === "W").length;
+  const draws = items.filter((item) => item === "D").length;
+  const losses = items.filter((item) => item === "L").length;
+
+  return {
+    count: items.length,
+    score: wins * 3 + draws,
+    wins,
+    draws,
+    losses,
+    items,
+  };
+}
+
+function getFormClass(item: "W" | "D" | "L") {
+  if (item === "W") return "bg-[rgba(95,255,123,0.14)] text-wc-neon";
+  if (item === "L") return "bg-[rgba(255,92,130,0.14)] text-wc-danger";
+  return "bg-[rgba(255,182,73,0.14)] text-wc-amber";
+}
+
+function getTeamName(team: Pick<TeamRecord, "name" | "name_he">) {
+  return team.name_he ?? team.name;
 }
 
 function formatOdds(value: number | string | null | undefined) {

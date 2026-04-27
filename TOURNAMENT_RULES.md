@@ -158,6 +158,14 @@ When a group is final, team-hub group tables must show exact locked positions on
 - Show only Top 3 by default. If more rows exist, expose Top 10 through an explicit `עוד - Top 10` control.
 - Player rows should use `players.photo_url` when available and keep team links RTL-safe through the shared compact leader table component.
 
+## Team directory and player profile rule
+
+- `/dashboard/teams` is the single all-teams directory and should not duplicate full group standings. Group tables remain owned by `/dashboard/tournament` and team-specific pages.
+- Eliminated teams should remain visible and clickable, but render visually muted/grayscale so active teams and current odds/form are easier to scan.
+- `team_recent_matches` is fed by server-side BSD `/api/events/` sync and should contain only exact national-team matches. Do not save broad search results unless the event home/away side matches the team aliases.
+- Every visible player name in leaderboards, squad cards, and team stat tables should link to `/dashboard/players/[id]`.
+- `/dashboard/players/[id]` is protected with the dashboard auth flow and reads the authenticated user's Supabase session like the other protected dashboard surfaces.
+
 ## BSD team sync foundation
 
 - External BSD/Bzzoiro identifiers live in Supabase, not in client state: `teams.bzzoiro_team_id`, `teams.coach_bzzoiro_id`, `players.bzzoiro_player_id`, and sync timestamps are introduced by `20260427000033_add_bzzoiro_sync_fields.sql`.

@@ -426,3 +426,12 @@ Brevo Free מוגבל בכמות יומית לכל החשבון, לכן ביום
 - Player leaderboards include player photos from `players.photo_url`, the linked national team chip, and the current metric.
 - Every stats table shows Top 3 by default and can expand to Top 10 with a single `עוד - Top 10` button.
 - The same compact table pattern is reused for team player stats so the UI stays RTL-safe and avoids wide, overloaded tables.
+
+## Team directory, recent form, and player pages - 2026-04-27
+
+- `/dashboard/teams` no longer repeats the tournament group tables. It now stays focused as the all-teams directory, with API sync counters, outright-odds leaders, recent-form leaders, and a compact card for every national team.
+- Eliminated teams remain clickable but render in a muted grayscale style so the full 48-team directory stays useful without visually competing with active teams.
+- `POST /api/dev/bzzoiro/sync-teams` now also calls BSD `/api/events/` server-side and writes verified national-team recent matches into `team_recent_matches`. The route filters returned events so broad team names cannot accidentally save club matches.
+- Team detail pages consume `team_recent_matches` for the five latest pre-tournament/recent form matches, while tournament matches still come from the local `matches` table.
+- Added `/dashboard/players/[id]` as the player profile route. Player names in global leaderboards, team stats, squad cards, and formation tokens now link to that profile.
+- `/dashboard/stats` no longer advertises a raw synced-player count in the hero; it shows table count instead, because the BSD roster can exceed 1000 records.
