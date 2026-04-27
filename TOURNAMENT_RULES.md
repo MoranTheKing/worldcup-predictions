@@ -102,4 +102,5 @@ This keeps the public tournament page usable while leaving user predictions, lea
 
 Each resolved team has a canonical public detail route at `/dashboard/teams/[id]`.
 Team references in match cards, prediction cards, tournament tables, knockout bracket seeds, league live chips, and tournament-winner badges should navigate to that route.
-The detail page is intentionally read-only and summarizes the team's fixture path, next known match, current group standing, tournament status, and quick stats.
+The detail page is intentionally read-only and summarizes the team's fixture path, next known match, current group standing, tournament status, expanded stats, and five-match form.
+It also links to `/dashboard/teams/[id]/squad`, which shows the current local player data, grouped by position, plus a coach placeholder until the external API sync supplies coach data.

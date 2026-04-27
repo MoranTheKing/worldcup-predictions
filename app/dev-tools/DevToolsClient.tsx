@@ -252,7 +252,7 @@ export default function DevToolsClient({ matches, error }: Props) {
       matches
         .map(
           (match) =>
-            `${match.match_number}:${match.status}:${match.match_phase}:${match.minute}:${match.home_score}:${match.away_score}:${match.home_odds}:${match.draw_odds}:${match.away_odds}:${match.home_team_id}:${match.away_team_id}`,
+            `${match.match_number}:${match.status}:${match.match_phase}:${match.minute}:${match.home_score}:${match.away_score}:${match.home_odds}:${match.draw_odds}:${match.away_odds}:${match.home_team_id}:${match.away_team_id}:${match.home_placeholder}:${match.away_placeholder}:${match.is_extra_time}:${match.home_penalty_score}:${match.away_penalty_score}`,
         )
         .join("|"),
     [matches],
