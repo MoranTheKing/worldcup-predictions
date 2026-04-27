@@ -62,6 +62,7 @@ During live matches, UI surfaces may show temporary projections as `+N`:
 - leaderboard rows show per-live-prediction and per-user live deltas
 - leaderboard rank uses the projected score during live matches: `total_score + live +N`
 - equal projected scores are currently ordered by `profiles.created_at`, earliest registration first
+- the global league header's "my rank" card uses the same projected leaderboard order
 - the game hero shows a `LIVE +N` badge next to `Total Score`
 - projections use `calculatePredictionPoints` against the current live score and never write to the database
 - at most two live matches are considered for compact UI surfaces

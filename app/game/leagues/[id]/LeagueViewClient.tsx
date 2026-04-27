@@ -95,6 +95,8 @@ export default function LeagueViewClient({
   const isOwner = !isGlobal && league.owner_id === currentUserId;
   const hasLiveMatches = liveMatches.length > 0;
   const showMemberActions = !isGlobal;
+  const currentUserRank = members.findIndex((member) => member.user_id === currentUserId) + 1;
+  const currentUserRankLabel = currentUserRank > 0 ? `#${currentUserRank}` : "-";
 
   return (
     <div className="flex flex-col gap-6">
@@ -138,7 +140,7 @@ export default function LeagueViewClient({
             {isGlobal ? (
               <>
                 <LeagueStatCard title="משתתפים" value={String(members.length)} />
-                <LeagueStatCard title="משחקי LIVE" value={String(liveMatches.length)} />
+                <LeagueStatCard title="המיקום שלי" value={currentUserRankLabel} />
               </>
             ) : (
               <>
