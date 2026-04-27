@@ -245,24 +245,26 @@ function MatchCard({ match }: { match: MatchListRow }) {
 
   return (
     <article
-      className={`wc-card group flex flex-col gap-4 border p-4 transition hover:border-white/20 ${statusMeta.cardClassName}`}
+      className={`wc-card group relative flex flex-col gap-4 border p-4 transition hover:border-white/20 ${statusMeta.cardClassName}`}
     >
-      <div className="flex items-center justify-between gap-3 text-[11px] text-wc-fg3">
+      <Link
+        href={`/dashboard/matches/${match.match_number}`}
+        className="absolute inset-0 z-0 rounded-[inherit]"
+        aria-label={`Open match ${match.match_number}`}
+      />
+      <div className="pointer-events-none relative z-10 flex items-center justify-between gap-3 text-[11px] text-wc-fg3">
         <div className="min-w-0">
           <p className="truncate font-semibold text-wc-fg2">{getStageLabelHe(match.stage)}</p>
-          <Link
-            href={`/dashboard/matches/${match.match_number}`}
-            className="mt-1 block font-mono text-[10px] text-wc-fg3 hover:text-wc-fg1"
-          >
+          <p className="mt-1 block font-mono text-[10px] text-wc-fg3 transition group-hover:text-wc-fg1">
             Match #{match.match_number}
-          </Link>
+          </p>
         </div>
         <span className={`inline-flex shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold ${statusMeta.pillClassName}`}>
           {statusMeta.label}
         </span>
       </div>
 
-      <div className="flex items-center justify-between gap-3">
+      <div className="pointer-events-none relative z-10 flex items-center justify-between gap-3">
         <TeamSide team={match.homeTeam} logo={homeLogo} name={homeName} />
         <div className="flex shrink-0 flex-col items-center gap-1 text-center">
           {scoreSummary ? (
@@ -346,7 +348,7 @@ function TeamSide({
   );
   const className = `flex min-w-0 flex-1 items-center gap-2 transition-colors ${
     reverse ? "flex-row-reverse text-end" : "text-start"
-  } ${team ? "hover:text-wc-neon" : ""}`;
+  } ${team ? "pointer-events-auto hover:text-wc-neon" : ""}`;
 
   if (team) {
     return (

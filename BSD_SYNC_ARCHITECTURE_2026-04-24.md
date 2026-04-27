@@ -824,3 +824,12 @@ raw_error
 - Team and global stats tables should render goal totals as explicit `זכות` and `חובה`, not `GF:GA` or `10:5`, to avoid RTL ambiguity.
 - Dev Tools now has manual team outright odds editing and reset via `/api/dev/outright-odds/teams`. Top-scorer odds remain random/API-fed until the external player feed is connected.
 - API sync can start with a source-ID mapping phase: store external team, match, and player identifiers, then sync match clocks/scores, odds, rosters, coach data, recent form, and player stats into Supabase. Browser UI should continue reading Supabase only.
+
+## Implemented team sync foundation - 2026-04-27
+
+- Added localhost-only `POST /api/dev/bzzoiro/sync-teams` as the first BSD sync slice. It is intentionally dev-only and still Supabase-first.
+- The route uses BSD's documented `Authorization: Token` header and reads from `/api/teams/`, `/api/players/?national_team=...`, `/api/managers/?team_id=...`, plus public `/img/team|player|manager/{id}/` image URLs.
+- Added `supabase/migrations/20260427000033_add_bzzoiro_sync_fields.sql` for `teams.bzzoiro_team_id`, `teams.coach_bzzoiro_id`, `teams.coach_photo_url`, `players.bzzoiro_player_id`, and sync timestamps.
+- The configured World Cup league currently returns placeholder teams as well as real teams, so the sync paginates and matches local teams by alias-normalized names. The checked alias set maps all 48 local teams, including `Czech Republic/Czechia` and `Bosnia and Herzegovina/Bosnia & Herzegovina`.
+- Dev Tools exposes this as `סנכרון נבחרות BSD`; it should be run only after the new migration exists in Supabase.
+- This foundation does not alter match scores/clocks yet. The production Worker should reuse the same server-side client pattern later for events/live/odds.

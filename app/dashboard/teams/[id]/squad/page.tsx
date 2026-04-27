@@ -39,7 +39,7 @@ export default async function TeamSquadPage({ params }: { params: Promise<{ id: 
   const [{ data: teamData }, { data: playersData, error: playersError }] = await Promise.all([
     supabase
       .from("teams")
-      .select("id, name, name_he, logo_url, group_letter, fair_play_score, fifa_ranking, is_eliminated, coach_name, coach_updated_at")
+      .select("id, name, name_he, logo_url, group_letter, fair_play_score, fifa_ranking, is_eliminated, coach_name, coach_bzzoiro_id, coach_photo_url, coach_updated_at")
       .eq("id", id)
       .maybeSingle(),
     supabase
@@ -113,8 +113,8 @@ export default async function TeamSquadPage({ params }: { params: Promise<{ id: 
 
       <div className="mt-5 grid gap-5 xl:grid-cols-[0.95fr_1.05fr]">
         <section className="rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-4 md:p-5">
-          <SectionHeader title="צוות מקצועי" eyebrow="API-ready" />
-          <CoachCard team={team} />
+          <SectionHeader title="מאמן" eyebrow="BSD API" />
+          <CoachSummary team={team} />
         </section>
 
         <section className="rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-4 md:p-5">
@@ -201,37 +201,40 @@ function HeroStat({ label, value }: { label: string; value: string }) {
   );
 }
 
-function CoachCard({ team }: { team: Pick<TournamentTeamRecord, "coach_name" | "coach_updated_at" | "logo_url" | "name" | "name_he"> }) {
+function CoachSummary({ team }: { team: Pick<TournamentTeamRecord, "coach_name" | "coach_photo_url" | "logo_url" | "name" | "name_he"> }) {
   const displayName = team.name_he ?? team.name;
+  const coachName = team.coach_name ?? "טרם סונכרן";
 
   return (
-    <div className="mt-4 grid gap-4 rounded-[1.5rem] border border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.06),rgba(255,255,255,0.025))] p-4 sm:grid-cols-[auto_1fr] sm:items-center">
-      <div className="relative grid h-28 w-28 place-items-center overflow-hidden rounded-[1.4rem] border border-white/10 bg-black/22">
-        {team.logo_url ? (
+    <div className="mt-4 flex items-center gap-4 rounded-[1.4rem] border border-white/10 bg-black/18 p-4">
+      <div className="grid h-20 w-20 shrink-0 place-items-center overflow-hidden rounded-[1.15rem] border border-white/10 bg-white/8">
+        {team.coach_photo_url ? (
+          <Image
+            src={team.coach_photo_url}
+            alt={coachName}
+            width={80}
+            height={80}
+            style={{ width: 80, height: 80 }}
+            className="h-full w-full object-cover"
+            unoptimized
+          />
+        ) : team.logo_url ? (
           <Image
             src={team.logo_url}
             alt={displayName}
-            width={88}
-            height={60}
-            style={{ width: 88, height: 60 }}
+            width={58}
+            height={40}
+            style={{ width: 58, height: 40 }}
             className="rounded-md object-cover opacity-90"
             unoptimized
           />
         ) : (
-          <span className="font-sans text-4xl font-black text-wc-fg2">{displayName.slice(0, 1)}</span>
+          <span className="font-sans text-2xl font-black text-wc-fg2">{displayName.slice(0, 1)}</span>
         )}
-        <div className="absolute inset-x-0 bottom-0 bg-black/35 px-2 py-1 text-center text-[10px] font-black text-wc-fg2">
-          מאמן
-        </div>
       </div>
       <div className="min-w-0">
         <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-wc-fg3">מאמן ראשי</p>
-        <p className="mt-2 truncate text-2xl font-black text-wc-fg1">
-          {team.coach_name ?? "טרם סונכרן"}
-        </p>
-        <p className="mt-2 text-sm leading-7 text-wc-fg3">
-          הכרטיס מוכן לשם המאמן ולפרטי צוות מורחבים ברגע שנתוני ה-API ייכנסו למערכת.
-        </p>
+        <p className="mt-1 truncate text-2xl font-black text-wc-fg1">{coachName}</p>
       </div>
     </div>
   );
@@ -403,7 +406,11 @@ function groupPlayersByPosition(players: TeamPlayer[]): PositionGroup[] {
 
 function getPositionKey(position: string | null) {
   if (!position) return "other";
-  const normalized = position.toLowerCase();
+  const normalized = position.trim().toLowerCase();
+  if (normalized === "g") return "goalkeeper";
+  if (normalized === "d") return "defender";
+  if (normalized === "m") return "midfielder";
+  if (normalized === "f") return "forward";
   if (normalized.includes("goal")) return "goalkeeper";
   if (normalized.includes("def")) return "defender";
   if (normalized.includes("mid")) return "midfielder";

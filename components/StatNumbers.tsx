@@ -36,7 +36,7 @@ export function GoalsForAgainst({
             : "bg-white/6 text-wc-fg2"
         }`}
       >
-        זכות <b className="font-black tabular-nums">{goalsFor}</b>
+        <b className="font-black tabular-nums">{goalsFor}</b> זכות
       </span>
       <span
         className={`rounded-full px-2 py-1 ${
@@ -45,7 +45,7 @@ export function GoalsForAgainst({
             : "bg-white/6 text-wc-fg2"
         }`}
       >
-        חובה <b className="font-black tabular-nums">{goalsAgainst}</b>
+        <b className="font-black tabular-nums">{goalsAgainst}</b> חובה
       </span>
     </span>
   );

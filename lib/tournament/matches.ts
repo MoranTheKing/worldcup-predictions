@@ -33,7 +33,10 @@ export type TournamentTeamRecord = {
   outright_odds?: number | string | null;
   outright_odds_updated_at?: string | null;
   coach_name?: string | null;
+  coach_bzzoiro_id?: number | string | null;
+  coach_photo_url?: string | null;
   coach_updated_at?: string | null;
+  bzzoiro_team_id?: number | string | null;
 };
 
 export type TournamentMatchRecord = {
@@ -103,6 +106,10 @@ const TEAM_NAME_ALIASES: Record<string, string> = {
   drc: "drcongo",
   republicofkorea: "southkorea",
   korea: "southkorea",
+  czechrepublic: "czechia",
+  czechia: "czechia",
+  bosniaherzegovina: "bosniaandherzegovina",
+  bosniaandherzegovina: "bosniaandherzegovina",
 };
 
 function compactAlphaNumeric(value: string) {

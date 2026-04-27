@@ -589,6 +589,31 @@ function DevToolsClientInner({ matches, teams, error }: Props) {
     }
   }
 
+  async function syncBzzoiroTeams() {
+    if (!confirm("לסנכרן נבחרות, דגלים, מאמנים וסגלים מה-BSD API? הפעולה תעדכן רק נתוני נבחרות ושחקנים.")) {
+      return;
+    }
+
+    setBulkSaving(true);
+    setMessage(null);
+
+    try {
+      const res = await fetch("/api/dev/bzzoiro/sync-teams", { method: "POST" });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setMessage(`Error: ${body.error ?? res.statusText}`);
+        return;
+      }
+
+      const body = await res.json().catch(() => ({}));
+      refreshWithMessage(
+        `סונכרנו ${body.matchedTeams ?? 0} נבחרות, ${body.coachesSynced ?? 0} מאמנים ו-${body.playersSynced ?? 0} שחקני סגל מה-BSD API.`,
+      );
+    } finally {
+      setBulkSaving(false);
+    }
+  }
+
   async function randomizeAll() {
     if (!confirm("למלא את כל המשחקים בתוצאות אקראיות ולסנכרן מיד את כל הטורניר?")) return;
 
@@ -720,6 +745,13 @@ function DevToolsClientInner({ matches, teams, error }: Props) {
               className="rounded-2xl border border-[rgba(111,60,255,0.55)] bg-[rgba(111,60,255,0.16)] px-4 py-3 text-sm font-bold text-[#C4B5FD] transition hover:bg-[rgba(111,60,255,0.26)] disabled:opacity-50"
             >
               יחס נבחרות/מלך שערים
+            </button>
+            <button
+              onClick={syncBzzoiroTeams}
+              disabled={pending}
+              className="rounded-2xl border border-[rgba(34,211,238,0.42)] bg-[rgba(34,211,238,0.1)] px-4 py-3 text-sm font-bold text-cyan-200 transition hover:bg-[rgba(34,211,238,0.18)] disabled:opacity-50"
+            >
+              סנכרון נבחרות BSD
             </button>
             <button
               onClick={finishAll}

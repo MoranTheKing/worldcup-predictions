@@ -399,3 +399,13 @@ Brevo Free מוגבל בכמות יומית לכל החשבון, לכן ביום
 - Added `supabase/migrations/20260427000032_add_player_roster_visual_fields.sql` for `players.photo_url` and `players.shirt_number`, so the future API sync can fill player photos and numbers.
 - Dev Tools now supports manual editing and resetting of `teams.outright_odds` through `/api/dev/outright-odds/teams`; top-scorer odds remain API/random-seed only for now.
 - API sync planning can begin from the current schema: map external team/player/match IDs, sync odds/coach/roster/form into the API-ready columns, then let existing realtime/UI surfaces consume Supabase rather than calling external APIs from the browser.
+
+## BSD team sync foundation - 2026-04-27
+
+- `/dashboard/matches` match cards are fully clickable to `/dashboard/matches/[match_number]`; nested team names still route to team pages.
+- Team and stats goal chips now render number-first labels (`8 חובה`, `10 זכות`) to avoid Hebrew RTL flips.
+- `/dashboard/teams` no longer shows the unclear `יחסים מוכנים` counter; the header keeps useful tournament scope stats instead.
+- `/dashboard/teams/[id]/squad` now shows a simple coach block rather than a professional-staff card, and it can display `teams.coach_photo_url` when BSD supplies a manager image.
+- Added `supabase/migrations/20260427000033_add_bzzoiro_sync_fields.sql` for BSD/Bzzoiro team IDs, player IDs, coach image fields, and sync timestamps.
+- Added localhost-only `/api/dev/bzzoiro/sync-teams` plus the Dev Tools `סנכרון נבחרות BSD` button. The sync uses BSD `/api/teams/`, `/api/players/?national_team=...`, `/api/managers/?team_id=...`, and public `/img/{type}/{id}/` image URLs, then writes the results into Supabase.
+- The BSD team-name matching was checked against the configured World Cup league ID: paginated BSD team data maps to all 48 local teams after aliases such as `Czech Republic/Czechia` and `Bosnia and Herzegovina/Bosnia & Herzegovina`.

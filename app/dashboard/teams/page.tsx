@@ -62,7 +62,7 @@ export default async function TeamsIndexPage() {
   }
 
   const groupLetters = [...new Set(teams.map((team) => team.group_letter).filter(Boolean))] as string[];
-  const oddsReadyCount = teams.filter((team) => Number.isFinite(Number(team.outright_odds))).length;
+  const groupCount = groupLetters.length;
   const liveMatches = matches.filter((match) => match.status === "live").length;
   const oddsLeaders = teams
     .filter((team) => Number.isFinite(Number(team.outright_odds)))
@@ -114,7 +114,7 @@ export default async function TeamsIndexPage() {
 
           <div className="grid grid-cols-3 gap-2 sm:min-w-[28rem]">
             <SummaryStat label="נבחרות" value={String(teams.length)} />
-            <SummaryStat label="יחסים מוכנים" value={String(oddsReadyCount)} accent="text-wc-neon" />
+            <SummaryStat label="בתים" value={String(groupCount)} accent="text-wc-neon" />
             <SummaryStat label="משחקי לייב" value={String(liveMatches)} accent="text-cyan-300" />
           </div>
         </div>

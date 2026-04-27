@@ -1060,7 +1060,11 @@ function getTopPlayers(players: TeamPlayer[]) {
 
 function getPositionLabel(position: string | null) {
   if (!position) return "שחקן";
-  const normalized = position.toLowerCase();
+  const normalized = position.trim().toLowerCase();
+  if (normalized === "g") return "שוער";
+  if (normalized === "d") return "הגנה";
+  if (normalized === "m") return "קישור";
+  if (normalized === "f") return "התקפה";
   if (normalized.includes("goal")) return "שוער";
   if (normalized.includes("def")) return "הגנה";
   if (normalized.includes("mid")) return "קישור";

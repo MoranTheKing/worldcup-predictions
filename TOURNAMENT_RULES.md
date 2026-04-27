@@ -143,3 +143,11 @@ Dev Tools has two separate odds flows:
 Manual team outright editing and reset are handled by localhost-only `/api/dev/outright-odds/teams`. Top-scorer odds remain random/API-fed and should not be manually maintained per player in the current UI.
 
 When a group is final, team-hub group tables must show exact locked positions only (`מקום 1` through `מקום 4`) and should match `/dashboard/tournament`. Negative goal differences must render in LTR numeric isolation so `-4` never flips to `4-`.
+
+## BSD team sync foundation
+
+- External BSD/Bzzoiro identifiers live in Supabase, not in client state: `teams.bzzoiro_team_id`, `teams.coach_bzzoiro_id`, `players.bzzoiro_player_id`, and sync timestamps are introduced by `20260427000033_add_bzzoiro_sync_fields.sql`.
+- Dev-only sync entrypoint: `POST /api/dev/bzzoiro/sync-teams`, exposed in Dev Tools as `סנכרון נבחרות BSD`. It must remain localhost-only and disabled in production until a dedicated production sync worker is built.
+- The browser must never call BSD directly. The route fetches BSD data server-side with `Authorization: Token`, writes flags/coach/roster/photo URLs into Supabase, and then revalidates dashboard/team/stat paths.
+- Team-name matching must keep aliases for real-world naming drift, including `Czech Republic/Czechia`, `Bosnia and Herzegovina/Bosnia & Herzegovina`, `Turkey/Turkiye`, `USA/United States`, `Republic of Korea/South Korea`, and `Côte d'Ivoire/Ivory Coast`.
+- In Hebrew UI, goal chips are number-first (`8 חובה`, `10 זכות`) and full match cards should be clickable to the match detail page while nested team links keep their own destination.
