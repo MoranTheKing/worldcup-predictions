@@ -76,10 +76,14 @@ export async function POST(request: Request) {
   await syncTournamentState(supabase);
 
   revalidatePath("/dashboard", "layout");
+  revalidatePath("/dashboard/stats");
+  revalidatePath("/dashboard/teams", "layout");
   revalidatePath("/game", "layout");
   revalidatePath("/game/predictions");
   revalidatePath("/game/leagues");
   revalidatePath("/game/leaderboard");
+  revalidatePath("/onboarding");
+  revalidatePath("/dev-tools");
 
   return NextResponse.json({
     reset: count ?? 0,

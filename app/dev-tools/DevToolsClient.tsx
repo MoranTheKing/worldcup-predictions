@@ -256,6 +256,27 @@ function buildScheduledReset(match: DevMatchRow) {
   });
 }
 
+function buildFullDataReset(match: DevMatchRow) {
+  return normalizeDraft({
+    ...match,
+    status: "scheduled",
+    match_phase: null,
+    home_score: 0,
+    away_score: 0,
+    home_odds: null,
+    draw_odds: null,
+    away_odds: null,
+    minute: null,
+    is_extra_time: false,
+    home_penalty_score: null,
+    away_penalty_score: null,
+    home_team_id: isKnockoutMatch(match.match_number) ? null : match.home_team_id,
+    away_team_id: isKnockoutMatch(match.match_number) ? null : match.away_team_id,
+    homeTeam: isKnockoutMatch(match.match_number) ? null : match.homeTeam,
+    awayTeam: isKnockoutMatch(match.match_number) ? null : match.awayTeam,
+  });
+}
+
 export default function DevToolsClient({ matches, teams, error }: Props) {
   const resetKey = useMemo(
     () =>
@@ -417,7 +438,7 @@ function DevToolsClientInner({ matches, teams, error }: Props) {
   async function clearAll() {
     if (
       !confirm(
-        "לאפס הכל? הפעולה תנקה תוצאות משחקים, יחסים, ניחושים, ג׳וקרים, ניקוד משתמשים וטבלאות ניקוד בליגות. הפעולה אינה הפיכה.",
+        "לאפס הכל? הפעולה תנקה תוצאות משחקים, יחסי 1/X/2, יחסי זכייה לנבחרות, יחסי מלך השערים, ניחושים, ג׳וקרים, ניקוד משתמשים וטבלאות ניקוד בליגות. הפעולה אינה הפיכה.",
       )
     ) {
       return;
@@ -435,8 +456,12 @@ function DevToolsClientInner({ matches, teams, error }: Props) {
       }
 
       const body = await res.json();
+      setDrafts((current) => current.map(buildFullDataReset));
+      setTeamOddsDrafts((current) =>
+        current.map((team) => ({ ...team, outright_odds: null, outright_odds_updated_at: null })),
+      );
       refreshWithMessage(
-        `אופסו ${body.reset ?? 0} משחקים, נמחקו ${body.predictionsReset ?? 0} ניחושים, ונוקו יחסים, ניקוד משתמשים וטבלאות ליגה.`,
+        `אופסו ${body.reset ?? 0} משחקים, נמחקו ${body.predictionsReset ?? 0} ניחושים, ונוקו יחסי משחקים, יחסי נבחרות (${body.teamOddsReset ?? 0}) ויחסי מלך השערים (${body.playerOddsReset ?? 0}).`,
       );
     } finally {
       setBulkSaving(false);

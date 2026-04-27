@@ -141,6 +141,7 @@ Dev Tools has two separate odds flows:
 - tournament outright odds: `teams.outright_odds`
 
 Manual team outright editing and reset are handled by localhost-only `/api/dev/outright-odds/teams`. Top-scorer odds remain random/API-fed and should not be manually maintained per player in the current UI.
+`Clear All Match Data` is the destructive local full reset: it clears match scores/status, match 1/X/2 odds, team outright odds, player top-scorer odds, predictions, tournament picks, legacy bets, profile totals, and league scoreboards.
 
 When a group is final, team-hub group tables must show exact locked positions only (`מקום 1` through `מקום 4`) and should match `/dashboard/tournament`. Negative goal differences must render in LTR numeric isolation so `-4` never flips to `4-`.
 
