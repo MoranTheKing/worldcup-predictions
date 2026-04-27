@@ -33,7 +33,14 @@ type BzzoiroPlayer = {
   name: string;
   short_name?: string | null;
   position?: string | null;
+  nationality?: string | null;
   jersey_number?: number | null;
+  national_team?: {
+    id?: number | null;
+    name?: string | null;
+    short_name?: string | null;
+    country?: string | null;
+  } | null;
 };
 
 type LocalTeam = {
@@ -48,6 +55,13 @@ type LocalPlayer = {
   name: string;
   bzzoiro_player_id?: string | null;
 };
+
+type LegacyPlayerAction =
+  | { kind: "update"; id: number; payload: ReturnType<typeof buildPlayerPayload> }
+  | { kind: "delete"; id: number; replacementId?: number };
+
+const MOCK_PLAYER_ID_MIN = 1;
+const MOCK_PLAYER_ID_MAX = 49;
 
 const TEAM_NAME_ALIASES: Record<string, string> = {
   czechrepublic: "czechia",
@@ -65,6 +79,11 @@ const TEAM_NAME_ALIASES: Record<string, string> = {
   drcongo: "drcongo",
   bosniaherzegovina: "bosniaandherzegovina",
   bosniaandherzegovina: "bosniaandherzegovina",
+};
+
+const PLAYER_SEARCH_ALIASES: Record<string, string> = {
+  gavi: "Pablo Gavi",
+  gioreyna: "Giovanni Reyna",
 };
 
 export async function POST(request: Request) {
@@ -99,6 +118,9 @@ export async function POST(request: Request) {
   const now = new Date().toISOString();
   let playersSynced = 0;
   let coachesSynced = 0;
+  let legacyPlayersEnriched = 0;
+  let legacyPlayersRemoved = 0;
+  const playerSearchCache = new Map<string, BzzoiroPlayer | null>();
 
   for (const { local, remote } of matchedTeams) {
     const [detail, managers, players, existingPlayersResult] = await Promise.all([
@@ -151,6 +173,60 @@ export async function POST(request: Request) {
 
       playersSynced += playerRows.length;
     }
+
+    const legacyActions = await buildLegacyPlayerFallbackActions({
+      local,
+      remote,
+      existingPlayers,
+      remotePlayers: players,
+      syncedAt: now,
+      cache: playerSearchCache,
+    });
+
+    for (const row of legacyActions) {
+      if (row.kind === "delete") {
+        const { error: predictionMoveError } = await supabase
+          .from("outright_bets")
+          .update({ predicted_top_scorer_player_id: row.replacementId ?? null })
+          .eq("predicted_top_scorer_player_id", row.id);
+
+        if (predictionMoveError) {
+          return NextResponse.json(
+            { error: predictionMoveError.message, player_id: row.id, team: local.name },
+            { status: 500 },
+          );
+        }
+
+        const { error: deleteError } = await supabase
+          .from("players")
+          .delete()
+          .eq("id", row.id);
+
+        if (deleteError) {
+          return NextResponse.json(
+            { error: deleteError.message, player_id: row.id, team: local.name },
+            { status: 500 },
+          );
+        }
+
+        legacyPlayersRemoved += 1;
+        continue;
+      }
+
+      const { error: legacyError } = await supabase
+        .from("players")
+        .update(row.payload)
+        .eq("id", row.id);
+
+      if (legacyError) {
+        return NextResponse.json(
+          { error: legacyError.message, player: row.payload.name, team: local.name },
+          { status: 500 },
+        );
+      }
+
+      legacyPlayersEnriched += 1;
+    }
   }
 
   revalidateSyncPaths();
@@ -161,6 +237,8 @@ export async function POST(request: Request) {
     unmatchedTeams: remoteTeams.length - matchedTeams.length,
     coachesSynced,
     playersSynced,
+    legacyPlayersEnriched,
+    legacyPlayersRemoved,
   });
 }
 
@@ -244,15 +322,134 @@ function buildPlayerRows(
 
       return {
         id,
-        team_id: teamId,
-        name: player.name,
-        position: normalizePosition(player.position),
-        shirt_number: normalizeNumber(player.jersey_number),
-        photo_url: getBzzoiroPublicImageUrl("player", player.id),
-        bzzoiro_player_id: String(player.id),
-        bzzoiro_synced_at: syncedAt,
+        ...buildPlayerPayload(teamId, player, syncedAt),
       };
     });
+}
+
+async function buildLegacyPlayerFallbackActions({
+  local,
+  remote,
+  existingPlayers,
+  remotePlayers,
+  syncedAt,
+  cache,
+}: {
+  local: LocalTeam;
+  remote: BzzoiroTeam;
+  existingPlayers: LocalPlayer[];
+  remotePlayers: BzzoiroPlayer[];
+  syncedAt: string;
+  cache: Map<string, BzzoiroPlayer | null>;
+}) {
+  const remoteNames = new Set(remotePlayers.map((player) => normalizeName(player.name)));
+  const existingByBzzoiroId = new Map(
+    existingPlayers
+      .filter((player) => player.bzzoiro_player_id)
+      .map((player) => [String(player.bzzoiro_player_id), player]),
+  );
+  const actions: LegacyPlayerAction[] = [];
+
+  for (const player of existingPlayers) {
+    if (!isMockSeedPlayer(player) || remoteNames.has(normalizeName(player.name))) {
+      continue;
+    }
+
+    const remotePlayer = await findBzzoiroPlayerByExactName(player.name, local, remote, cache);
+    if (!remotePlayer) {
+      actions.push({ kind: "delete", id: player.id });
+      continue;
+    }
+
+    const duplicate = existingByBzzoiroId.get(String(remotePlayer.id));
+    if (duplicate && duplicate.id !== player.id) {
+      actions.push({ kind: "delete", id: player.id, replacementId: duplicate.id });
+      continue;
+    }
+
+    actions.push({
+      kind: "update",
+      id: player.id,
+      payload: buildPlayerPayload(local.id, remotePlayer, syncedAt),
+    });
+  }
+
+  return actions;
+}
+
+async function findBzzoiroPlayerByExactName(
+  name: string,
+  local: LocalTeam,
+  remote: BzzoiroTeam,
+  cache: Map<string, BzzoiroPlayer | null>,
+) {
+  const normalizedName = normalizeName(name);
+  const cached = cache.get(normalizedName);
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  const alias = PLAYER_SEARCH_ALIASES[normalizedName];
+  const expectedNames = new Set([normalizedName, normalizeName(alias)]);
+  const queries = Array.from(new Set([name, stripAccents(name), alias].filter(Boolean)));
+  const resultGroups = await Promise.all(
+    queries.map((query) => safeBzzoiroPaginated<BzzoiroPlayer>("/players/", { search: query })),
+  );
+  const exactMatches = resultGroups.flat().filter(
+    (player) =>
+      expectedNames.has(normalizeName(player.name)) ||
+      expectedNames.has(normalizeName(player.short_name)),
+  );
+  const bestMatch = exactMatches.sort(
+    (left, right) => scorePlayerTeamMatch(right, local, remote) - scorePlayerTeamMatch(left, local, remote),
+  )[0] ?? null;
+
+  cache.set(normalizedName, bestMatch);
+  return bestMatch;
+}
+
+function scorePlayerTeamMatch(player: BzzoiroPlayer, local: LocalTeam, remote: BzzoiroTeam) {
+  const localNames = [local.name, local.name_he, remote.name, remote.short_name, remote.country]
+    .map(normalizeName)
+    .filter(Boolean);
+  let score = 0;
+
+  if (player.national_team?.id && String(player.national_team.id) === String(remote.id)) {
+    score += 6;
+  }
+
+  for (const value of [
+    player.national_team?.name,
+    player.national_team?.short_name,
+    player.national_team?.country,
+    player.nationality,
+  ]) {
+    if (localNames.includes(normalizeName(value))) {
+      score += 2;
+    }
+  }
+
+  return score;
+}
+
+function buildPlayerPayload(teamId: string, player: BzzoiroPlayer, syncedAt: string) {
+  return {
+    team_id: teamId,
+    name: player.name,
+    position: normalizePosition(player.position),
+    shirt_number: normalizeNumber(player.jersey_number),
+    photo_url: getBzzoiroPublicImageUrl("player", player.id),
+    bzzoiro_player_id: String(player.id),
+    bzzoiro_synced_at: syncedAt,
+  };
+}
+
+function isMockSeedPlayer(player: LocalPlayer) {
+  return (
+    Number.isInteger(player.id) &&
+    player.id >= MOCK_PLAYER_ID_MIN &&
+    player.id <= MOCK_PLAYER_ID_MAX
+  );
 }
 
 function buildStableBzzoiroPlayerId(remoteId: number, usedIds: Set<number>) {
@@ -288,12 +485,16 @@ function normalizeNumber(value: number | null | undefined) {
 }
 
 function normalizeName(value: string | null | undefined) {
-  const normalized = String(value ?? "")
-    .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "")
+  const normalized = stripAccents(value)
     .replace(/[^a-z0-9א-ת]+/gi, "")
     .toLowerCase();
   return TEAM_NAME_ALIASES[normalized] ?? normalized;
+}
+
+function stripAccents(value: string | null | undefined) {
+  return String(value ?? "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "");
 }
 
 function revalidateSyncPaths() {

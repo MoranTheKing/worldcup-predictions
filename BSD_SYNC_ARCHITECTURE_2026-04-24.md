@@ -832,6 +832,7 @@ raw_error
 - The BSD migration only adds storage for external IDs, coach images, and sync timestamps. Data appears only after the server route `POST /api/dev/bzzoiro/sync-teams` runs successfully.
 - Current visible BSD fields after a successful sync are team external IDs/images, coach name/photo, player external IDs/photos/shirt numbers, and refreshed squad/team pages. Live match clocks and score syncing remain a later Worker slice.
 - The browser calls only local app routes. BSD API requests and the BSD token stay on the server route, so ordinary users do not create per-visit BSD traffic.
+- The sync also cleans the initial 49 mock top-scorer players. Exact BSD matches overwrite the mock row in place with image and source IDs; stale mock rows that duplicate an already-synced BSD player or have no BSD source match are removed after legacy `outright_bets.predicted_top_scorer_player_id` references are migrated.
 
 ## Implemented team sync foundation - 2026-04-27
 

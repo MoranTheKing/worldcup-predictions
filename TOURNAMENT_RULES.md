@@ -150,6 +150,7 @@ When a group is final, team-hub group tables must show exact locked positions on
 - The team-only random odds action should update every existing team with a plausible `outright_odds` value and must leave top-scorer odds untouched.
 - The combined team/player random odds action should also be update-only for both tables.
 - Applying BSD sync migrations only prepares the schema. The actual pull is a server-side dev action through `POST /api/dev/bzzoiro/sync-teams`; client components and public visitors must continue to read Supabase and must not call BSD directly.
+- BSD roster sync must replace the old 49 mock players with API-backed records. Prefer in-place updates when an exact BSD player exists so existing prediction references remain valid; remove stale mock duplicates only after migrating any legacy outright FK to the matching BSD row or null.
 
 ## BSD team sync foundation
 
