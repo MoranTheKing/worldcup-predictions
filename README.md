@@ -336,6 +336,11 @@ Brevo Free מוגבל בכמות יומית לכל החשבון, לכן ביום
 - Dev Tools `Clear All Match Data` is a full reset: it clears match scores/statuses, odds, match predictions, tournament predictions, legacy bets, `profiles.total_score`, and therefore all league leaderboard totals.
 - The scoring sync now writes `0` into `predictions.points_earned` when a finished prediction earns zero, instead of leaving stale `null` values.
 
+## Tournament status labels - 2026-04-27
+
+- Group tables now display guaranteed qualification/elimination even when the exact group rank is not locked yet. Example: a team can show "הבטיחה העפלה" while still being able to finish first or second.
+- Locked rank labels remain separate: when the exact position is mathematically fixed, the row still shows `מקום N`.
+
 ## Schedule sync - 2026-04-26
 
 - `matches_data.json`, `matches_data.json.txt`, and migration `20260426000027_correct_schedule_from_fifa.sql` now store the World Cup schedule according to FIFA's official match order and kickoff timestamps, with Israel-time `+03:00` kickoff values.

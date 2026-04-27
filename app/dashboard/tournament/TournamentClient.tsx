@@ -72,8 +72,8 @@ const TEXT = {
   eliminatedLegend: "הדחה ודאית",
   liveLegend: "נבחרת שמשחקת עכשיו",
   lockedPosition: "מקום",
-  qualified: "העפלה",
-  eliminated: "הדחה",
+  qualified: "הבטיחה העפלה",
+  eliminated: "הודחה",
   group: "בית",
   team: "נבחרת",
   played: "מש'",
@@ -200,7 +200,7 @@ function getEffectiveGroupStatus(
   qualifiedThirdPlaceTeamIds: Set<string>,
   eliminatedThirdPlaceTeamIds: Set<string>,
 ): StandingStatus {
-  if (!hasLockedGroupPosition(entry)) return "pending";
+  if (!hasLockedGroupPosition(entry)) return entry.status;
 
   const thirdPlaceStatus = getEffectiveThirdPlaceStatus(
     entry,
@@ -211,7 +211,7 @@ function getEffectiveGroupStatus(
   if (thirdPlaceStatus) return thirdPlaceStatus;
   if (entry.lockedRank !== null && entry.lockedRank <= 2) return "qualified";
   if (entry.lockedRank !== null && entry.lockedRank >= 4) return "eliminated";
-  return "pending";
+  return entry.status;
 }
 
 function getGroupStatusDisplay(
@@ -219,8 +219,6 @@ function getGroupStatusDisplay(
   qualifiedThirdPlaceTeamIds: Set<string>,
   eliminatedThirdPlaceTeamIds: Set<string>,
 ): StatusDisplay | null {
-  if (!hasLockedGroupPosition(entry)) return null;
-
   const effectiveStatus = getEffectiveGroupStatus(
     entry,
     qualifiedThirdPlaceTeamIds,

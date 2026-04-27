@@ -29,6 +29,7 @@ Key rules to remember:
 - Leaderboards sort by projected live score while matches are live: `total_score + live +N`; ties currently break by `profiles.created_at` registration date.
 - The global league header should show participant count and the current user's rank in that same projected leaderboard order, not a live-match count card.
 - In group live standings, the inline live score is row-team-perspective: the row team's goal count should appear on the visual right side.
+- Tournament group tables must distinguish locked position from qualification status. If a team has mathematically guaranteed qualification or elimination but its exact group rank is still open, show the qualified/eliminated status pill without claiming `מקום N`.
 - `/game/leaderboard` is the global league and should share the private league leaderboard surface: live prediction chips, winner/top-scorer columns, projected live deltas, and profile-total realtime refreshes.
 - Dev Tools match-clock ranges are phase-aware: first half allows 0-60 and displays 45+, second half allows 46-105 and displays 90+, and knockout extra time allows 91-135 with 120+ display for stoppage.
 - Match schedule syncs must follow FIFA's official match order. Only update `match_number` and `date_time`, and relink existing prediction/bet references when a fixture's number changes. Do not swap home/away sides, statuses, scores, odds, or placeholders.

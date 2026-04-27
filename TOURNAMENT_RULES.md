@@ -22,6 +22,7 @@ Primary implementation:
 ## Deterministic locking
 
 Group positions and best-third-place positions are locked only when they are mathematically settled, not just because the UI wants to show a stable state.
+Qualification and elimination status can be settled before the exact group position is settled. In that case the UI should show a qualified/eliminated pill without a locked-place label.
 
 ## Annex C and knockout progression
 
