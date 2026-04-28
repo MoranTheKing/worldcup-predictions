@@ -402,6 +402,7 @@ async function getTopScorerOdds(
       .from("players")
       .select("top_scorer_odds")
       .eq("id", playerId)
+      .eq("name", playerName)
       .maybeSingle();
 
     if (error) {
