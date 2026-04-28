@@ -66,6 +66,7 @@ export default async function GlobalLeaderboardPage() {
   await requireServerMfa(supabase, "/game/leaderboard");
 
   const admin = createAdminClient();
+  const visibleMemberIds = await loadVisibleMemberIds(admin, user.id);
   const [
     { data: rawProfiles, error: profilesError },
     kickoffResult,
@@ -73,7 +74,10 @@ export default async function GlobalLeaderboardPage() {
   ] = await Promise.all([
     admin
       .from("profiles")
-      .select("id, display_name, total_score, avatar_url, created_at"),
+      .select("id, display_name, total_score, avatar_url, created_at")
+      .in("id", visibleMemberIds)
+      .order("total_score", { ascending: false })
+      .limit(500),
     admin
       .from("matches")
       .select("status, date_time")
@@ -176,6 +180,53 @@ export default async function GlobalLeaderboardPage() {
       variant="global"
     />
   );
+}
+
+async function loadVisibleMemberIds(admin: ReturnType<typeof createAdminClient>, userId: string) {
+  const visibleMemberIds = new Set<string>([userId]);
+  const { data: memberships, error: membershipsError } = await admin
+    .from("league_members")
+    .select("league_id")
+    .eq("user_id", userId);
+
+  if (membershipsError) {
+    console.error("[GlobalLeaderboardPage] memberships error:", membershipsError);
+    return Array.from(visibleMemberIds);
+  }
+
+  const leagueIds = Array.from(
+    new Set(
+      (memberships ?? [])
+        .map((membership) =>
+          typeof (membership as { league_id?: string | null }).league_id === "string"
+            ? (membership as { league_id: string }).league_id
+            : null,
+        )
+        .filter((value): value is string => Boolean(value)),
+    ),
+  );
+
+  if (leagueIds.length === 0) {
+    return Array.from(visibleMemberIds);
+  }
+
+  const { data: leagueMembers, error: leagueMembersError } = await admin
+    .from("league_members")
+    .select("user_id")
+    .in("league_id", leagueIds);
+
+  if (leagueMembersError) {
+    console.error("[GlobalLeaderboardPage] league members error:", leagueMembersError);
+    return Array.from(visibleMemberIds);
+  }
+
+  for (const member of (leagueMembers ?? []) as Array<{ user_id?: string | null }>) {
+    if (typeof member.user_id === "string" && member.user_id) {
+      visibleMemberIds.add(member.user_id);
+    }
+  }
+
+  return Array.from(visibleMemberIds);
 }
 
 async function loadLiveTeams(
