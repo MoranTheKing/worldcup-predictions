@@ -11,6 +11,7 @@ import LeagueViewClient, {
 } from "@/app/game/leagues/[id]/LeagueViewClient";
 
 export const dynamic = "force-dynamic";
+const GLOBAL_LEADERBOARD_MEMBER_LIMIT = 500;
 
 type RawProfileRow = {
   id: string;
@@ -73,7 +74,9 @@ export default async function GlobalLeaderboardPage() {
   ] = await Promise.all([
     admin
       .from("profiles")
-      .select("id, display_name, total_score, avatar_url, created_at"),
+      .select("id, display_name, total_score, avatar_url, created_at")
+      .order("total_score", { ascending: false })
+      .limit(GLOBAL_LEADERBOARD_MEMBER_LIMIT),
     admin
       .from("matches")
       .select("status, date_time")
