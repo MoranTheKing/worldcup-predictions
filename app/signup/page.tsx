@@ -41,7 +41,7 @@ export default function SignupPage() {
   const nextPath = getSafeRedirectPath(searchParams.get("next"));
   const signupNotice = getSignupNotice(searchParams.get("notice"));
   const loginHref =
-    nextPath === "/dashboard" ? "/login" : `/login?next=${encodeURIComponent(nextPath)}`;
+    nextPath === "/game" ? "/login" : `/login?next=${encodeURIComponent(nextPath)}`;
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

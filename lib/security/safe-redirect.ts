@@ -1,4 +1,4 @@
-const DEFAULT_REDIRECT_PATH = "/dashboard";
+const DEFAULT_REDIRECT_PATH = "/game";
 
 export function getSafeRedirectPath(
   nextParam: string | null | undefined,

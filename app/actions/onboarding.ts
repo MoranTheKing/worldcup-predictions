@@ -130,21 +130,25 @@ export async function completeOnboarding(
       return { error: "צריך לבחור מלך שערים." };
     }
 
-    const [winnerOdds, scorerOdds] = await Promise.all([
+    const [winnerOdds, scorerSelection] = await Promise.all([
       getTeamOutrightOdds(admin, winnerTeamId),
-      getTopScorerOdds(admin, topScorerPlayerId, topScorerName),
+      resolveTopScorerSelection(admin, topScorerPlayerId, topScorerName),
     ]);
+
+    if (scorerSelection.error) {
+      return { error: scorerSelection.error };
+    }
 
     const baseTournamentPayload = {
       user_id: user.id,
       predicted_winner_team_id: winnerTeamId,
-      predicted_top_scorer_name: topScorerName,
+      predicted_top_scorer_name: scorerSelection.name,
     };
 
     const tournamentPayload = {
       ...baseTournamentPayload,
       predicted_winner_odds: winnerOdds,
-      predicted_scorer_odds: scorerOdds,
+      predicted_scorer_odds: scorerSelection.odds,
       winner_points_earned: 0,
       scorer_points_earned: 0,
     };
@@ -392,7 +396,7 @@ async function getTeamOutrightOdds(admin: AdminClient, teamId: string) {
   return normalizeOddsValue((data as { outright_odds?: number | string | null } | null)?.outright_odds);
 }
 
-async function getTopScorerOdds(
+async function resolveTopScorerSelection(
   admin: AdminClient,
   playerId: number | null,
   playerName: string,
@@ -400,20 +404,64 @@ async function getTopScorerOdds(
   if (playerId !== null) {
     const { data, error } = await admin
       .from("players")
-      .select("top_scorer_odds")
+      .select("name")
       .eq("id", playerId)
       .maybeSingle();
 
     if (error) {
-      console.error("[completeOnboarding] scorer odds by id error:", error.message);
+      console.error("[completeOnboarding] scorer lookup by id error:", error.message);
+    } else if (!data) {
+      return { name: null, odds: null, error: "נבחר מלך שערים לא תקין." };
     } else {
-      const odds = normalizeOddsValue(
-        (data as { top_scorer_odds?: number | string | null } | null)?.top_scorer_odds,
-      );
-      if (odds !== null) return odds;
+      const canonicalName = normalizeTopScorerName((data as { name?: string | null }).name ?? null);
+
+      if (
+        canonicalName &&
+        normalizeIdentity(playerName) !== normalizeIdentity(canonicalName)
+      ) {
+        return { name: null, odds: null, error: "בחירת מלך השערים אינה עקבית." };
+      }
+
+      return {
+        name: canonicalName ?? playerName,
+        odds: await getTopScorerOddsById(admin, playerId),
+        error: null,
+      };
     }
   }
 
+  return {
+    name: playerName,
+    odds: await getTopScorerOddsByName(admin, playerName),
+    error: null,
+  };
+}
+
+async function getTopScorerOddsById(
+  admin: AdminClient,
+  playerId: number,
+) {
+  const { data, error } = await admin
+    .from("players")
+    .select("top_scorer_odds")
+    .eq("id", playerId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("[completeOnboarding] scorer odds by id error:", error.message);
+  } else {
+    return normalizeOddsValue(
+      (data as { top_scorer_odds?: number | string | null } | null)?.top_scorer_odds,
+    );
+  }
+
+  return null;
+}
+
+async function getTopScorerOddsByName(
+  admin: AdminClient,
+  playerName: string,
+) {
   const { data, error } = await admin
     .from("players")
     .select("top_scorer_odds")
@@ -427,6 +475,15 @@ async function getTopScorerOdds(
   }
 
   return normalizeOddsValue((data as { top_scorer_odds?: number | string | null } | null)?.top_scorer_odds);
+}
+
+function normalizeIdentity(value: string) {
+  return value
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
 }
 
 function normalizeOddsValue(value: number | string | null | undefined) {

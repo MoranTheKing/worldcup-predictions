@@ -170,7 +170,7 @@ export async function proxy(request: NextRequest) {
     const redirectUrl = request.nextUrl.clone();
     const requestedNext = request.nextUrl.searchParams.get("next");
     const safeRequestedNext = isSafeNextPath(requestedNext) ? requestedNext : null;
-    redirectUrl.pathname = onboardingStatus?.isComplete ? "/dashboard" : "/onboarding";
+    redirectUrl.pathname = onboardingStatus?.isComplete ? "/game" : "/onboarding";
     redirectUrl.search = "";
     if (!onboardingStatus?.isComplete && safeRequestedNext) {
       redirectUrl.searchParams.set("next", safeRequestedNext);

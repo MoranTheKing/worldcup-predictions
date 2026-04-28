@@ -53,11 +53,15 @@ export async function PATCH(request: Request) {
   const existingByNumber = new Map(
     ((existingMatches ?? []) as EditableMatchState[]).map((match) => [match.match_number, match]),
   );
-  const finishedMatchNumbers = new Set<number>();
-  const unfinishedMatchNumbers = new Set<number>();
+  const pendingUpdates: Array<{
+    matchNumber: number;
+    update: Record<string, unknown>;
+  }> = [];
+  const finalStateByMatchNumber = new Map<number, EditableMatchState>();
 
   for (const item of body.matches) {
-    const existing = existingByNumber.get(item.match_number);
+    const existing =
+      finalStateByMatchNumber.get(item.match_number) ?? existingByNumber.get(item.match_number);
     if (!existing) {
       return NextResponse.json({ error: `match ${item.match_number} not found` }, { status: 404 });
     }
@@ -70,25 +74,28 @@ export async function PATCH(request: Request) {
       );
     }
 
-    if (validation.next.status === "finished") {
-      finishedMatchNumbers.add(item.match_number);
-    } else {
-      unfinishedMatchNumbers.add(item.match_number);
-    }
+    pendingUpdates.push({ matchNumber: item.match_number, update: validation.update });
+    finalStateByMatchNumber.set(item.match_number, validation.next);
   }
 
-  for (const item of body.matches) {
-    const existing = existingByNumber.get(item.match_number)!;
-    const validation = buildDevMatchUpdate(existing, item);
-    if ("error" in validation) continue;
-
+  for (const item of pendingUpdates) {
     const { error } = await supabase
       .from("matches")
-      .update(validation.update)
-      .eq("match_number", item.match_number);
+      .update(item.update)
+      .eq("match_number", item.matchNumber);
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+  }
+
+  const finishedMatchNumbers = new Set<number>();
+  const unfinishedMatchNumbers = new Set<number>();
+  for (const [matchNumber, finalState] of finalStateByMatchNumber) {
+    if (finalState.status === "finished") {
+      finishedMatchNumbers.add(matchNumber);
+    } else {
+      unfinishedMatchNumbers.add(matchNumber);
     }
   }
 

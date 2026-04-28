@@ -61,6 +61,27 @@ PRs covered:
 - `#13`
 - plus an additional signup-path fix discovered during this audit
 
+### 1.1 Auth default destination follow-up - 2026-04-28
+
+Affected files:
+
+- `lib/security/safe-redirect.ts`
+- `proxy.ts`
+- `app/login/page.tsx`
+- `app/signup/page.tsx`
+
+What was wrong:
+
+- the safe redirect fallback still pointed at `/dashboard`
+- authenticated users who opened `/login` or `/signup` after finishing onboarding were redirected to `/dashboard`
+- the product's actual game entry is `/game`, which redirects to `/game/predictions`
+
+What changed:
+
+- the global safe redirect fallback is now `/game`
+- auth-page redirects for users who already completed onboarding now use `/game`
+- login/signup cross-links treat `/game` as the clean default, so first-time and returning flows stay on the game path unless a specific safe `next` path is provided
+
 ### 2. Pre-kickoff leakage of hidden outright picks
 
 Affected files before the fix:
@@ -145,6 +166,100 @@ PR covered:
 - `#5` identified one endpoint
 - this audit expanded the same protection to the full dev tooling surface
 - `#14` later narrowed the hostname resolution logic so localhost gating no longer trusts spoofable forwarded-host input
+
+### 4.1 Dev clear endpoint hardening follow-up - 2026-04-28
+
+Reviewed PR:
+
+- `#32` Harden dev match clear endpoint authorization
+
+Importance:
+
+- high, because `POST /api/dev/matches/clear` deletes predictions, tournament picks, legacy bets, score totals, match state and odds
+- localhost-only checks reduce remote exposure, but they do not fully protect against same-machine CSRF or another local web app triggering the destructive POST
+
+What changed locally:
+
+- added `isSameOriginRequest()` in `lib/security/local-request.ts`
+- unlike the PR's first version, the check compares full origin, including scheme and port, so `http://localhost:4000` cannot masquerade as `http://localhost:3000`
+- `app/api/dev/matches/clear/route.ts` now requires a logged-in Supabase user whose email matches `DEV_TOOLS_ADMIN_EMAIL` or the fallback `admin@moran65.com`
+- destructive writes still use the service-role admin client, but only after the same-origin and admin-session checks pass
+
+Residual note:
+
+- local admin users should set `DEV_TOOLS_ADMIN_EMAIL` when using a different admin mailbox
+
+### 4.2 Dev bulk match update scoring integrity - 2026-04-28
+
+Reviewed PR:
+
+- `#28` Prevent duplicate bulk match entries from clearing finished match scores
+
+Importance:
+
+- high for local/dev data integrity, because a duplicated `match_number` in one bulk request could put the same match into scoring and clearing paths
+
+What changed locally:
+
+- bulk updates are validated once, stored as pending updates, and applied in request order
+- duplicate entries now update an in-memory final match state before validating the next entry
+- scoring and clearing sets are derived from the final state that will actually be written, not from stale pre-request rows
+
+This addresses the review concern on the PR that a later duplicate entry without `status` could otherwise fall back to the original row status.
+
+### 4.3 Minor dev/API safety fixes - 2026-04-28
+
+Reviewed PRs:
+
+- `#21` Avoid empty-string exact matches when finding Bzzoiro players
+- `#22` Prevent double-decode crash in player profile route
+- `#31` Expand matches.minute DB constraint to 0..135
+
+What changed locally:
+
+- Bzzoiro exact-name matching no longer treats a missing alias as an empty-string expected name
+- `/dashboard/players/[id]` no longer double-decodes already-decoded Next.js dynamic route params
+- added migration `20260428000035_expand_matches_minute_range_to_135.sql` so the DB constraint matches app validation for extra-time stoppage up to minute 135
+
+### 4.4 Outright scorer odds tampering follow-up - 2026-04-28
+
+Reviewed PRs:
+
+- `#23` Validate top-scorer name/ID to prevent odds/name mismatch
+- `#29` Bind top-scorer odds lookup to submitted player name to prevent tampering
+
+Importance:
+
+- high for scoring integrity, because a crafted form could try to pair a visible scorer name with another player's higher odds
+
+What changed locally:
+
+- onboarding and tournament prediction saves resolve the submitted `top_scorer_player_id` to the canonical player name before persisting
+- if both ID and name are submitted, the server compares normalized names and rejects real mismatches
+- odds are read by player ID after the identity check, preserving valid picks even when display casing, accents or spacing differ
+- if an odds column is unavailable in a partially migrated environment, the save degrades to `null` odds instead of blocking the whole submission
+
+This combines the security intent of both PRs while avoiding the review regressions noted on each PR.
+
+### 4.5 PRs intentionally not applied as-is - 2026-04-28
+
+Reviewed PRs:
+
+- `#24` Mitigate standings scenario enumeration DoS
+- `#25` Reinstate bounded global leaderboard member query
+- `#26` Restrict global leaderboard visibility to shared-league members
+- `#27` Restrict global leaderboard visibility to shared-league members
+- `#30` Fix IDOR: remove global query bypass on opponent view
+
+Decision:
+
+- `#24` was not applied as-is because it drops high-score scenarios for the final one or two pending group matches. That can mislabel qualification/elimination states when goal-difference swings matter.
+- `#25`, `#26`, and `#27` were not applied as-is because the app currently has an intentional global leaderboard experience. Query-time caps or shared-league-only filters can hide the current user, produce incorrect projected-live ranks, or turn the global leaderboard into a private-league view.
+- `#30` was not applied as-is because `/game/leaderboard` intentionally links global rows to `/game/users/[id]?league=global`. Removing that bypass would break the current global comparison flow.
+
+Recommended future fix:
+
+- redesign global leaderboard privacy as an explicit product decision: either keep global profiles public to signed-in users with a paginated/ranked API, or remove global opponent links and show only aggregate public fields. Avoid partial caps before projected-score ranking.
 
 ### 5. Social prediction tables had permissive SELECT RLS
 

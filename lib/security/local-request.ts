@@ -21,6 +21,25 @@ function extractHostname(value: string | null) {
   }
 }
 
+function extractOrigin(value: string | null) {
+  if (!value) {
+    return null;
+  }
+
+  const normalizedValue = value.split(",")[0]?.trim();
+  if (!normalizedValue) {
+    return null;
+  }
+
+  try {
+    return new URL(
+      normalizedValue.includes("://") ? normalizedValue : `http://${normalizedValue}`,
+    ).origin;
+  } catch {
+    return null;
+  }
+}
+
 function isLocalHostname(hostname: string | null) {
   return Boolean(hostname && LOCAL_HOSTS.has(hostname));
 }
@@ -44,6 +63,17 @@ export function isLocalRequest(request: Request) {
   ]);
 
   return isLocalHostname(hostname);
+}
+
+export function isSameOriginRequest(request: Request) {
+  const requestOrigin = extractOrigin(request.url);
+  const originHeader = extractOrigin(request.headers.get("origin"));
+
+  if (!originHeader) {
+    return true;
+  }
+
+  return Boolean(requestOrigin && requestOrigin === originHeader);
 }
 
 export function getRequestHostname(request: Request) {

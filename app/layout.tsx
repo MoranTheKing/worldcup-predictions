@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import { getServerMfaGateState } from "@/lib/auth/mfa-server";
@@ -14,7 +13,7 @@ const worldCupDisplay = localFont({
   weight: "500",
 });
 
-export const metadata: Metadata = {
+export const metadata = {
   metadataBase: new URL("https://moran65.com"),
   applicationName: "Moran 65 - ניחושי מונדיאל 2026",
   title: {

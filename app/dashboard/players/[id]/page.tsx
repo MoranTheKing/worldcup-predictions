@@ -248,9 +248,8 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 }
 
 function parsePlayerId(value: string) {
-  const decoded = decodeURIComponent(value);
-  const numeric = Number(decoded);
-  return Number.isFinite(numeric) ? numeric : decoded;
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : value;
 }
 
 function getPositionLabel(position: string | null) {

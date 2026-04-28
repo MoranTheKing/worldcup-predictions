@@ -549,7 +549,11 @@ async function findBzzoiroPlayerByExactName(
   }
 
   const alias = PLAYER_SEARCH_ALIASES[normalizedName];
-  const expectedNames = new Set([normalizedName, normalizeName(alias)]);
+  const expectedNames = new Set(
+    [normalizedName, alias ? normalizeName(alias) : null].filter(
+      (candidate): candidate is string => Boolean(candidate),
+    ),
+  );
   const queries = Array.from(new Set([name, stripAccents(name), alias].filter(Boolean)));
   const resultGroups = await Promise.all(
     queries.map((query) => safeBzzoiroPaginated<BzzoiroPlayer>("/players/", { search: query })),

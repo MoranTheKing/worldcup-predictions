@@ -17,7 +17,7 @@ export default function LoginPage() {
   const supabase = createClient();
   const nextPath = getSafeRedirectPath(searchParams.get("next"));
   const signupHref =
-    nextPath === "/dashboard" ? "/signup" : `/signup?next=${encodeURIComponent(nextPath)}`;
+    nextPath === "/game" ? "/signup" : `/signup?next=${encodeURIComponent(nextPath)}`;
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
