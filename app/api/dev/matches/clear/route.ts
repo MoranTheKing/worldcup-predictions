@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { devOnly } from "@/app/api/dev/_guard";
+import { isSameOriginRequest } from "@/lib/security/local-request";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { syncTournamentState } from "@/lib/tournament/knockout-progression";
 
 type ResetResult = { count: number } | { error: string };
@@ -10,7 +12,30 @@ export async function POST(request: Request) {
   const blocked = devOnly(request);
   if (blocked) return blocked;
 
-  const supabase = createAdminClient();
+  if (!isSameOriginRequest(request)) {
+    return NextResponse.json({ error: "invalid origin" }, { status: 403 });
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError) {
+    return NextResponse.json({ error: authError.message }, { status: 401 });
+  }
+
+  if (!user) {
+    return NextResponse.json({ error: "login required" }, { status: 401 });
+  }
+
+  const allowedAdminEmail = process.env.DEV_TOOLS_ADMIN_EMAIL ?? "admin@moran65.com";
+  if (user.email?.toLowerCase() !== allowedAdminEmail.toLowerCase()) {
+    return NextResponse.json({ error: "admin access required" }, { status: 403 });
+  }
+
+  const admin = createAdminClient();
 
   const [
     predictionsReset,
@@ -40,7 +65,7 @@ export async function POST(request: Request) {
 
   // Explicitly wipe resolved team slots from all knockout matches so they
   // revert to placeholder display before the sync rebuilds them.
-  const { error: knockoutError } = await supabase
+  const { error: knockoutError } = await admin
     .from("matches")
     .update({ home_team_id: null, away_team_id: null })
     .gte("match_number", 73);
@@ -49,7 +74,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: knockoutError.message }, { status: 500 });
   }
 
-  const { error, count } = await supabase
+  const { error, count } = await admin
     .from("matches")
     .update(
       {
@@ -73,7 +98,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  await syncTournamentState(supabase);
+  await syncTournamentState(admin);
 
   revalidatePath("/dashboard", "layout");
   revalidatePath("/dashboard/stats");
@@ -97,7 +122,7 @@ export async function POST(request: Request) {
   });
 
   async function deleteRows(table: string, nonNullColumn: string): Promise<ResetResult> {
-    const { error, count: deletedCount } = await supabase
+    const { error, count: deletedCount } = await admin
       .from(table)
       .delete({ count: "exact" })
       .not(nonNullColumn, "is", null);
@@ -107,7 +132,7 @@ export async function POST(request: Request) {
   }
 
   async function resetProfileScores(): Promise<ResetResult> {
-    const { error, count: updatedCount } = await supabase
+    const { error, count: updatedCount } = await admin
       .from("profiles")
       .update({ total_score: 0 }, { count: "exact" })
       .not("id", "is", null);
@@ -117,7 +142,7 @@ export async function POST(request: Request) {
   }
 
   async function resetTeamOutrightOdds(): Promise<ResetResult> {
-    const { error, count: updatedCount } = await supabase
+    const { error, count: updatedCount } = await admin
       .from("teams")
       .update({ outright_odds: null, outright_odds_updated_at: null }, { count: "exact" })
       .not("id", "is", null);
@@ -127,7 +152,7 @@ export async function POST(request: Request) {
   }
 
   async function resetPlayerTopScorerOdds(): Promise<ResetResult> {
-    const { error, count: updatedCount } = await supabase
+    const { error, count: updatedCount } = await admin
       .from("players")
       .update({ top_scorer_odds: null, top_scorer_odds_updated_at: null }, { count: "exact" })
       .not("id", "is", null);

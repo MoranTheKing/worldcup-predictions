@@ -46,6 +46,17 @@ export function isLocalRequest(request: Request) {
   return isLocalHostname(hostname);
 }
 
+export function isSameOriginRequest(request: Request) {
+  const requestHostname = extractHostname(request.url);
+  const originHostname = extractHostname(request.headers.get("origin"));
+
+  if (!originHostname) {
+    return true;
+  }
+
+  return Boolean(requestHostname && requestHostname === originHostname);
+}
+
 export function getRequestHostname(request: Request) {
   return resolveHostname([
     request.headers.get("host"),
