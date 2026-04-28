@@ -213,21 +213,25 @@ export async function upsertTournamentPrediction(
     return { error: "נבחר מלך שערים לא תקין." };
   }
 
-  const [winnerOdds, scorerOdds] = await Promise.all([
+  const [winnerOdds, scorerSelection] = await Promise.all([
     getTeamOutrightOdds(admin, winnerTeamId),
-    getTopScorerOdds(admin, topScorerPlayerId, topScorerName),
+    resolveTopScorerSelection(admin, topScorerPlayerId, topScorerName),
   ]);
+
+  if (scorerSelection.error) {
+    return { error: scorerSelection.error };
+  }
 
   const basePayload = {
     user_id: user.id,
     predicted_winner_team_id: winnerTeamId,
-    predicted_top_scorer_name: topScorerName,
+    predicted_top_scorer_name: scorerSelection.name,
   };
 
   const payload = {
     ...basePayload,
     predicted_winner_odds: winnerOdds,
-    predicted_scorer_odds: scorerOdds,
+    predicted_scorer_odds: scorerSelection.odds,
     winner_points_earned: 0,
     scorer_points_earned: 0,
   };
@@ -404,33 +408,52 @@ async function getTeamOutrightOdds(
   return normalizeOddsValue((data as { outright_odds?: number | string | null } | null)?.outright_odds);
 }
 
-async function getTopScorerOdds(
+async function resolveTopScorerSelection(
   supabase: ReturnType<typeof createAdminClient>,
   playerId: number | null,
   playerName: string | null,
 ) {
-  const byId =
-    playerId !== null
-      ? await supabase
-          .from("players")
-          .select("top_scorer_odds")
-          .eq("id", playerId)
-          .maybeSingle()
-      : null;
-
-  if (byId?.error) {
-    console.error(
-      "[upsertTournamentPrediction] scorer odds by id error:",
-      formatSupabaseError(byId.error),
-    );
-  } else {
-    const odds = normalizeOddsValue(
-      (byId?.data as { top_scorer_odds?: number | string | null } | null)?.top_scorer_odds,
-    );
-    if (odds !== null) return odds;
+  if (playerId === null && playerName === null) {
+    return { name: null, odds: null, error: null };
   }
 
-  if (!playerName) return null;
+  if (playerId !== null) {
+    const { data, error } = await supabase
+      .from("players")
+      .select("name, top_scorer_odds")
+      .eq("id", playerId)
+      .maybeSingle();
+
+    if (error) {
+      console.error(
+        "[upsertTournamentPrediction] scorer lookup by id error:",
+        formatSupabaseError(error),
+      );
+      return { name: null, odds: null, error: "לא הצלחנו לאמת את בחירת מלך השערים." };
+    }
+
+    if (!data) {
+      return { name: null, odds: null, error: "נבחר מלך שערים לא תקין." };
+    }
+
+    const canonicalName = normalizeText((data as { name?: string | null }).name ?? null);
+
+    if (
+      playerName &&
+      canonicalName &&
+      normalizeIdentity(playerName) !== normalizeIdentity(canonicalName)
+    ) {
+      return { name: null, odds: null, error: "בחירת מלך השערים אינה עקבית." };
+    }
+
+    return {
+      name: canonicalName ?? playerName,
+      odds: normalizeOddsValue(
+        (data as { top_scorer_odds?: number | string | null }).top_scorer_odds,
+      ),
+      error: null,
+    };
+  }
 
   const { data, error } = await supabase
     .from("players")
@@ -441,13 +464,22 @@ async function getTopScorerOdds(
 
   if (error) {
     console.error(
-      "[upsertTournamentPrediction] scorer odds lookup error:",
+      "[upsertTournamentPrediction] scorer odds lookup by name error:",
       formatSupabaseError(error),
     );
-    return null;
   }
 
-  return normalizeOddsValue((data as { top_scorer_odds?: number | string | null } | null)?.top_scorer_odds);
+  return {
+    name: playerName,
+    odds: normalizeOddsValue(
+      (data as { top_scorer_odds?: number | string | null } | null)?.top_scorer_odds,
+    ),
+    error: null,
+  };
+}
+
+function normalizeIdentity(value: string) {
+  return value.trim().replace(/\s+/g, " ").toLocaleLowerCase("en-US");
 }
 
 function normalizeOddsValue(value: number | string | null | undefined) {
