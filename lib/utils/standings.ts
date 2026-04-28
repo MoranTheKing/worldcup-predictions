@@ -122,7 +122,6 @@ const MID_PENDING_MATCH_SCENARIOS = [
   { homeScore: 0, awayScore: 2 },
   { homeScore: 0, awayScore: 3 },
 ] as const;
-const DETAILED_SCENARIO_MAX_GOALS = 8;
 
 function isCompletedGroupMatch(match: TournamentMatch): boolean {
   return (
@@ -400,21 +399,8 @@ function buildScenarioMatch(
   };
 }
 
-function buildDetailedPendingMatchScenarios(): Array<{ homeScore: number; awayScore: number }> {
-  const scenarios: Array<{ homeScore: number; awayScore: number }> = [];
-
-  for (let homeScore = 0; homeScore <= DETAILED_SCENARIO_MAX_GOALS; homeScore += 1) {
-    for (let awayScore = 0; awayScore <= DETAILED_SCENARIO_MAX_GOALS; awayScore += 1) {
-      scenarios.push({ homeScore, awayScore });
-    }
-  }
-
-  return scenarios;
-}
-
 function getPendingMatchScenarioScores(pendingMatchCount: number) {
-  if (pendingMatchCount <= 2) return buildDetailedPendingMatchScenarios();
-  if (pendingMatchCount <= 3) return MID_PENDING_MATCH_SCENARIOS;
+  if (pendingMatchCount <= 2) return MID_PENDING_MATCH_SCENARIOS;
   return BASIC_PENDING_MATCH_SCENARIOS;
 }
 
