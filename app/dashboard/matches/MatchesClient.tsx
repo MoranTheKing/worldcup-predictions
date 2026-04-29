@@ -245,8 +245,10 @@ function MatchCard({ match }: { match: MatchListRow }) {
 
   return (
     <article
-      className={`wc-card group relative flex flex-col gap-4 border p-4 transition hover:border-white/20 ${statusMeta.cardClassName}`}
+      className={`group relative min-h-[11rem] overflow-hidden rounded-[1.65rem] border bg-[linear-gradient(145deg,rgba(255,255,255,0.085),rgba(255,255,255,0.035)_46%,rgba(4,7,16,0.72))] p-4 shadow-[0_18px_52px_rgba(0,0,0,0.25),inset_0_1px_0_rgba(255,255,255,0.055)] transition duration-200 hover:-translate-y-1 hover:border-wc-neon/35 hover:bg-white/[0.06] ${statusMeta.cardClassName}`}
     >
+      <div className="pointer-events-none absolute inset-x-5 top-0 h-px bg-gradient-to-l from-transparent via-wc-neon/60 to-transparent opacity-0 transition group-hover:opacity-100" />
+      <div className="pointer-events-none absolute inset-y-5 end-0 w-1 rounded-s-full bg-wc-neon/0 transition group-hover:bg-wc-neon/70" />
       <Link
         href={`/dashboard/matches/${match.match_number}`}
         className="absolute inset-0 z-0 rounded-[inherit]"
@@ -254,23 +256,21 @@ function MatchCard({ match }: { match: MatchListRow }) {
       />
       <div className="pointer-events-none relative z-10 flex items-center justify-between gap-3 text-[11px] text-wc-fg3">
         <div className="min-w-0">
-          <p className="truncate font-semibold text-wc-fg2">{getStageLabelHe(match.stage)}</p>
-          <p className="mt-1 block font-mono text-[10px] text-wc-fg3 transition group-hover:text-wc-fg1">
-            Match #{match.match_number}
-          </p>
+          <p className="inline-flex rounded-full bg-white/8 px-2.5 py-1 font-black text-wc-fg2">{getStageLabelHe(match.stage)}</p>
+          <p className="mt-2 block font-mono text-[10px] text-wc-fg3 transition group-hover:text-wc-fg1">Match #{match.match_number}</p>
         </div>
         <span className={`inline-flex shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold ${statusMeta.pillClassName}`}>
           {statusMeta.label}
         </span>
       </div>
 
-      <div className="pointer-events-none relative z-10 flex items-center justify-between gap-3">
+      <div className="pointer-events-none relative z-10 mt-5 grid grid-cols-[minmax(0,1fr)_5.5rem_minmax(0,1fr)] items-center gap-3">
         <TeamSide team={match.homeTeam} logo={homeLogo} name={homeName} />
-        <div className="flex shrink-0 flex-col items-center gap-1 text-center">
+        <div className="flex min-h-24 shrink-0 flex-col items-center justify-center rounded-3xl border border-white/10 bg-black/24 px-2 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.045)]">
           {scoreSummary ? (
             <ScoreSummaryBadge
               summary={scoreSummary}
-              className={`wc-display text-wc-fg1 ${scoreSummary.hasPenalties ? "text-xl" : "text-2xl"}`}
+              className={`wc-display text-wc-fg1 ${scoreSummary.hasPenalties ? "text-xl" : "text-3xl"}`}
             />
           ) : (
             <span className="wc-display text-2xl text-wc-fg3">VS</span>
@@ -279,6 +279,11 @@ function MatchCard({ match }: { match: MatchListRow }) {
           <span className="text-[10px] uppercase tracking-[0.18em] text-wc-fg3">IDT</span>
         </div>
         <TeamSide team={match.awayTeam} logo={awayLogo} name={awayName} reverse />
+      </div>
+
+      <div className="pointer-events-none relative z-10 mt-4 flex items-center justify-between rounded-2xl border border-white/10 bg-black/14 px-3 py-2 text-xs font-black text-wc-fg2">
+        <span>פתח Match Center</span>
+        <span className="text-wc-neon" aria-hidden="true">←</span>
       </div>
     </article>
   );
@@ -332,22 +337,22 @@ function TeamSide({
         <Image
           src={logo}
           alt={name}
-          width={26}
-          height={18}
-          className="rounded-sm object-cover"
-          style={{ height: 18, width: 26 }}
+          width={54}
+          height={38}
+          className="rounded-lg object-cover shadow-[0_10px_22px_rgba(0,0,0,0.2)]"
+          style={{ height: 38, width: 54 }}
           unoptimized
         />
       ) : (
-        <div className="h-[18px] w-[26px] rounded-sm bg-white/10" />
+        <div className="h-[38px] w-[54px] rounded-lg bg-white/10" />
       )}
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold text-wc-fg1">{name}</p>
+      <div className="min-w-0">
+        <p className="truncate text-sm font-black text-wc-fg1 md:text-base">{name}</p>
       </div>
     </>
   );
-  const className = `flex min-w-0 flex-1 items-center gap-2 transition-colors ${
-    reverse ? "flex-row-reverse text-end" : "text-start"
+  const className = `flex min-w-0 flex-col items-center gap-2 rounded-2xl p-2 text-center transition-colors ${
+    reverse ? "" : ""
   } ${team ? "pointer-events-auto hover:text-wc-neon" : ""}`;
 
   if (team) {

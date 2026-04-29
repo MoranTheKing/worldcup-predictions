@@ -131,7 +131,13 @@ export function getEliminatedTeamIds({
     if (match.match_number < 73 || match.status !== "finished") continue;
 
     const stageKind = getMatchStageKind(match.stage);
-    if (stageKind === "group" || stageKind === "unknown" || stageKind === "semi_final") {
+    if (
+      stageKind === "group" ||
+      stageKind === "unknown" ||
+      stageKind === "semi_final" ||
+      stageKind === "third_place" ||
+      stageKind === "final"
+    ) {
       continue;
     }
 

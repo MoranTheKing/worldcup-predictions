@@ -137,6 +137,11 @@ export default function MatchDetailClient({
               <p className="mt-2 text-xs font-bold text-wc-fg3">
                 {getStatusLabel(match, event)}
               </p>
+              {shouldPreferLocalScore(match, event) ? (
+                <p className="mt-2 rounded-full border border-wc-neon/25 bg-wc-neon/10 px-3 py-1 text-[11px] font-black text-wc-neon">
+                  תוצאת סימולציה מקומית
+                </p>
+              ) : null}
             </div>
             <TeamBlock team={match.awayTeam} logo={awayLogo} name={awayName} />
           </div>
@@ -1334,6 +1339,10 @@ function getLiveStatPairs(event: BzzoiroMatchEvent, match: MatchDetailRow): Stat
 }
 
 function getBestScoreSummary(match: MatchDetailRow, event: BzzoiroMatchEvent | null) {
+  if (shouldPreferLocalScore(match, event)) {
+    return getMatchScoreSummary(match);
+  }
+
   const homeScore = readOptionalNumber(event?.home_score);
   const awayScore = readOptionalNumber(event?.away_score);
 
@@ -1346,6 +1355,18 @@ function getBestScoreSummary(match: MatchDetailRow, event: BzzoiroMatchEvent | n
   }
 
   return isMatchScoreVisible(match) ? getMatchScoreSummary(match) : null;
+}
+
+function shouldPreferLocalScore(match: MatchDetailRow, event: BzzoiroMatchEvent | null) {
+  if (!isMatchScoreVisible(match)) return false;
+  const apiStatus = String(event?.status ?? "").toLowerCase();
+  const apiIsLiveOrFinished =
+    apiStatus.includes("progress") ||
+    apiStatus.includes("half") ||
+    apiStatus === "live" ||
+    apiStatus === "finished";
+
+  return !apiIsLiveOrFinished;
 }
 
 function getStatusLabel(match: MatchDetailRow, event: BzzoiroMatchEvent | null) {

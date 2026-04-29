@@ -2,8 +2,10 @@ import Image from "next/image";
 import Link from "next/link";
 import TeamLink from "@/components/TeamLink";
 import { createClient } from "@/lib/supabase/server";
+import { determineKnockoutLoserId, determineKnockoutWinnerId } from "@/lib/tournament/knockout-utils";
 import {
   attachTeamsToMatches,
+  getMatchStageKind,
   type TournamentMatchRecord,
   type TournamentTeamRecord,
 } from "@/lib/tournament/matches";
@@ -39,6 +41,12 @@ type TeamForm = {
   draws: number;
   losses: number;
   items: Array<"W" | "D" | "L">;
+};
+
+type PodiumPlacement = {
+  label: string;
+  rank: number;
+  className: string;
 };
 
 export default async function TeamsIndexPage() {
@@ -91,12 +99,15 @@ export default async function TeamsIndexPage() {
     }
   }
 
+  const placementByTeamId = buildPodiumPlacements(matches);
   const playersByTeamId = countPlayersByTeam((playersData ?? []) as PlayerTeamRef[]);
   const recentByTeamId = groupRecentMatches((recentMatchesData ?? []) as RecentMatchRecord[]);
   const teamsWithSquad = [...playersByTeamId.values()].filter((count) => count > 0).length;
   const teamsWithCoach = teams.filter((team) => Boolean(team.coach_name)).length;
   const teamsWithRecentForm = [...recentByTeamId.values()].filter((matches) => matches.length > 0).length;
-  const eliminatedTeams = teams.filter((team) => isTeamInactive(team, standingsByTeamId.get(team.id) ?? null)).length;
+  const eliminatedTeams = teams.filter((team) =>
+    isTeamInactive(team, standingsByTeamId.get(team.id) ?? null, placementByTeamId.get(team.id) ?? null),
+  ).length;
   const liveMatches = matches.filter((match) => match.status === "live").length;
   const oddsLeaders = teams
     .filter((team) => Number.isFinite(Number(team.outright_odds)))
@@ -116,10 +127,13 @@ export default async function TeamsIndexPage() {
     .sort((left, right) => {
       const leftStanding = standingsByTeamId.get(left.id) ?? null;
       const rightStanding = standingsByTeamId.get(right.id) ?? null;
-      const leftInactive = isTeamInactive(left, leftStanding);
-      const rightInactive = isTeamInactive(right, rightStanding);
+      const leftInactive = isTeamInactive(left, leftStanding, placementByTeamId.get(left.id) ?? null);
+      const rightInactive = isTeamInactive(right, rightStanding, placementByTeamId.get(right.id) ?? null);
+      const leftPlacement = placementByTeamId.get(left.id)?.rank ?? 99;
+      const rightPlacement = placementByTeamId.get(right.id)?.rank ?? 99;
 
       if (leftInactive !== rightInactive) return leftInactive ? 1 : -1;
+      if (leftPlacement !== rightPlacement) return leftPlacement - rightPlacement;
       if ((left.group_letter ?? "") !== (right.group_letter ?? "")) {
         return String(left.group_letter ?? "").localeCompare(String(right.group_letter ?? ""), "he");
       }
@@ -193,6 +207,7 @@ export default async function TeamsIndexPage() {
                 key={team.id}
                 team={team}
                 standing={standingsByTeamId.get(team.id) ?? null}
+                placement={placementByTeamId.get(team.id) ?? null}
                 rank={index + 1}
               />
             ))}
@@ -205,7 +220,13 @@ export default async function TeamsIndexPage() {
         {formLeaders.length > 0 ? (
           <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
             {formLeaders.map(({ team, standing, form }) => (
-              <FormTeamCard key={team.id} team={team} standing={standing} form={form} />
+              <FormTeamCard
+                key={team.id}
+                team={team}
+                standing={standing}
+                form={form}
+                placement={placementByTeamId.get(team.id) ?? null}
+              />
             ))}
           </div>
         ) : (
@@ -228,6 +249,7 @@ export default async function TeamsIndexPage() {
                 standing={standing}
                 playerCount={playersByTeamId.get(team.id) ?? 0}
                 form={buildTeamForm(recentByTeamId.get(team.id) ?? [])}
+                placement={placementByTeamId.get(team.id) ?? null}
               />
             );
           })}
@@ -242,15 +264,17 @@ function TeamDirectoryCard({
   standing,
   playerCount,
   form,
+  placement,
 }: {
   team: TeamRecord;
   standing: TeamStanding | null;
   playerCount: number;
   form: TeamForm;
+  placement: PodiumPlacement | null;
 }) {
   const displayName = getTeamName(team);
-  const status = getStatus(team, standing);
-  const inactive = isTeamInactive(team, standing);
+  const status = getStatus(team, standing, placement);
+  const inactive = isTeamInactive(team, standing, placement);
 
   return (
     <TeamLink
@@ -285,13 +309,15 @@ function TeamDirectoryCard({
 function TeamOddsCard({
   team,
   standing,
+  placement,
   rank,
 }: {
   team: TeamRecord;
   standing: TeamStanding | null;
+  placement: PodiumPlacement | null;
   rank: number;
 }) {
-  const inactive = isTeamInactive(team, standing);
+  const inactive = isTeamInactive(team, standing, placement);
 
   return (
     <TeamLink
@@ -324,12 +350,14 @@ function FormTeamCard({
   team,
   standing,
   form,
+  placement,
 }: {
   team: TeamRecord;
   standing: TeamStanding | null;
   form: TeamForm;
+  placement: PodiumPlacement | null;
 }) {
-  const inactive = isTeamInactive(team, standing);
+  const inactive = isTeamInactive(team, standing, placement);
 
   return (
     <TeamLink
@@ -457,8 +485,15 @@ function FormDots({ form, compact = false }: { form: TeamForm; compact?: boolean
   );
 }
 
-function getStatus(team: TeamRecord, standing: TeamStanding | null) {
-  if (isTeamInactive(team, standing)) {
+function getStatus(team: TeamRecord, standing: TeamStanding | null, placement: PodiumPlacement | null) {
+  if (placement) {
+    return {
+      label: placement.label,
+      className: placement.className,
+    };
+  }
+
+  if (isTeamInactive(team, standing, placement)) {
     return {
       label: "הודחה",
       className: "bg-white/8 text-wc-fg3",
@@ -488,8 +523,55 @@ function getStatus(team: TeamRecord, standing: TeamStanding | null) {
   };
 }
 
-function isTeamInactive(team: TeamRecord, standing: TeamStanding | null) {
+function isTeamInactive(team: TeamRecord, standing: TeamStanding | null, placement: PodiumPlacement | null) {
+  if (placement) return false;
   return team.is_eliminated === true || standing?.status === "eliminated" || (standing?.lockedRank !== null && standing?.lockedRank !== undefined && standing.lockedRank >= 4);
+}
+
+function buildPodiumPlacements(matches: TournamentMatchRecord[]) {
+  const placements = new Map<string, PodiumPlacement>();
+  const final = matches.find((match) => getMatchStageKind(match.stage) === "final" && match.status === "finished");
+  const thirdPlace = matches.find((match) => getMatchStageKind(match.stage) === "third_place" && match.status === "finished");
+
+  if (final) {
+    const winner = determineKnockoutWinnerId(final, final.home_team_id, final.away_team_id);
+    const runnerUp = determineKnockoutLoserId(final, final.home_team_id, final.away_team_id);
+    if (winner) {
+      placements.set(winner, {
+        label: "אלופה",
+        rank: 1,
+        className: "bg-[rgba(95,255,123,0.16)] text-wc-neon",
+      });
+    }
+    if (runnerUp) {
+      placements.set(runnerUp, {
+        label: "סגנית",
+        rank: 2,
+        className: "bg-[rgba(125,211,252,0.16)] text-cyan-300",
+      });
+    }
+  }
+
+  if (thirdPlace) {
+    const third = determineKnockoutWinnerId(thirdPlace, thirdPlace.home_team_id, thirdPlace.away_team_id);
+    const fourth = determineKnockoutLoserId(thirdPlace, thirdPlace.home_team_id, thirdPlace.away_team_id);
+    if (third) {
+      placements.set(third, {
+        label: "מקום 3",
+        rank: 3,
+        className: "bg-[rgba(255,182,73,0.16)] text-wc-amber",
+      });
+    }
+    if (fourth) {
+      placements.set(fourth, {
+        label: "מקום 4",
+        rank: 4,
+        className: "bg-white/10 text-wc-fg2",
+      });
+    }
+  }
+
+  return placements;
 }
 
 function countPlayersByTeam(players: PlayerTeamRef[]) {
