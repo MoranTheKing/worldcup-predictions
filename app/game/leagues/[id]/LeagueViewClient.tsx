@@ -475,9 +475,12 @@ function LeagueMemberRowView({
   liveMatches: LeagueLiveMatchSummary[];
 }) {
   const router = useRouter();
-  const href = isGlobal
-    ? `/game/users/${member.user_id}?league=global`
-    : `/game/users/${member.user_id}?league=${leagueId}`;
+  const canOpenMember = !isGlobal || isSelf;
+  const href = canOpenMember
+    ? isGlobal
+      ? `/game/users/${member.user_id}?league=global`
+      : `/game/users/${member.user_id}?league=${leagueId}`
+    : null;
   const liveProjectedPoints = liveMatches.reduce((sum, match) => {
     const prediction =
       member.live_predictions.find((item) => item.match_number === match.match_number) ?? null;
@@ -486,14 +489,16 @@ function LeagueMemberRowView({
 
   return (
     <tr
-      role="link"
-      tabIndex={0}
-      className={`cursor-pointer border-b border-white/10 transition hover:bg-white/5 ${
+      role={canOpenMember ? "link" : undefined}
+      tabIndex={canOpenMember ? 0 : undefined}
+      className={`${canOpenMember ? "cursor-pointer hover:bg-white/5" : ""} border-b border-white/10 transition ${
         isSelf ? "bg-[rgba(95,255,123,0.05)]" : ""
       }`}
-      onClick={() => router.push(href)}
+      onClick={() => {
+        if (href) router.push(href);
+      }}
       onKeyDown={(event) => {
-        if (event.key === "Enter" || event.key === " ") {
+        if (href && (event.key === "Enter" || event.key === " ")) {
           event.preventDefault();
           router.push(href);
         }

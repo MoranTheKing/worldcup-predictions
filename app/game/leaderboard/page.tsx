@@ -12,6 +12,8 @@ import LeagueViewClient, {
 
 export const dynamic = "force-dynamic";
 
+const GLOBAL_LEADERBOARD_MEMBER_LIMIT = 500;
+
 type RawProfileRow = {
   id: string;
   display_name?: string | null;
@@ -73,7 +75,10 @@ export default async function GlobalLeaderboardPage() {
   ] = await Promise.all([
     admin
       .from("profiles")
-      .select("id, display_name, total_score, avatar_url, created_at"),
+      .select("id, display_name, total_score, avatar_url, created_at")
+      .order("total_score", { ascending: false })
+      .order("created_at", { ascending: true })
+      .limit(GLOBAL_LEADERBOARD_MEMBER_LIMIT),
     admin
       .from("matches")
       .select("status, date_time")
@@ -98,8 +103,13 @@ export default async function GlobalLeaderboardPage() {
     console.error("[GlobalLeaderboardPage] live matches error:", liveMatchesError);
   }
 
+  const visibleProfiles = await includeCurrentUserProfile(
+    admin,
+    (rawProfiles ?? []) as RawProfileRow[],
+    user.id,
+  );
   const tournamentStarted = hasTournamentStarted(kickoffResult.data);
-  const membersBase = ((rawProfiles ?? []) as RawProfileRow[])
+  const membersBase = visibleProfiles
     .map((profile) => ({
       user_id: profile.id,
       joined_at: null,
@@ -176,6 +186,29 @@ export default async function GlobalLeaderboardPage() {
       variant="global"
     />
   );
+}
+
+async function includeCurrentUserProfile(
+  admin: ReturnType<typeof createAdminClient>,
+  profiles: RawProfileRow[],
+  currentUserId: string,
+) {
+  if (profiles.some((profile) => profile.id === currentUserId)) {
+    return profiles;
+  }
+
+  const { data: currentProfile, error } = await admin
+    .from("profiles")
+    .select("id, display_name, total_score, avatar_url, created_at")
+    .eq("id", currentUserId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("[GlobalLeaderboardPage] current profile error:", error);
+    return profiles;
+  }
+
+  return currentProfile ? [...profiles, currentProfile as RawProfileRow] : profiles;
 }
 
 async function loadLiveTeams(

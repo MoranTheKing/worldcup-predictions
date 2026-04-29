@@ -35,7 +35,7 @@
 - בפלואו שבו משתמש Google קיים מוסיף סיסמה לאותו אימייל, הסיסמה כבר לא נשמרת ב-state בזמן ההמתנה ל-OTP; לפני אימות הקוד המשתמש מקליד אותה שוב, המדיניות נבדקת, ורק אחרי OTP תקין מתבצע `updateUser`.
 - בחירת מלך שערים ב-onboarding ובמסך הניחושים נשמרת לפי שם קנוני מה-DB כאשר נשלח `player_id`, ודוחה רק חוסר התאמה אמיתי אחרי נרמול שם. כך אי אפשר להצמיד שם לשחקן אחר כדי לנפח odds, אבל שינויי רווחים/אותיות לא מפילים בחירה תקינה.
 - נתיב Dev Tools ההרסני `POST /api/dev/matches/clear` דורש עכשיו בקשת same-origin מלאה, session מחובר ומייל ניהול דרך `DEV_TOOLS_ADMIN_EMAIL` או `admin@moran65.com`, לפני שימוש ב-service-role למחיקת נתונים.
-- סבב PRים פתוחים 21-32 נסקר ב-2026-04-28. תיקונים בטוחים הוטמעו, ותיקונים שעלולים לפגוע ב-global leaderboard או בדיוק חישובי הבתים תועדו כלא מומלצים כמות שהם ב-`SECURITY_AUDIT_2026-04-23.md`.
+- סבב PRים פתוחים 21-32 נסקר ב-2026-04-28 וב-2026-04-29. תיקונים בטוחים הוטמעו, ה-global leaderboard הוגבל ל-500 משתמשים מובילים + המשתמש הנוכחי, ועמוד יריב גלובלי כבר לא נפתח למשתמשים ללא ליגה משותפת. תיקוני PR שעלולים לפגוע בדיוק חישובי הבתים או לבטל את חוויית ה-global leaderboard תועדו ב-`SECURITY_AUDIT_2026-04-23.md`.
 - תבנית מייל עברית ל-Supabase Auth עם לוגו ממורכז וקוד אימות.
 
 ## פיתוח מקומי
@@ -350,6 +350,7 @@ Brevo Free מוגבל בכמות יומית לכל החשבון, לכן ביום
 - The global league header shows participant count and the logged-in user's current rank in that same projected-live league order, instead of showing live-match count.
 - `lib/game/live-score-projection.ts` reuses `calculatePredictionPoints` for the logged-in user's current live matches, and `/api/game/live-score-projection` returns the hero card's persisted totals plus the temporary live score delta.
 - `/game/leaderboard` reuses the full league leaderboard UI for all profiles: live prediction chips, projected live `+N`, tournament winner and top-scorer picks, and profile-based realtime total updates.
+- `/game/leaderboard` now loads the top 500 profiles by persisted score plus the current user, bounding downstream live-prediction/outright queries. Global rows no longer open another user's full opponent page unless the viewer also shares a private league with that user.
 - Dev Tools can edit `home_odds`/`draw_odds`/`away_odds` and can generate random future predictions for the currently logged-in dev user only.
 - Dev Tools also includes a random odds button that seeds plausible 1/X/2 odds for every match and persists them through the bulk match API.
 - Dev Tools `Clear All Match Data` is a full reset: it clears match scores/statuses, odds, match predictions, tournament predictions, legacy bets, `profiles.total_score`, and therefore all league leaderboard totals.

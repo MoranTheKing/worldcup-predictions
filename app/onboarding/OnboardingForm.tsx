@@ -101,9 +101,7 @@ export default function OnboardingForm({
   const sortedTeams = useMemo(
     () =>
       [...teams]
-        .sort((left, right) =>
-          (left.name_he ?? left.name).localeCompare(right.name_he ?? right.name, "he"),
-        )
+        .sort(compareTeamsByOutrightOdds)
         .map((team) => ({
           ...team,
           reward_points: getOutrightRewardPoints("winner", team.outright_odds),
@@ -712,6 +710,22 @@ export default function OnboardingForm({
 function getOutrightRewardPoints(type: "winner" | "scorer", odds: number | string | null | undefined) {
   const normalized = normalizeOdds(odds);
   return normalized === null ? 0 : calculateOutrightPoints(type, normalized);
+}
+
+function compareTeamsByOutrightOdds(
+  left: { name: string; name_he: string | null; outright_odds?: number | string | null },
+  right: { name: string; name_he: string | null; outright_odds?: number | string | null },
+) {
+  const leftOdds = normalizeOdds(left.outright_odds);
+  const rightOdds = normalizeOdds(right.outright_odds);
+
+  if (leftOdds !== rightOdds) {
+    if (leftOdds === null) return 1;
+    if (rightOdds === null) return -1;
+    return leftOdds - rightOdds;
+  }
+
+  return (left.name_he ?? left.name).localeCompare(right.name_he ?? right.name, "he");
 }
 
 function normalizeOdds(value: number | string | null | undefined) {

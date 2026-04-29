@@ -241,7 +241,7 @@ What changed locally:
 
 This combines the security intent of both PRs while avoiding the review regressions noted on each PR.
 
-### 4.5 PRs intentionally not applied as-is - 2026-04-28
+### 4.5 Global leaderboard and remaining PR trade-offs - 2026-04-28/2026-04-29
 
 Reviewed PRs:
 
@@ -254,12 +254,14 @@ Reviewed PRs:
 Decision:
 
 - `#24` was not applied as-is because it drops high-score scenarios for the final one or two pending group matches. That can mislabel qualification/elimination states when goal-difference swings matter.
-- `#25`, `#26`, and `#27` were not applied as-is because the app currently has an intentional global leaderboard experience. Query-time caps or shared-league-only filters can hide the current user, produce incorrect projected-live ranks, or turn the global leaderboard into a private-league view.
-- `#30` was not applied as-is because `/game/leaderboard` intentionally links global rows to `/game/users/[id]?league=global`. Removing that bypass would break the current global comparison flow.
+- `#25` was applied with an important product-preserving adjustment on 2026-04-29: `/game/leaderboard` now caps the global profile query at the top 500 by persisted score and appends the current user's profile if needed, bounding downstream `.in("user_id", ...)` reads without making the current user disappear.
+- `#26` and `#27` were not applied as-is because the app intentionally has a signed-in global leaderboard. Turning it into shared-league-only visibility would remove that product surface.
+- `#30` was applied as a privacy-preserving variant on 2026-04-29: the opponent page no longer accepts `?league=global` as an authorization bypass for non-self users without a shared league, and global leaderboard rows no longer navigate to another user's full opponent page.
 
-Recommended future fix:
+Remaining trade-off:
 
-- redesign global leaderboard privacy as an explicit product decision: either keep global profiles public to signed-in users with a paginated/ranked API, or remove global opponent links and show only aggregate public fields. Avoid partial caps before projected-score ranking.
+- global leaderboard itself still exposes public profile/rank fields to signed-in users by product design. If this should become private later, replace it with an explicit paginated/ranked API or a shared-league-only view rather than partial client-side filtering.
+- if standings scenario enumeration becomes a measured production bottleneck, replace it with a cached or streaming exact analysis. Do not use representative score samples for the last one or two pending matches unless the UI labels become explicitly approximate.
 
 ### 5. Social prediction tables had permissive SELECT RLS
 
