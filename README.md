@@ -482,3 +482,4 @@ Brevo Free מוגבל בכמות יומית לכל החשבון, לכן ביום
 - `/dashboard/players/[id]` now avoids Hebrew slash-pair metric cards. Cards such as yellow/red cards, saves/conceded, xG/xA, shots, duels, tackles and height/weight are split into labeled values so numbers cannot be read backwards in RTL.
 - Player profile metric cards and recent-match mini metrics are centered, and recent-match score chips now show `ניצחון`, `תיקו`, or `הפסד` with color and a team-perspective score when the player team can be matched to the event.
 - Split player metric cards use constrained columns and smaller tabular numbers so paired values such as `xG`/`xA` cannot overlap in narrow cards.
+- Player age rows no longer combine Hebrew dates inside an LTR parenthesized string; they render as separate RTL-safe age and birth-date tokens.

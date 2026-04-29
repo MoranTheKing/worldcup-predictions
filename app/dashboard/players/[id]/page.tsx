@@ -225,7 +225,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
             <div className="mt-4 grid gap-3">
               <InfoRow label="שם קצר" value={detail.short_name ?? "-"} dir="ltr" />
               <InfoRow label="אזרחות" value={detail.nationality ?? "-"} />
-              <InfoRow label="גיל" value={formatAge(detail.date_of_birth)} dir="ltr" />
+              <InfoRow label="גיל" valueNode={<AgeValue dateOfBirth={detail.date_of_birth} />} />
               <InfoRow label="גובה" value={formatHeight(detail.height)} />
               <InfoRow label="משקל" value={formatWeight(detail.weight)} />
               <InfoRow label="רגל חזקה" value={translateFoot(detail.preferred_foot)} />
@@ -531,8 +531,23 @@ function InfoRow({
   return (
     <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-black/14 px-4 py-3">
       <span className="text-sm font-bold text-wc-fg2">{label}</span>
-      <span className="truncate text-sm font-black text-wc-fg1" dir={dir}>{valueNode ?? value ?? "-"}</span>
+      <span className={`min-w-0 text-sm font-black text-wc-fg1 ${valueNode ? "text-end" : "truncate"}`} dir={dir}>
+        {valueNode ?? value ?? "-"}
+      </span>
     </div>
+  );
+}
+
+function AgeValue({ dateOfBirth }: { dateOfBirth: string | null | undefined }) {
+  const age = calculateAge(dateOfBirth);
+  if (age === null) return <span dir="ltr">-</span>;
+
+  return (
+    <span className="inline-flex min-w-0 flex-wrap items-center justify-end gap-1.5 text-end" dir="rtl">
+      <span className="whitespace-nowrap">{age} שנים</span>
+      <span className="text-wc-fg3">·</span>
+      <span className="whitespace-nowrap text-wc-fg2">{formatDate(dateOfBirth)}</span>
+    </span>
   );
 }
 
@@ -763,17 +778,17 @@ function formatDate(iso: string | null | undefined) {
   }
 }
 
-function formatAge(dateOfBirth: string | null | undefined) {
-  if (!dateOfBirth) return "-";
+function calculateAge(dateOfBirth: string | null | undefined) {
+  if (!dateOfBirth) return null;
   const birthDate = new Date(dateOfBirth);
-  if (Number.isNaN(birthDate.getTime())) return "-";
+  if (Number.isNaN(birthDate.getTime())) return null;
   const now = new Date();
   let age = now.getFullYear() - birthDate.getFullYear();
   const monthDelta = now.getMonth() - birthDate.getMonth();
   if (monthDelta < 0 || (monthDelta === 0 && now.getDate() < birthDate.getDate())) {
     age -= 1;
   }
-  return `${age} (${formatDate(dateOfBirth)})`;
+  return age;
 }
 
 function formatHeight(value: number | string | null | undefined) {
