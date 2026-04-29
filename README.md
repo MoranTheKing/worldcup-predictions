@@ -484,3 +484,10 @@ Brevo Free מוגבל בכמות יומית לכל החשבון, לכן ביום
 - Split player metric cards use constrained columns and smaller tabular numbers so paired values such as `xG`/`xA` cannot overlap in narrow cards.
 - Player age rows no longer combine Hebrew dates inside an LTR parenthesized string; they render as separate RTL-safe age and birth-date tokens.
 - Player advanced stats now label BSD `duel_won/duel_lost` as general duels, keep aerial duels separate, and only show the goalkeeper card for goalkeepers or players with real goalkeeper activity.
+
+## Match detail API center - 2026-04-29
+
+- `/dashboard/matches/[id]` now builds a BSD-backed match center without requiring a new SQL migration. It maps the local match to a BSD World Cup event by `teams.bzzoiro_team_id`, team names, and the local kickoff window.
+- Added `lib/bzzoiro/matches.ts` for server-side event matching, `events/{id}?full=true`, `/live/?full=true`, `/predicted-lineup/{event_id}/`, and `/player-stats/?event=...` reads. API failures return quiet fallbacks instead of breaking the page.
+- Match pages now show API status, venue/referee, odds, live/full stat comparisons, actual or predicted lineups, substitutes, unavailable players, incidents, player-stat leaders, momentum, and recent shots when BSD provides those fields.
+- Live BSD pages refresh the server payload every 30 seconds while the tab is visible. Local dev match edits still use the existing dev refresh channel.
