@@ -474,9 +474,9 @@ function MetricCard({
     tone === "amber" ? "text-wc-amber" : tone === "red" ? "text-wc-danger" : "text-wc-fg1";
 
   return (
-    <div className="rounded-[1.35rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.055),rgba(255,255,255,0.025))] p-4 text-center">
+    <div className="min-w-0 rounded-[1.35rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.055),rgba(255,255,255,0.025))] p-4 text-center">
       <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-wc-fg3">{label}</p>
-      <p className={`mt-2 font-sans text-3xl font-black tracking-normal ${toneClass}`} dir="ltr">{value}</p>
+      <p className={`mt-2 truncate font-sans text-3xl font-black tracking-normal ${toneClass}`} dir="ltr">{value}</p>
     </div>
   );
 }
@@ -495,12 +495,12 @@ function SplitMetricCard({
   parts: SplitMetricPart[];
 }) {
   return (
-    <div className="rounded-[1.35rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.055),rgba(255,255,255,0.025))] p-4 text-center">
+    <div className="min-w-0 rounded-[1.35rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.055),rgba(255,255,255,0.025))] p-4 text-center">
       <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-wc-fg3">{title}</p>
-      <div className="mt-3 grid grid-cols-2 divide-x divide-x-reverse divide-white/10 text-center">
+      <div className="mt-3 grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] divide-x divide-x-reverse divide-white/10 text-center">
         {parts.map((part) => (
-          <div key={part.label} className="px-2">
-            <p className={`font-sans text-3xl font-black tracking-normal ${getMetricToneClass(part.tone)}`} dir="ltr">
+          <div key={part.label} className="min-w-0 px-1">
+            <p className={`font-sans text-lg font-black leading-none tracking-normal tabular-nums ${getMetricToneClass(part.tone)}`} dir="ltr">
               {part.value}
             </p>
             <p className="mt-1 text-[11px] font-bold text-wc-fg3">{part.label}</p>
@@ -607,9 +607,9 @@ function RecentStatRow({
 
 function MiniMetric({ label, value }: { label: string; value: number | string }) {
   return (
-    <div className="rounded-lg bg-white/[0.045] px-2 py-1 text-center">
+    <div className="min-w-0 rounded-lg bg-white/[0.045] px-2 py-1 text-center">
       <p className="text-[10px] font-bold text-wc-fg3">{label}</p>
-      <p className="mt-0.5 text-sm font-black text-wc-fg1" dir="ltr">{value}</p>
+      <p className="mt-0.5 truncate text-sm font-black text-wc-fg1" dir="ltr">{value}</p>
     </div>
   );
 }
