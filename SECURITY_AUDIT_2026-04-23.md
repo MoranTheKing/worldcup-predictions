@@ -644,3 +644,10 @@ Not tied to a specific open PR, but implemented as a direct follow-up:
 - PR `#24` was closed as not accepted as-is because the representative-scenario optimization can make group qualification labels wrong when high goal-difference outcomes are still possible.
 - PRs `#26` and `#27` were closed as not accepted as-is because shared-league-only global filtering would remove the intended signed-in global leaderboard; the deeper cross-user opponent page exposure was addressed through the safer `#30` fix instead.
 - The active residual operational item is still SQL migration `20260429000036_stop_oauth_name_prefill_on_signup.sql`, which must be applied in Supabase before first-time Google signup can be fully verified in that environment.
+
+## PR #32 operational adjustment - 2026-04-29
+
+- The destructive `POST /api/dev/matches/clear` endpoint still requires the localhost/dev guard, a same-origin request and an authenticated Supabase user before any service-role write is used.
+- The extra single-email allowlist was removed because the project uses Cloudflare Email Routing and the active local operator account may be `moran200333@gmail.com` or another test account rather than `admin@moran65.com`.
+- Risk after the adjustment is still bounded to the local/dev surface: a remote site cannot trigger the route because of the dev guard and same-origin check, and an anonymous local request is rejected with `login required`.
+- No SQL migration is tied to this PR #32 adjustment. It is an application-route authorization change only.

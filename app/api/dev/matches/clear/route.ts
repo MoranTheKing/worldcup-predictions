@@ -30,11 +30,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "login required" }, { status: 401 });
   }
 
-  const allowedAdminEmail = process.env.DEV_TOOLS_ADMIN_EMAIL ?? "admin@moran65.com";
-  if (user.email?.toLowerCase() !== allowedAdminEmail.toLowerCase()) {
-    return NextResponse.json({ error: "admin access required" }, { status: 403 });
-  }
-
   const admin = createAdminClient();
 
   const [

@@ -874,3 +874,12 @@ raw_error
 - Existing coach cards/rows on `/dashboard/teams/[id]`, `/dashboard/teams/[id]/squad`, and `/dashboard/teams/[id]/stats` now link to the coach page through `components/CoachLink.tsx`.
 - No new SQL was needed for this slice. The existing `teams.bzzoiro_team_id`, `teams.coach_bzzoiro_id`, `teams.coach_name`, and `teams.coach_photo_url` columns are enough for routing and fallback display; the richer coach profile is live server-side API data.
 - Manual sync after this change refreshed 48 matched teams, 47 coaches, 1087 player roster rows, 16 legacy player enrichments, and 96 recent-form rows across 35 teams.
+
+## Implemented lineup/player data refinement - 2026-04-29
+
+- `lib/bzzoiro/lineups.ts` now adds a server-side helper for BSD `GET /api/predicted-lineup/{event_id}/`. The squad page first searches the upcoming World Cup events for the team's BSD id and uses the predicted lineup when BSD has generated it.
+- When BSD has no predicted lineup yet, `/dashboard/teams/[id]/squad` still uses API data instead of a hard-coded formation: manager `preferred_formation` drives the shape, and the projected XI is selected by role using position, minutes, appearances, shirt number and top-scorer odds.
+- `lib/bzzoiro/players.ts` now wraps BSD `GET /api/players/{id}/` and `GET /api/player-stats/?player=...` for server components. The player page presents local World Cup 2026 stats separately from broader BSD match-history aggregates.
+- The current BSD player-stat rows do not carry a World Cup-only season/league discriminator in the page helper. The UI therefore avoids calling those rows World Cup data unless they are the local Supabase tournament columns.
+- No new SQL was needed. The existing `players.bzzoiro_player_id`, `players.photo_url`, `players.shirt_number`, `players.top_scorer_odds`, and team BSD id columns are enough for these live server-side reads.
+- Global and team player-stat tables now use odds as the first tie-breaker while all tournament stats are zero. This makes pre-tournament tables line up with betting-market order until actual goals, assists, cards or points exist.

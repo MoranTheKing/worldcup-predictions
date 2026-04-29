@@ -464,6 +464,7 @@ function compareAttackers(left: TeamPlayer, right: TeamPlayer) {
     (right.goals ?? 0) - (left.goals ?? 0) ||
     (right.assists ?? 0) - (left.assists ?? 0) ||
     (right.appearances ?? 0) - (left.appearances ?? 0) ||
+    comparePlayerOdds(left, right) ||
     left.name.localeCompare(right.name, "he")
   );
 }
@@ -473,8 +474,18 @@ function compareCards(left: TeamPlayer, right: TeamPlayer) {
     (right.red_cards ?? 0) - (left.red_cards ?? 0) ||
     (right.yellow_cards ?? 0) - (left.yellow_cards ?? 0) ||
     (right.goals ?? 0) - (left.goals ?? 0) ||
+    comparePlayerOdds(left, right) ||
     left.name.localeCompare(right.name, "he")
   );
+}
+
+function comparePlayerOdds(left: TeamPlayer, right: TeamPlayer) {
+  const leftOdds = Number(left.top_scorer_odds);
+  const rightOdds = Number(right.top_scorer_odds);
+  if (Number.isFinite(leftOdds) && Number.isFinite(rightOdds)) return leftOdds - rightOdds;
+  if (Number.isFinite(leftOdds)) return -1;
+  if (Number.isFinite(rightOdds)) return 1;
+  return 0;
 }
 
 function getPositionLabel(position: string | null) {

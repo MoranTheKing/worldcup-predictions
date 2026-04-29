@@ -3,6 +3,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import CoachLink from "@/components/CoachLink";
 import PlayerLink from "@/components/PlayerLink";
+import {
+  getBzzoiroPredictedLineupForTeam,
+  type BzzoiroPredictedStarter,
+} from "@/lib/bzzoiro/lineups";
+import { getBzzoiroManagerForTeam } from "@/lib/bzzoiro/managers";
 import { createClient } from "@/lib/supabase/server";
 import type { TournamentTeamRecord } from "@/lib/tournament/matches";
 
@@ -20,6 +25,7 @@ type TeamPlayer = {
   minutes_played?: number | null;
   yellow_cards?: number | null;
   red_cards?: number | null;
+  top_scorer_odds?: number | string | null;
 };
 
 type PositionGroup = {
@@ -41,12 +47,12 @@ export default async function TeamSquadPage({ params }: { params: Promise<{ id: 
   const [{ data: teamData }, { data: playersData, error: playersError }] = await Promise.all([
     supabase
       .from("teams")
-      .select("id, name, name_he, logo_url, group_letter, fair_play_score, fifa_ranking, is_eliminated, coach_name, coach_bzzoiro_id, coach_photo_url, coach_updated_at")
+      .select("id, name, name_he, logo_url, group_letter, fair_play_score, fifa_ranking, is_eliminated, coach_name, coach_bzzoiro_id, coach_photo_url, coach_updated_at, bzzoiro_team_id")
       .eq("id", id)
       .maybeSingle(),
     supabase
       .from("players")
-      .select("id, name, position, photo_url, shirt_number, goals, assists, appearances, minutes_played, yellow_cards, red_cards")
+      .select("id, name, position, photo_url, shirt_number, goals, assists, appearances, minutes_played, yellow_cards, red_cards, top_scorer_odds")
       .eq("team_id", id)
       .order("position", { ascending: true })
       .order("name", { ascending: true }),
@@ -59,11 +65,20 @@ export default async function TeamSquadPage({ params }: { params: Promise<{ id: 
   }
 
   const team = teamData as TournamentTeamRecord;
+  const displayName = team.name_he ?? team.name;
+  const [manager, predictedLineup] = await Promise.all([
+    getBzzoiroManagerForTeam(team.bzzoiro_team_id),
+    getBzzoiroPredictedLineupForTeam(team.bzzoiro_team_id, team.name),
+  ]);
+  const formationName = predictedLineup?.formation ?? manager?.preferred_formation ?? "4-3-3";
   const players = ((playersData ?? []) as TeamPlayer[]).filter((player) => player.name);
   const groups = groupPlayersByPosition(players);
-  const formation = buildFormation(players);
-  const displayName = team.name_he ?? team.name;
+  const predictedStarters = mapPredictedStarters(predictedLineup?.starters, players);
+  const formation = buildFormation(players, formationName, predictedStarters);
   const startersCount = formation.reduce((sum, line) => sum + line.players.length, 0);
+  const formationSource = predictedLineup
+    ? `הרכב API ${formatConfidence(predictedLineup.confidence)}`
+    : `מערך מאמן ${formationName}`;
 
   return (
     <div className="wc-shell px-4 py-4 md:px-6 md:py-6" dir="rtl">
@@ -107,7 +122,7 @@ export default async function TeamSquadPage({ params }: { params: Promise<{ id: 
 
           <div className="grid grid-cols-3 gap-2">
             <HeroStat label="שחקנים" value={String(players.length)} />
-            <HeroStat label="מערך" value={startersCount > 0 ? "4-3-3" : "-"} />
+            <HeroStat label="מערך" value={startersCount > 0 ? formationName : "-"} />
             <HeroStat label="בית" value={team.group_letter ?? "-"} />
           </div>
         </div>
@@ -120,9 +135,16 @@ export default async function TeamSquadPage({ params }: { params: Promise<{ id: 
         </section>
 
         <section className="rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-4 md:p-5">
-          <SectionHeader title="מערך משוער" eyebrow={players.length > 0 ? "מבוסס עמדות זמינות" : "ממתין לסגל"} />
+          <SectionHeader title="הרכב משוער" eyebrow={players.length > 0 ? formationSource : "ממתין לסגל"} />
           {players.length > 0 ? (
-            <FormationPitch lines={formation} />
+            <>
+              <FormationPitch lines={formation} />
+              <p className="mt-3 text-xs leading-6 text-wc-fg3">
+                {predictedLineup
+                  ? `נמשך מ-BSD predicted-lineup למשחק ${predictedLineup.event.home_team ?? ""} - ${predictedLineup.event.away_team ?? ""}.`
+                  : "אין עדיין predicted-lineup זמין מ-BSD למשחקי המונדיאל, ולכן ההרכב נבנה ממערך המאמן, עמדות, דקות, הופעות ויחסי מלך השערים."}
+              </p>
+            </>
           ) : (
             <EmptyPanel
               title="הסגל עדיין לא סונכרן"
@@ -359,14 +381,21 @@ function EmptyPanel({ title, description }: { title: string; description: string
   );
 }
 
-function buildFormation(players: TeamPlayer[]): FormationLine[] {
+function buildFormation(
+  players: TeamPlayer[],
+  formationName: string | null | undefined,
+  predictedStarters: TeamPlayer[] = [],
+): FormationLine[] {
+  const structure = parseFormation(formationName);
+  const candidatePool = predictedStarters.length > 0 ? predictedStarters : players;
   const grouped = {
-    goalkeeper: players.filter((player) => getPositionKey(player.position) === "goalkeeper"),
-    defender: players.filter((player) => getPositionKey(player.position) === "defender"),
-    midfielder: players.filter((player) => getPositionKey(player.position) === "midfielder"),
-    forward: players.filter((player) => getPositionKey(player.position) === "forward"),
-    other: players.filter((player) => getPositionKey(player.position) === "other"),
+    goalkeeper: sortLineupCandidates(candidatePool.filter((player) => getPositionKey(player.position) === "goalkeeper"), "goalkeeper"),
+    defender: sortLineupCandidates(candidatePool.filter((player) => getPositionKey(player.position) === "defender"), "defender"),
+    midfielder: sortLineupCandidates(candidatePool.filter((player) => getPositionKey(player.position) === "midfielder"), "midfielder"),
+    forward: sortLineupCandidates(candidatePool.filter((player) => getPositionKey(player.position) === "forward"), "forward"),
+    other: sortLineupCandidates(candidatePool.filter((player) => getPositionKey(player.position) === "other"), "other"),
   };
+  const orderedPlayers = sortLineupCandidates(players, "other");
   const used = new Set<TeamPlayer["id"]>();
 
   const pick = (list: TeamPlayer[], amount: number) => {
@@ -378,13 +407,13 @@ function buildFormation(players: TeamPlayer[]): FormationLine[] {
     if (line.length >= amount) return line;
     return [
       ...line,
-      ...pick([...grouped.other, ...players], amount - line.length),
+      ...pick([...grouped.other, ...orderedPlayers], amount - line.length),
     ];
   };
 
-  const forwards = fill(pick(grouped.forward, 3), 3);
-  const midfielders = fill(pick(grouped.midfielder, 3), 3);
-  const defenders = fill(pick(grouped.defender, 4), 4);
+  const forwards = fill(pick(grouped.forward, structure.forwards), structure.forwards);
+  const midfielders = fill(pick(grouped.midfielder, structure.midfielders), structure.midfielders);
+  const defenders = fill(pick(grouped.defender, structure.defenders), structure.defenders);
   const goalkeepers = fill(pick(grouped.goalkeeper, 1), 1);
 
   return [
@@ -393,6 +422,90 @@ function buildFormation(players: TeamPlayer[]): FormationLine[] {
     { key: "defender", label: "הגנה", players: defenders },
     { key: "goalkeeper", label: "שער", players: goalkeepers },
   ].filter((line) => line.players.length > 0);
+}
+
+function mapPredictedStarters(
+  starters: BzzoiroPredictedStarter[] | null | undefined,
+  localPlayers: TeamPlayer[],
+) {
+  if (!starters?.length) return [];
+
+  const byName = new Map(
+    localPlayers.map((player) => [normalizePlayerName(player.name), player]),
+  );
+
+  return starters
+    .filter((starter) => starter.name)
+    .map((starter, index): TeamPlayer => {
+      const local = byName.get(normalizePlayerName(starter.name)) ?? null;
+      return {
+        id: local?.id ?? `predicted-${index}-${starter.name}`,
+        name: local?.name ?? starter.name ?? "שחקן",
+        position: local?.position ?? normalizePosition(starter.position),
+        photo_url: local?.photo_url ?? null,
+        shirt_number: local?.shirt_number ?? starter.jersey_number ?? null,
+        goals: local?.goals ?? 0,
+        assists: local?.assists ?? 0,
+        appearances: local?.appearances ?? 0,
+        minutes_played: local?.minutes_played ?? 0,
+        yellow_cards: local?.yellow_cards ?? 0,
+        red_cards: local?.red_cards ?? 0,
+        top_scorer_odds: local?.top_scorer_odds ?? null,
+      };
+    });
+}
+
+function parseFormation(formationName: string | null | undefined) {
+  const parts = String(formationName ?? "")
+    .split("-")
+    .map((part) => Number(part.trim()))
+    .filter((part) => Number.isInteger(part) && part > 0);
+
+  if (parts.length < 3 || parts.reduce((sum, part) => sum + part, 0) !== 10) {
+    return { defenders: 4, midfielders: 3, forwards: 3 };
+  }
+
+  return {
+    defenders: parts[0] ?? 4,
+    midfielders: parts.slice(1, -1).reduce((sum, part) => sum + part, 0),
+    forwards: parts.at(-1) ?? 3,
+  };
+}
+
+function sortLineupCandidates(players: TeamPlayer[], role: string) {
+  return players.slice().sort((left, right) => {
+    return getLineupScore(right, role) - getLineupScore(left, role) || left.name.localeCompare(right.name, "he");
+  });
+}
+
+function getLineupScore(player: TeamPlayer, role: string) {
+  const shirtNumber = Number(player.shirt_number);
+  const odds = Number(player.top_scorer_odds);
+  let score = 0;
+
+  score += (player.appearances ?? 0) * 8;
+  score += Math.min(player.minutes_played ?? 0, 900) / 30;
+  score += (player.goals ?? 0) * 6;
+  score += (player.assists ?? 0) * 4;
+
+  if (Number.isFinite(odds)) {
+    score += Math.max(0, 420 - odds) / (role === "forward" ? 3 : 7);
+  }
+
+  if (Number.isFinite(shirtNumber)) {
+    if (role === "goalkeeper" && shirtNumber === 1) score += 80;
+    if (shirtNumber >= 1 && shirtNumber <= 11) score += 30;
+    if (shirtNumber >= 12 && shirtNumber <= 23) score += 8;
+  }
+
+  return score;
+}
+
+function formatConfidence(value: number | null | undefined) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return "";
+  const percent = number <= 1 ? number * 100 : number;
+  return `(${Math.round(percent)}%)`;
 }
 
 function groupPlayersByPosition(players: TeamPlayer[]): PositionGroup[] {
@@ -440,6 +553,23 @@ function getPositionLabel(position: string | null) {
   if (key === "midfielder") return "קישור";
   if (key === "forward") return "התקפה";
   return position;
+}
+
+function normalizePosition(position: string | null | undefined) {
+  const normalized = String(position ?? "").trim().toUpperCase();
+  if (normalized === "G") return "Goalkeeper";
+  if (normalized === "D") return "Defender";
+  if (normalized === "M") return "Midfielder";
+  if (normalized === "F") return "Forward";
+  return position ?? null;
+}
+
+function normalizePlayerName(value: string | null | undefined) {
+  return String(value ?? "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9א-ת]+/gi, "")
+    .toLowerCase();
 }
 
 function getInitials(name: string) {

@@ -24,7 +24,7 @@ export default async function CoachPage({ params }: { params: Promise<{ id: stri
 
   const { data: teamData } = await supabase
     .from("teams")
-    .select("id, name, name_he, logo_url, group_letter, fifa_ranking, outright_odds, coach_name, coach_bzzoiro_id, coach_photo_url, coach_updated_at, bzzoiro_team_id")
+    .select("id, name, name_he, logo_url, group_letter, points, goals_for, goals_against, played_count, fifa_ranking, outright_odds, coach_name, coach_bzzoiro_id, coach_photo_url, coach_updated_at, bzzoiro_team_id")
     .eq("id", id)
     .maybeSingle();
 
@@ -84,7 +84,7 @@ export default async function CoachPage({ params }: { params: Promise<{ id: stri
                 {manager?.short_name ? <span className="wc-badge" dir="ltr">{manager.short_name}</span> : null}
               </div>
               <p className="mt-4 max-w-3xl text-sm leading-7 text-wc-fg2">
-                נתוני המאמן נמשכים מה־BSD managers API בצד השרת: מערך מועדף, סגנון טקטי, לחץ, קו הגנה ומדדי משחק מצטברים.
+                נתוני BSD כאן הם מדדי הקבוצה במשחקים שבהם המאמן עמד על הקווים: מערך, סגנון, לחץ, קו הגנה וממוצעים קבוצתיים. אלו לא נתוני יכולת אישיים של המאמן.
               </p>
             </div>
           </div>
@@ -99,10 +99,23 @@ export default async function CoachPage({ params }: { params: Promise<{ id: stri
       </section>
 
       <section className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <InfoStat label="מאזן" value={formatRecord(manager)} sub="ניצחונות-תיקו-הפסדים" />
-        <InfoStat label="שערים למשחק" value={formatDecimal(manager?.avg_goals_scored)} sub="ממוצע הבקעה" />
-        <InfoStat label="ספיגה למשחק" value={formatDecimal(manager?.avg_goals_conceded)} sub="ממוצע שערי חובה" />
-        <InfoStat label="רשת נקייה" value={formatPercent(manager?.clean_sheet_pct)} sub="אחוז משחקים ללא ספיגה" />
+        <InfoStat label="מאזן הקבוצה" value={formatRecord(manager)} sub="ניצחונות / תיקו / הפסדים תחת המאמן" />
+        <InfoStat label="שערי הקבוצה" value={formatDecimal(manager?.avg_goals_scored)} sub="ממוצע שערים למשחק תחת המאמן" />
+        <InfoStat label="ספיגות הקבוצה" value={formatDecimal(manager?.avg_goals_conceded)} sub="ממוצע שערי חובה למשחק" />
+        <InfoStat label="רשת נקייה" value={formatPercent(manager?.clean_sheet_pct)} sub="אחוז משחקי הקבוצה ללא ספיגה" />
+      </section>
+
+      <section className="mt-5 rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-4 md:p-5">
+        <SectionHeader title="מונדיאל 2026" eyebrow="נתוני טורניר בלבד" />
+        <div className="mt-4 grid gap-3 md:grid-cols-4">
+          <SmallMetric label="משחקים ששוחקו" value={formatInteger(team.played_count)} />
+          <SmallMetric label="נקודות" value={formatInteger(team.points)} />
+          <SmallMetric label="שערי זכות" value={formatInteger(team.goals_for)} />
+          <SmallMetric label="שערי חובה" value={formatInteger(team.goals_against)} />
+        </div>
+        <p className="mt-3 text-xs leading-6 text-wc-fg3">
+          כל עוד המונדיאל עוד לא התחיל, אזור הטורניר נשאר על אפס. המדדים בהמשך הם נתוני BSD מצטברים ממשחקים זמינים של הקבוצה תחת המאמן.
+        </p>
       </section>
 
       <div className="mt-5 grid gap-5 xl:grid-cols-[0.9fr_1.1fr]">
@@ -153,20 +166,20 @@ export default async function CoachPage({ params }: { params: Promise<{ id: stri
       </div>
 
       <section className="mt-5 rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-4 md:p-5">
-        <SectionHeader title="מדדי משחק מצטברים" eyebrow="ממוצעים ואחוזים מה־API" />
+        <SectionHeader title="מדדי הקבוצה במשחקי המאמן" eyebrow="ממוצעים ואחוזים מ-BSD" />
         <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <SmallMetric label="החזקה" value={formatPercent(manager?.avg_possession)} />
-          <SmallMetric label="בעיטות" value={formatDecimal(manager?.avg_shots)} />
-          <SmallMetric label="למסגרת" value={formatDecimal(manager?.avg_shots_on_target)} />
-          <SmallMetric label="קרנות" value={formatDecimal(manager?.avg_corners)} />
-          <SmallMetric label="xG לזכות" value={formatDecimal(manager?.avg_xg_for)} />
-          <SmallMetric label="xG חובה" value={formatDecimal(manager?.avg_xg_against)} />
-          <SmallMetric label="צהובים" value={formatDecimal(manager?.avg_yellow_cards)} />
-          <SmallMetric label="עבירות" value={formatDecimal(manager?.avg_fouls)} />
-          <SmallMetric label="שני הצדדים כובשים" value={formatPercent(manager?.btts_pct)} />
-          <SmallMetric label="מעל 2.5 שערים" value={formatPercent(manager?.over_25_pct)} />
-          <SmallMetric label="מעל 1.5 שערים" value={formatPercent(manager?.over_15_pct)} />
-          <SmallMetric label="לא כבשה" value={formatPercent(manager?.fail_to_score_pct)} />
+          <SmallMetric label="החזקה ממוצעת" value={formatPercent(manager?.avg_possession)} />
+          <SmallMetric label="בעיטות הקבוצה" value={formatDecimal(manager?.avg_shots)} />
+          <SmallMetric label="בעיטות למסגרת" value={formatDecimal(manager?.avg_shots_on_target)} />
+          <SmallMetric label="קרנות הקבוצה" value={formatDecimal(manager?.avg_corners)} />
+          <SmallMetric label="xG של הקבוצה" value={formatDecimal(manager?.avg_xg_for)} />
+          <SmallMetric label="xG שספגה" value={formatDecimal(manager?.avg_xg_against)} />
+          <SmallMetric label="צהובים לקבוצה" value={formatDecimal(manager?.avg_yellow_cards)} />
+          <SmallMetric label="עבירות לקבוצה" value={formatDecimal(manager?.avg_fouls)} />
+          <SmallMetric label="שני הצדדים כבשו" value={formatPercent(manager?.btts_pct)} />
+          <SmallMetric label="משחקים מעל 2.5" value={formatPercent(manager?.over_25_pct)} />
+          <SmallMetric label="משחקים מעל 1.5" value={formatPercent(manager?.over_15_pct)} />
+          <SmallMetric label="הקבוצה לא כבשה" value={formatPercent(manager?.fail_to_score_pct)} />
         </div>
       </section>
     </div>
@@ -264,7 +277,7 @@ function InfoStat({ label, value, sub }: { label: string; value: string; sub: st
   return (
     <div className="rounded-[1.35rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.055),rgba(255,255,255,0.025))] p-4">
       <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-wc-fg3">{label}</p>
-      <p className="mt-2 font-sans text-3xl font-black tracking-normal text-wc-fg1">{value}</p>
+      <p className="mt-2 font-sans text-3xl font-black tracking-normal text-wc-fg1" dir="ltr">{value}</p>
       <p className="mt-1 text-xs text-wc-fg3">{sub}</p>
     </div>
   );
@@ -322,7 +335,7 @@ function SmallMetric({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-2xl border border-white/10 bg-black/14 px-4 py-3">
       <p className="text-xs font-bold text-wc-fg3">{label}</p>
-      <p className="mt-1 font-sans text-2xl font-black tracking-normal text-wc-fg1">{value}</p>
+      <p className="mt-1 font-sans text-2xl font-black tracking-normal text-wc-fg1" dir="ltr">{value}</p>
     </div>
   );
 }
@@ -346,7 +359,7 @@ function getTopFormations(manager: BzzoiroManager | null) {
 
 function formatRecord(manager: BzzoiroManager | null) {
   if (!manager) return "-";
-  return `${manager.wins ?? 0}-${manager.draws ?? 0}-${manager.losses ?? 0}`;
+  return `${manager.wins ?? 0} / ${manager.draws ?? 0} / ${manager.losses ?? 0}`;
 }
 
 function formatInteger(value: number | string | null | undefined) {

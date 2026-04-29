@@ -338,15 +338,35 @@ function sortPlayers(players: PlayerRecord[], mode: PlayerTableMode) {
       return Number(left.top_scorer_odds) - Number(right.top_scorer_odds);
     }
     if (mode === "assists") {
-      return (right.assists ?? 0) - (left.assists ?? 0) || (right.goals ?? 0) - (left.goals ?? 0) || comparePlayerNames(left, right);
+      return (
+        (right.assists ?? 0) - (left.assists ?? 0) ||
+        (right.goals ?? 0) - (left.goals ?? 0) ||
+        comparePlayerOdds(left, right) ||
+        comparePlayerNames(left, right)
+      );
     }
     if (mode === "yellow") {
-      return (right.yellow_cards ?? 0) - (left.yellow_cards ?? 0) || (right.red_cards ?? 0) - (left.red_cards ?? 0) || comparePlayerNames(left, right);
+      return (
+        (right.yellow_cards ?? 0) - (left.yellow_cards ?? 0) ||
+        (right.red_cards ?? 0) - (left.red_cards ?? 0) ||
+        comparePlayerOdds(left, right) ||
+        comparePlayerNames(left, right)
+      );
     }
     if (mode === "red") {
-      return (right.red_cards ?? 0) - (left.red_cards ?? 0) || (right.yellow_cards ?? 0) - (left.yellow_cards ?? 0) || comparePlayerNames(left, right);
+      return (
+        (right.red_cards ?? 0) - (left.red_cards ?? 0) ||
+        (right.yellow_cards ?? 0) - (left.yellow_cards ?? 0) ||
+        comparePlayerOdds(left, right) ||
+        comparePlayerNames(left, right)
+      );
     }
-    return (right.goals ?? 0) - (left.goals ?? 0) || (right.assists ?? 0) - (left.assists ?? 0) || comparePlayerNames(left, right);
+    return (
+      (right.goals ?? 0) - (left.goals ?? 0) ||
+      (right.assists ?? 0) - (left.assists ?? 0) ||
+      comparePlayerOdds(left, right) ||
+      comparePlayerNames(left, right)
+    );
   });
 }
 
@@ -364,12 +384,12 @@ function sortTeams(
       if (Number.isFinite(rightOdds)) return 1;
     }
     if (mode === "defense") {
-      return left.ga - right.ga || right.gd - left.gd || right.pts - left.pts || compareTeamNames(left, right);
+      return left.ga - right.ga || compareTeamOdds(left, right, teamsById) || right.gd - left.gd || right.pts - left.pts || compareTeamNames(left, right);
     }
     if (mode === "points") {
-      return right.pts - left.pts || right.gd - left.gd || right.gf - left.gf || compareTeamNames(left, right);
+      return right.pts - left.pts || right.gd - left.gd || right.gf - left.gf || compareTeamOdds(left, right, teamsById) || compareTeamNames(left, right);
     }
-    return right.gf - left.gf || right.gd - left.gd || right.pts - left.pts || compareTeamNames(left, right);
+    return right.gf - left.gf || right.gd - left.gd || right.pts - left.pts || compareTeamOdds(left, right, teamsById) || compareTeamNames(left, right);
   });
 }
 
@@ -429,10 +449,32 @@ function comparePlayerNames(left: PlayerRecord, right: PlayerRecord) {
   return left.name.localeCompare(right.name, "he");
 }
 
+function comparePlayerOdds(left: PlayerRecord, right: PlayerRecord) {
+  const leftOdds = Number(left.top_scorer_odds);
+  const rightOdds = Number(right.top_scorer_odds);
+  if (Number.isFinite(leftOdds) && Number.isFinite(rightOdds)) return leftOdds - rightOdds;
+  if (Number.isFinite(leftOdds)) return -1;
+  if (Number.isFinite(rightOdds)) return 1;
+  return 0;
+}
+
 function compareTeamNames(left: TeamStanding, right: TeamStanding) {
   const leftName = left.team.name_he ?? left.team.name;
   const rightName = right.team.name_he ?? right.team.name;
   return leftName.localeCompare(rightName, "he");
+}
+
+function compareTeamOdds(
+  left: TeamStanding,
+  right: TeamStanding,
+  teamsById: Map<string, TournamentTeamRecord>,
+) {
+  const leftOdds = Number(teamsById.get(left.team.id)?.outright_odds);
+  const rightOdds = Number(teamsById.get(right.team.id)?.outright_odds);
+  if (Number.isFinite(leftOdds) && Number.isFinite(rightOdds)) return leftOdds - rightOdds;
+  if (Number.isFinite(leftOdds)) return -1;
+  if (Number.isFinite(rightOdds)) return 1;
+  return 0;
 }
 
 function getPositionLabel(position: string | null) {

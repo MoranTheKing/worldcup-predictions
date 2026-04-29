@@ -460,3 +460,13 @@ Brevo Free מוגבל בכמות יומית לכל החשבון, לכן ביום
 - Added secure server-side `POST /api/admin/bzzoiro/sync-odds` for BSD match-odds pulls. Browsers still read Supabase; BSD API calls stay on server routes.
 - Recent-form sync now stores Hebrew opponent names and Hebrew friendly labels. A manual sync verified Jordan vs Nigeria as `ניגריה`.
 - Dev Tools adds scorer-odds random/reset, player-stat randomization, `Clear Tournament`, and BSD odds sync buttons.
+
+## Coach, lineup, player and PR #32 follow-up - 2026-04-29
+
+- Added `/dashboard/coaches/[id]` as a national-team coach page keyed by the local team id, with existing coach cards/rows linking through `components/CoachLink.tsx`.
+- Coach pages call BSD managers server-side and label the data as team-under-manager metrics. World Cup 2026 local stats are shown separately, and manager records render LTR as wins / draws / losses to avoid RTL reversals.
+- PR `#32` remains addressed without binding Dev Tools to a single mailbox. `POST /api/dev/matches/clear` still requires the dev-only localhost guard, same-origin request and logged-in Supabase session, but no longer checks `DEV_TOOLS_ADMIN_EMAIL` or `admin@moran65.com`.
+- No new SQL migration is required for this follow-up. Previously pending migrations still matter, especially `20260429000036_stop_oauth_name_prefill_on_signup.sql` if first-time Google signup has not yet been fixed in the target Supabase project.
+- `/dashboard/stats` and `/dashboard/teams/[id]/stats` now break all-zero ties by odds: player tables use `players.top_scorer_odds`, and team attack/defense/points tables use `teams.outright_odds`.
+- `/dashboard/teams/[id]/squad` now prefers BSD `/api/predicted-lineup/{event_id}/` when available. Until World Cup lineups are generated, it uses the BSD manager formation plus a deterministic role-based lineup score from position, minutes, appearances, shirt number and top-scorer odds instead of a fixed 4-3-3.
+- `/dashboard/players/[id]` now calls BSD `/api/players/{id}/` and `/api/player-stats/?player=...` server-side, keeping local World Cup 2026 stats separate from general BSD match-history stats.
