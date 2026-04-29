@@ -304,6 +304,7 @@ function PlayerToken({ player }: { player: TeamPlayer }) {
       <PlayerAvatar player={player} size="sm" />
       <p className="mt-2 truncate text-xs font-black text-wc-fg1">{player.name}</p>
       <p className="text-[10px] font-bold text-wc-fg3">{getPositionLabel(player.position)}</p>
+      <p className="mt-1 text-[10px] font-black text-wc-neon" dir="ltr">{formatOdds(player.top_scorer_odds)}</p>
     </PlayerLink>
   );
 }
@@ -330,7 +331,7 @@ function PlayerCard({ player }: { player: TeamPlayer }) {
             <MiniMetric label="הופ׳" value={player.appearances ?? 0} />
             <MiniMetric label="שערים" value={player.goals ?? 0} />
             <MiniMetric label="בישולים" value={player.assists ?? 0} />
-            <MiniMetric label="דק׳" value={player.minutes_played ?? 0} />
+            <MiniMetric label="יחס" value={formatOdds(player.top_scorer_odds)} />
           </div>
         </div>
       </div>
@@ -363,7 +364,7 @@ function PlayerAvatar({ player, size }: { player: TeamPlayer; size: "sm" | "lg" 
   );
 }
 
-function MiniMetric({ label, value }: { label: string; value: number }) {
+function MiniMetric({ label, value }: { label: string; value: number | string }) {
   return (
     <div className="rounded-lg bg-black/18 px-2 py-1">
       <p className="text-[10px] font-bold text-wc-fg3">{label}</p>
@@ -525,8 +526,33 @@ function groupPlayersByPosition(players: TeamPlayer[]): PositionGroup[] {
   }
 
   return order
-    .map((key) => ({ key, label: labels[key], players: grouped.get(key) ?? [] }))
+    .map((key) => ({
+      key,
+      label: labels[key],
+      players: sortSquadPlayers(grouped.get(key) ?? []),
+    }))
     .filter((group) => group.players.length > 0);
+}
+
+function sortSquadPlayers(players: TeamPlayer[]) {
+  return players.slice().sort((left, right) => {
+    return (
+      comparePlayerOdds(left, right) ||
+      (right.goals ?? 0) - (left.goals ?? 0) ||
+      (right.assists ?? 0) - (left.assists ?? 0) ||
+      (right.appearances ?? 0) - (left.appearances ?? 0) ||
+      left.name.localeCompare(right.name, "he")
+    );
+  });
+}
+
+function comparePlayerOdds(left: TeamPlayer, right: TeamPlayer) {
+  const leftOdds = Number(left.top_scorer_odds);
+  const rightOdds = Number(right.top_scorer_odds);
+  if (Number.isFinite(leftOdds) && Number.isFinite(rightOdds)) return leftOdds - rightOdds;
+  if (Number.isFinite(leftOdds)) return -1;
+  if (Number.isFinite(rightOdds)) return 1;
+  return 0;
 }
 
 function getPositionKey(position: string | null) {
@@ -553,6 +579,13 @@ function getPositionLabel(position: string | null) {
   if (key === "midfielder") return "קישור";
   if (key === "forward") return "התקפה";
   return position;
+}
+
+function formatOdds(value: number | string | null | undefined) {
+  if (value === null || value === undefined || value === "") return "-";
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return "-";
+  return numeric.toFixed(2);
 }
 
 function normalizePosition(position: string | null | undefined) {

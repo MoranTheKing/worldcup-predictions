@@ -463,8 +463,8 @@ function compareAttackers(left: TeamPlayer, right: TeamPlayer) {
   return (
     (right.goals ?? 0) - (left.goals ?? 0) ||
     (right.assists ?? 0) - (left.assists ?? 0) ||
-    (right.appearances ?? 0) - (left.appearances ?? 0) ||
     comparePlayerOdds(left, right) ||
+    (right.appearances ?? 0) - (left.appearances ?? 0) ||
     left.name.localeCompare(right.name, "he")
   );
 }
@@ -473,8 +473,8 @@ function compareCards(left: TeamPlayer, right: TeamPlayer) {
   return (
     (right.red_cards ?? 0) - (left.red_cards ?? 0) ||
     (right.yellow_cards ?? 0) - (left.yellow_cards ?? 0) ||
-    (right.goals ?? 0) - (left.goals ?? 0) ||
     comparePlayerOdds(left, right) ||
+    (right.goals ?? 0) - (left.goals ?? 0) ||
     left.name.localeCompare(right.name, "he")
   );
 }

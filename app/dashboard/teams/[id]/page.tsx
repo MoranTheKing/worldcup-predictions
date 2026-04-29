@@ -40,6 +40,7 @@ type TeamPlayer = {
   id: number | string;
   name: string;
   position: string | null;
+  top_scorer_odds?: number | string | null;
   goals?: number | null;
   assists?: number | null;
   appearances?: number | null;
@@ -142,7 +143,7 @@ export default async function TeamPage({ params }: { params: Promise<{ id: strin
       .order("date_time", { ascending: true }),
     supabase
       .from("players")
-      .select("id, name, position, goals, assists, appearances, minutes_played, yellow_cards, red_cards")
+      .select("id, name, position, top_scorer_odds, goals, assists, appearances, minutes_played, yellow_cards, red_cards")
       .eq("team_id", id)
       .order("position", { ascending: true })
       .order("name", { ascending: true }),
@@ -198,7 +199,7 @@ export default async function TeamPage({ params }: { params: Promise<{ id: strin
   );
   const formItems = buildFormItems(finishedMatches, recentMatches, id).slice(0, 5);
   const displayName = team.name_he ?? team.name;
-  const previewPlayers = players.slice(0, 8);
+  const previewPlayers = getSquadPreviewPlayers(players).slice(0, 8);
   const topPlayers = getTopPlayers(players).slice(0, 6);
 
   return (
@@ -389,13 +390,14 @@ export default async function TeamPage({ params }: { params: Promise<{ id: strin
           actionLabel="כל הסטטיסטיקות"
         />
         {topPlayers.length > 0 ? (
-          <div className="mt-4 overflow-hidden rounded-2xl border border-white/10">
-            <table className="w-full text-sm">
+          <div className="mt-4 overflow-x-auto rounded-2xl border border-white/10">
+            <table className="w-full min-w-[38rem] text-sm">
               <thead>
                 <tr className="border-b border-white/8 bg-white/[0.025] text-wc-fg3">
                   <th className="px-3 py-2 text-start">שחקן</th>
                   <th className="px-3 py-2 text-center">שערים</th>
                   <th className="px-3 py-2 text-center">בישולים</th>
+                  <th className="px-3 py-2 text-center">יחס</th>
                   <th className="px-3 py-2 text-center">צהובים</th>
                   <th className="px-3 py-2 text-center">אדומים</th>
                 </tr>
@@ -706,8 +708,13 @@ function SquadPreview({ players, total }: { players: TeamPlayer[]; total: number
           className="flex items-center justify-between gap-3 rounded-xl bg-white/5 px-3 py-2 transition hover:bg-white/[0.085] hover:text-wc-neon"
         >
           <span className="truncate text-sm font-bold text-wc-fg1">{player.name}</span>
-          <span className="shrink-0 rounded-full bg-white/8 px-2 py-0.5 text-[10px] font-bold text-wc-fg3">
-            {getPositionLabel(player.position)}
+          <span className="flex shrink-0 items-center gap-1">
+            <span className="rounded-full bg-[rgba(95,255,123,0.1)] px-2 py-0.5 text-[10px] font-black text-wc-neon" dir="ltr">
+              {formatOdds(player.top_scorer_odds)}
+            </span>
+            <span className="rounded-full bg-white/8 px-2 py-0.5 text-[10px] font-bold text-wc-fg3">
+              {getPositionLabel(player.position)}
+            </span>
           </span>
         </PlayerLink>
       ))}
@@ -729,6 +736,7 @@ function PlayerStatsRow({ player }: { player: TeamPlayer }) {
       </td>
       <td className="px-3 py-2 text-center font-black text-wc-fg1">{player.goals ?? 0}</td>
       <td className="px-3 py-2 text-center text-wc-fg2">{player.assists ?? 0}</td>
+      <td className="px-3 py-2 text-center font-black text-wc-neon" dir="ltr">{formatOdds(player.top_scorer_odds)}</td>
       <td className="px-3 py-2 text-center text-wc-amber">{player.yellow_cards ?? 0}</td>
       <td className="px-3 py-2 text-center text-wc-danger">{player.red_cards ?? 0}</td>
     </tr>
@@ -1101,11 +1109,33 @@ function getTopPlayers(players: TeamPlayer[]) {
       const score =
         (right.goals ?? 0) - (left.goals ?? 0) ||
         (right.assists ?? 0) - (left.assists ?? 0) ||
+        comparePlayerOdds(left, right) ||
         (right.yellow_cards ?? 0) - (left.yellow_cards ?? 0) ||
         (right.red_cards ?? 0) - (left.red_cards ?? 0);
       if (score !== 0) return score;
       return left.name.localeCompare(right.name, "he");
     });
+}
+
+function getSquadPreviewPlayers(players: TeamPlayer[]) {
+  return players.slice().sort((left, right) => {
+    return (
+      comparePlayerOdds(left, right) ||
+      (right.goals ?? 0) - (left.goals ?? 0) ||
+      (right.assists ?? 0) - (left.assists ?? 0) ||
+      (right.appearances ?? 0) - (left.appearances ?? 0) ||
+      left.name.localeCompare(right.name, "he")
+    );
+  });
+}
+
+function comparePlayerOdds(left: TeamPlayer, right: TeamPlayer) {
+  const leftOdds = Number(left.top_scorer_odds);
+  const rightOdds = Number(right.top_scorer_odds);
+  if (Number.isFinite(leftOdds) && Number.isFinite(rightOdds)) return leftOdds - rightOdds;
+  if (Number.isFinite(leftOdds)) return -1;
+  if (Number.isFinite(rightOdds)) return 1;
+  return 0;
 }
 
 function getPositionLabel(position: string | null) {

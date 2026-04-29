@@ -99,7 +99,7 @@ export default async function CoachPage({ params }: { params: Promise<{ id: stri
       </section>
 
       <section className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <InfoStat label="מאזן הקבוצה" value={formatRecord(manager)} sub="ניצחונות / תיקו / הפסדים תחת המאמן" />
+        <RecordStat manager={manager} />
         <InfoStat label="שערי הקבוצה" value={formatDecimal(manager?.avg_goals_scored)} sub="ממוצע שערים למשחק תחת המאמן" />
         <InfoStat label="ספיגות הקבוצה" value={formatDecimal(manager?.avg_goals_conceded)} sub="ממוצע שערי חובה למשחק" />
         <InfoStat label="רשת נקייה" value={formatPercent(manager?.clean_sheet_pct)} sub="אחוז משחקי הקבוצה ללא ספיגה" />
@@ -283,6 +283,39 @@ function InfoStat({ label, value, sub }: { label: string; value: string; sub: st
   );
 }
 
+function RecordStat({ manager }: { manager: BzzoiroManager | null }) {
+  return (
+    <div className="rounded-[1.35rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.055),rgba(255,255,255,0.025))] p-4">
+      <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-wc-fg3">מאזן הקבוצה</p>
+      <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+        <RecordPart label="ניצחונות" value={manager?.wins} tone="text-wc-neon" />
+        <RecordPart label="תיקו" value={manager?.draws} tone="text-wc-amber" />
+        <RecordPart label="הפסדים" value={manager?.losses} tone="text-wc-danger" />
+      </div>
+      <p className="mt-2 text-xs text-wc-fg3">המאזן של הקבוצה במשחקים תחת המאמן</p>
+    </div>
+  );
+}
+
+function RecordPart({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: number | string | null | undefined;
+  tone: string;
+}) {
+  return (
+    <div className="rounded-xl bg-black/16 px-2 py-2">
+      <p className={`font-sans text-2xl font-black tracking-normal ${tone}`} dir="ltr">
+        {formatInteger(value)}
+      </p>
+      <p className="mt-0.5 text-[10px] font-bold text-wc-fg3">{label}</p>
+    </div>
+  );
+}
+
 function MetricRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-black/14 px-4 py-3">
@@ -355,11 +388,6 @@ function getTopFormations(manager: BzzoiroManager | null) {
     .filter((item) => Number.isFinite(Number(item.count)))
     .sort((left, right) => Number(right.count) - Number(left.count))
     .slice(0, 4);
-}
-
-function formatRecord(manager: BzzoiroManager | null) {
-  if (!manager) return "-";
-  return `${manager.wins ?? 0} / ${manager.draws ?? 0} / ${manager.losses ?? 0}`;
 }
 
 function formatInteger(value: number | string | null | undefined) {

@@ -470,3 +470,12 @@ Brevo Free מוגבל בכמות יומית לכל החשבון, לכן ביום
 - `/dashboard/stats` and `/dashboard/teams/[id]/stats` now break all-zero ties by odds: player tables use `players.top_scorer_odds`, and team attack/defense/points tables use `teams.outright_odds`.
 - `/dashboard/teams/[id]/squad` now prefers BSD `/api/predicted-lineup/{event_id}/` when available. Until World Cup lineups are generated, it uses the BSD manager formation plus a deterministic role-based lineup score from position, minutes, appearances, shirt number and top-scorer odds instead of a fixed 4-3-3.
 - `/dashboard/players/[id]` now calls BSD `/api/players/{id}/` and `/api/player-stats/?player=...` server-side, keeping local World Cup 2026 stats separate from general BSD match-history stats.
+
+## Team page odds sorting follow-up - 2026-04-29
+
+- `/dashboard/teams/[id]` now sorts the squad preview by top-scorer odds first, and shows the odds chip next to each player so the highest-market players appear before the rest while tournament stats are still zero.
+- The team-page "מובילי הנבחרת" table now includes a top-scorer odds column and uses odds as the first tie-breaker after goals/assists.
+- `/dashboard/teams/[id]/squad` now sorts each position group by top-scorer odds first and shows odds on formation tokens and squad cards.
+- `/dashboard/teams/[id]/stats` now places odds before appearances/cards as the all-zero tie-breaker, so pre-tournament internal tables match the market order.
+- The coach record card now renders separate labeled cells for wins, draws and losses. This avoids any RTL ambiguity such as interpreting Mexico's `3 wins, 2 draws, 0 losses` backwards.
+- Missing BSD predicted lineups now return a quiet `null` fallback on 404 instead of logging a server console error; this is expected while BSD has not generated lineups for future World Cup fixtures yet.

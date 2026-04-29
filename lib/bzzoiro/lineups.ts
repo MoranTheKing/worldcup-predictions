@@ -1,4 +1,5 @@
 import {
+  BzzoiroRequestError,
   bzzoiroGet,
   bzzoiroGetPaginated,
 } from "@/lib/bzzoiro/client";
@@ -102,6 +103,10 @@ export async function getBzzoiroPredictedLineupForTeam(
       updatedAt: lineup.updated_at ?? null,
     } satisfies BzzoiroTeamPredictedLineup;
   } catch (error) {
+    if (error instanceof BzzoiroRequestError && error.status === 404) {
+      return null;
+    }
+
     console.error("[bzzoiro] predicted lineup fetch failed", error);
     return null;
   }

@@ -7,6 +7,18 @@ export type BzzoiroPage<T> = {
   results?: T[];
 };
 
+export class BzzoiroRequestError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+    readonly path: string,
+    readonly responseText: string,
+  ) {
+    super(message);
+    this.name = "BzzoiroRequestError";
+  }
+}
+
 const DEFAULT_API_BASE_URL = "https://sports.bzzoiro.com/api";
 const DEFAULT_PUBLIC_BASE_URL = "https://sports.bzzoiro.com";
 
@@ -34,7 +46,12 @@ export async function bzzoiroGet<T>(
 
   if (!response.ok) {
     const text = await response.text().catch(() => "");
-    throw new Error(`BSD request failed (${response.status}) for ${path}: ${text.slice(0, 180)}`);
+    throw new BzzoiroRequestError(
+      `BSD request failed (${response.status}) for ${path}: ${text.slice(0, 180)}`,
+      response.status,
+      path,
+      text,
+    );
   }
 
   return (await response.json()) as T;
