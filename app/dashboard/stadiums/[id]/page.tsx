@@ -7,6 +7,7 @@ import { normalizeTeamNameKey, translateTeamNameToHebrew } from "@/lib/i18n/team
 import { createClient } from "@/lib/supabase/server";
 import {
   attachTeamsToMatches,
+  formatRtlVisualScoreSummary,
   getMatchScoreSummary,
   getStageLabelHe,
   getTeamDisplayLogo,
@@ -140,7 +141,7 @@ function StadiumMatchCard({
   const score = localMatch && isMatchScoreVisible(localMatch)
     ? getMatchScoreSummary(getEventSideScoreMatch(event, localMatch))
     : null;
-  const centerLabel = score ? score.displayScore : "VS";
+  const centerLabel = score ? formatRtlVisualScoreSummary(score) : "VS";
   const statusLabel = localMatch ? translateStatus(localMatch.status) : translateStatus(event.status);
   const content = (
     <article className="group relative min-h-[11.5rem] overflow-hidden rounded-[1.45rem] border border-white/10 bg-[linear-gradient(150deg,rgba(255,255,255,0.085),rgba(255,255,255,0.035)_44%,rgba(0,0,0,0.20))] p-4 shadow-[0_18px_45px_rgba(0,0,0,0.18),inset_0_1px_0_rgba(255,255,255,0.055)] transition duration-200 hover:-translate-y-1 hover:border-wc-neon/45 hover:bg-white/[0.065]">

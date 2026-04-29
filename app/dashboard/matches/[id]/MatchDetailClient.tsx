@@ -20,6 +20,7 @@ import { normalizeTeamNameKey, translateTeamNameToHebrew } from "@/lib/i18n/team
 import { buildFootballFormation, normalizeFootballPosition } from "@/lib/football/formation";
 import {
   formatMatchTimeLabel,
+  formatRtlVisualScoreSummary,
   getLiveMatchStatusLabel,
   getMatchScoreSummary,
   getStageLabelHe,
@@ -222,24 +223,7 @@ function ScoreSummaryHero({
 }) {
   return (
     <div className={`inline-flex items-center gap-3 ${className}`} dir="ltr">
-      <span className="inline-flex items-center gap-1">
-        <span className="font-bold">{summary.homeScore}</span>
-        <span>-</span>
-        <span className="font-bold">{summary.awayScore}</span>
-      </span>
-      {summary.hasPenalties && summary.homePenaltyScore !== null && summary.awayPenaltyScore !== null ? (
-        <span className="inline-flex items-center gap-1 text-lg text-wc-fg3">
-          <span>(</span>
-          <span className="inline-flex items-center gap-1">
-            <span className="font-bold">{summary.homePenaltyScore}</span>
-            <span>-</span>
-            <span className="font-bold">{summary.awayPenaltyScore}</span>
-          </span>
-          <span>PEN)</span>
-        </span>
-      ) : summary.statusSuffix ? (
-        <span className="text-lg text-wc-fg3">{summary.statusSuffix}</span>
-      ) : null}
+      {formatRtlVisualScoreSummary(summary)}
     </div>
   );
 }
@@ -660,7 +644,6 @@ function LineupsPanel({
           <EmptyState text="כש־BSD יחזיר predicted-lineup או lineups בפועל, יוצגו כאן פותחים, ספסל וחסרים." />
         )
       )}
-      <EventInvolvementSummary match={match} players={players} devEvents={devEvents} />
     </section>
   );
 }
@@ -681,7 +664,6 @@ function LocalLineupsPanel({
       <section className="mt-5 rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-4 md:p-5">
         <SectionHeader title="הרכבים וסגלים למשחק" eyebrow="סימולציה מקומית" />
         <EmptyState text="ברגע שיהיו שחקנים מחוברים לנבחרות המשחק, יוצג כאן הרכב משוער לסימולציה." />
-        <EventInvolvementSummary match={match} players={players} devEvents={devEvents} />
       </section>
     );
   }
@@ -703,7 +685,6 @@ function LocalLineupsPanel({
           eventSummaryByPlayerId={eventSummaryByPlayerId}
         />
       </div>
-      <EventInvolvementSummary match={match} players={players} devEvents={devEvents} />
     </section>
   );
 }
@@ -752,7 +733,13 @@ function SquadPreviewSide({
   eventSummaryByPlayerId: Map<string, PlayerMatchEventSummary>;
 }) {
   const formation = formationName ?? "4-3-3";
-  const lines = buildFootballFormation(players.map((player) => toFormationPlayer(player, eventSummaryByPlayerId)), formation);
+  const formationPlayers = players.map((player) => toFormationPlayer(player, eventSummaryByPlayerId));
+  const lines = buildFootballFormation(formationPlayers, formation);
+  const starterIds = new Set(lines.flatMap((line) => line.players.map((player) => String(player.id))));
+  const benchPlayers = formationPlayers
+    .filter((player) => !starterIds.has(String(player.id)))
+    .sort(compareBenchEventPriority)
+    .slice(0, 12);
 
   return (
     <div className="rounded-[1.35rem] border border-white/10 bg-black/14 p-4">
@@ -764,6 +751,19 @@ function SquadPreviewSide({
         עד ש־BSD יחזיר הרכב רשמי, זהו מבנה משוער לפי מערך המאמן, עמדות ויחסי מלך השערים.
       </p>
       <FormationPitch lines={lines} formationName={formation} source="מבוסס סגל מקומי" compact />
+      <LineupGroup title="ספסל" empty="אין עדיין ספסל מקומי" count={benchPlayers.length}>
+        {benchPlayers.map((player) => (
+          <LineupPlayerRow
+            key={player.id}
+            name={player.name}
+            position={player.position}
+            number={player.shirt_number}
+            teamId={player.team_id}
+            players={players}
+            eventSummary={eventSummaryByPlayerId.get(String(player.id))}
+          />
+        ))}
+      </LineupGroup>
     </div>
   );
 }
@@ -1024,9 +1024,11 @@ function LineupPlayerRow({
   const localPlayer = findLocalPlayer(name, players, teamId);
   const content = (
     <div className="flex min-w-0 items-center gap-3 rounded-xl bg-white/[0.045] px-3 py-2 transition hover:bg-white/[0.075]">
-      <span className="shrink-0 rounded-full bg-black/22 px-2 py-1 text-[11px] font-black text-wc-fg2" dir="ltr">
-        #{number ?? localPlayer?.shirt_number ?? "-"}
-      </span>
+      <LineupPlayerAvatar
+        name={localPlayer?.name ?? name}
+        photoUrl={localPlayer?.photo_url ?? null}
+        number={number ?? localPlayer?.shirt_number ?? null}
+      />
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-black text-wc-fg1">{localPlayer?.name ?? name}</p>
         <p className="mt-0.5 text-[11px] font-bold text-wc-fg3">{formatPosition(position ?? localPlayer?.position)}</p>
@@ -1044,168 +1046,91 @@ function LineupPlayerRow({
   );
 }
 
+function LineupPlayerAvatar({
+  name,
+  photoUrl,
+  number,
+}: {
+  name: string;
+  photoUrl: string | null;
+  number?: number | string | null;
+}) {
+  return (
+    <span className="relative grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-2xl border border-white/10 bg-black/24">
+      {photoUrl ? (
+        <Image
+          src={photoUrl}
+          alt={name}
+          width={40}
+          height={40}
+          className="h-full w-full object-cover"
+          unoptimized
+        />
+      ) : (
+        <span className="font-sans text-[11px] font-black tracking-normal text-wc-fg2" dir="ltr">
+          #{number ?? "-"}
+        </span>
+      )}
+    </span>
+  );
+}
+
 function InlineEventBadges({ summary }: { summary?: PlayerMatchEventSummary | null }) {
   if (!hasEventSummary(summary)) return null;
 
   const badges = [
-    summary.goals > 0 ? { key: "g", value: summary.goals, singular: "שער", plural: "שערים", className: "bg-wc-neon text-wc-bg" } : null,
-    summary.assists > 0 ? { key: "a", value: summary.assists, singular: "בישול", plural: "בישולים", className: "bg-cyan-300 text-wc-bg" } : null,
-    summary.yellowCards > 0 ? { key: "y", value: summary.yellowCards, singular: "צהוב", plural: "צהובים", className: "bg-wc-amber text-wc-bg" } : null,
-    summary.redCards > 0 ? { key: "r", value: summary.redCards, singular: "אדום", plural: "אדומים", className: "bg-wc-danger text-white" } : null,
-  ].filter((badge): badge is { key: string; value: number; singular: string; plural: string; className: string } => Boolean(badge));
+    summary.goals > 0 ? { key: "g", value: summary.goals, kind: "goal" as const, label: "שער", plural: "שערים", className: "border-wc-neon/35 bg-wc-neon/14 text-wc-neon" } : null,
+    summary.assists > 0 ? { key: "a", value: summary.assists, kind: "assist" as const, label: "בישול", plural: "בישולים", className: "border-cyan-300/30 bg-cyan-300/12 text-cyan-200" } : null,
+    summary.yellowCards > 0 ? { key: "y", value: summary.yellowCards, kind: "yellow" as const, label: "צהוב", plural: "צהובים", className: "border-wc-amber/35 bg-wc-amber/12 text-wc-amber" } : null,
+    summary.redCards > 0 ? { key: "r", value: summary.redCards, kind: "red" as const, label: "אדום", plural: "אדומים", className: "border-wc-danger/35 bg-wc-danger/12 text-wc-danger" } : null,
+  ].filter((badge): badge is { key: string; value: number; kind: EventBadgeKind; label: string; plural: string; className: string } => Boolean(badge));
 
   return (
     <span className="flex shrink-0 flex-wrap justify-end gap-1">
       {badges.map((badge) => (
-        <span key={badge.key} className={`rounded-full px-1.5 py-0.5 text-[9px] font-black leading-none ${badge.className}`} dir="rtl">
-          {formatEventBadgeCount(badge.value, badge.singular, badge.plural)}
+        <span
+          key={badge.key}
+          className={`inline-flex h-6 min-w-6 items-center justify-center gap-1 rounded-full border px-1.5 text-[10px] font-black leading-none ${badge.className}`}
+          title={formatEventBadgeCount(badge.value, badge.label, badge.plural)}
+          aria-label={formatEventBadgeCount(badge.value, badge.label, badge.plural)}
+        >
+          <EventBadgeSymbol kind={badge.kind} />
+          {badge.value > 1 ? <span dir="ltr">{badge.value}</span> : null}
         </span>
       ))}
     </span>
   );
 }
 
-function EventInvolvementSummary({
-  match,
-  players,
-  devEvents,
-}: {
-  match: MatchDetailRow;
-  players: MatchPagePlayer[];
-  devEvents: MatchDetailDevEvent[];
-}) {
-  const rows = buildEventInvolvementRows(match, players, devEvents);
-  if (rows.length === 0) return null;
+type EventBadgeKind = "goal" | "assist" | "yellow" | "red";
 
-  const homeRows = rows.filter((row) => row.side === "home");
-  const awayRows = rows.filter((row) => row.side === "away");
-
-  return (
-    <div className="mt-4 grid gap-3 xl:grid-cols-2">
-      <EventInvolvementTeam
-        title={getTeamDisplayName(match.homeTeam, match.home_placeholder)}
-        rows={homeRows}
-      />
-      <EventInvolvementTeam
-        title={getTeamDisplayName(match.awayTeam, match.away_placeholder)}
-        rows={awayRows}
-      />
-    </div>
-  );
-}
-
-type EventInvolvementRow = {
-  key: string;
-  side: "home" | "away";
-  player: MatchPagePlayer | null;
-  name: string;
-  summary: PlayerMatchEventSummary;
-};
-
-function EventInvolvementTeam({
-  title,
-  rows,
-}: {
-  title: string;
-  rows: EventInvolvementRow[];
-}) {
-  return (
-    <div className="rounded-[1.15rem] border border-white/10 bg-black/14 p-3">
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-sm font-black text-wc-fg1">{title}</p>
-        <span className="rounded-full bg-white/8 px-2.5 py-1 text-[11px] font-black text-wc-fg3">
-          אירועי שחקנים
-        </span>
-      </div>
-      {rows.length > 0 ? (
-        <div className="mt-3 grid gap-2">
-          {rows.map((row) => (
-            <div key={row.key} className="flex items-center justify-between gap-3 rounded-2xl bg-white/[0.045] px-3 py-2">
-              <div className="min-w-0">
-                {row.player ? (
-                  <PlayerLink player={row.player} className="truncate text-sm font-black text-wc-fg1 hover:text-wc-neon">
-                    {row.player.name}
-                  </PlayerLink>
-                ) : (
-                  <p className="truncate text-sm font-black text-wc-fg1">{row.name}</p>
-                )}
-                <p className="mt-0.5 text-[11px] font-bold text-wc-fg3">
-                  {row.player ? formatPosition(row.player.position) : "יושלם כשהסגל הרשמי יסתנכרן"}
-                </p>
-              </div>
-              <InlineEventBadges summary={row.summary} />
-            </div>
-          ))}
-        </div>
-      ) : (
-        <p className="mt-3 rounded-2xl border border-dashed border-white/10 px-3 py-3 text-center text-xs font-bold text-wc-fg3">
-          אין אירועי שחקנים לנבחרת הזו
-        </p>
-      )}
-    </div>
-  );
-}
-
-function buildEventInvolvementRows(
-  match: MatchDetailRow,
-  players: MatchPagePlayer[],
-  events: MatchDetailDevEvent[],
-) {
-  const rows = new Map<string, EventInvolvementRow>();
-
-  for (const event of events) {
-    const side = getEventSide(event, match);
-    if (!side) continue;
-    const teamId = side === "home" ? match.home_team_id : match.away_team_id;
-
-    if (event.event_type === "goal") {
-      addEventInvolvement(rows, event, side, teamId, players, "goals");
-      if (event.related_player_id !== null && event.related_player_id !== undefined) {
-        addEventInvolvement(rows, { ...event, player_id: event.related_player_id }, side, teamId, players, "assists");
-      }
-    } else if (event.event_type === "yellow_card") {
-      addEventInvolvement(rows, event, side, teamId, players, "yellowCards");
-    } else if (event.event_type === "red_card") {
-      addEventInvolvement(rows, event, side, teamId, players, "redCards");
-    }
+function EventBadgeSymbol({ kind }: { kind: EventBadgeKind }) {
+  if (kind === "goal") {
+    return <span aria-hidden="true">⚽</span>;
   }
 
-  return [...rows.values()].sort((left, right) =>
-    eventImpactScore(right.summary) - eventImpactScore(left.summary) ||
-    left.name.localeCompare(right.name, "he"),
+  if (kind === "assist") {
+    return <span aria-hidden="true">👟</span>;
+  }
+
+  if (kind === "yellow") {
+    return <span aria-hidden="true" className="h-3.5 w-2.5 rounded-[2px] bg-wc-amber shadow-[0_0_10px_rgba(255,199,77,0.35)]" />;
+  }
+
+  return <span aria-hidden="true" className="h-3.5 w-2.5 rounded-[2px] bg-wc-danger shadow-[0_0_10px_rgba(255,92,130,0.35)]" />;
+}
+
+function compareBenchEventPriority(left: FormationLineupPlayer, right: FormationLineupPlayer) {
+  return getBenchEventScore(right) - getBenchEventScore(left) || compareOdds(left.top_scorer_odds, right.top_scorer_odds) || left.name.localeCompare(right.name, "he");
+}
+
+function getBenchEventScore(player: FormationLineupPlayer) {
+  return (
+    readNumber(player.match_goals) * 10 +
+    readNumber(player.match_assists) * 6 +
+    readNumber(player.match_red_cards) * 3 +
+    readNumber(player.match_yellow_cards)
   );
-}
-
-function addEventInvolvement(
-  rows: Map<string, EventInvolvementRow>,
-  event: MatchDetailDevEvent,
-  side: "home" | "away",
-  teamId: string | null,
-  players: MatchPagePlayer[],
-  field: keyof PlayerMatchEventSummary,
-) {
-  const player = findLocalPlayerById(event.player_id, players, teamId);
-  const syntheticType = field === "goals" ? "scorer" : field === "assists" ? "assist" : "card";
-  const key = player ? `player-${player.id}` : `synthetic-${side}-${syntheticType}`;
-  const row = rows.get(key) ?? {
-    key,
-    side,
-    player,
-    name: player?.name ?? getSyntheticEventPlayerName(field),
-    summary: { goals: 0, assists: 0, yellowCards: 0, redCards: 0 },
-  };
-  row.summary[field] += 1;
-  rows.set(key, row);
-}
-
-function getSyntheticEventPlayerName(field: keyof PlayerMatchEventSummary) {
-  if (field === "goals") return "מבקיע מהסגל העתידי";
-  if (field === "assists") return "מבשל מהסגל העתידי";
-  return "שחקן מהסגל העתידי";
-}
-
-function eventImpactScore(summary: PlayerMatchEventSummary) {
-  return summary.goals * 5 + summary.assists * 3 + summary.redCards * 2 + summary.yellowCards;
 }
 
 function formatEventBadgeCount(value: number, singular: string, plural: string) {
@@ -1980,14 +1905,6 @@ function namesMatch(leftValue: string | null | undefined, rightValue: string | n
   const left = normalizeTeamNameKey(leftValue);
   const right = normalizeTeamNameKey(rightValue);
   return Boolean(left && right && (left === right || left.includes(right) || right.includes(left)));
-}
-
-function getEventSide(event: Pick<MatchDetailDevEvent, "is_home" | "team_id">, match: MatchDetailRow) {
-  if (event.is_home === true) return "home";
-  if (event.is_home === false) return "away";
-  if (event.team_id && event.team_id === match.home_team_id) return "home";
-  if (event.team_id && event.team_id === match.away_team_id) return "away";
-  return null;
 }
 
 function formatTimelineScore(homeGoals: number, awayGoals: number) {

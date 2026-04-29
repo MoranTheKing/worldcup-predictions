@@ -80,9 +80,9 @@ export default function FormationPitch({
 
 function PlayerToken({ player, compact }: { player: FormationPitchPlayer; compact: boolean }) {
   const eventBadges = getPlayerEventBadges(player);
-  const hasEvents = eventBadges.length > 0;
+  const hasGoal = readPositiveCount(player.match_goals) > 0;
   const content = (
-    <div className={`${compact ? "w-[5.15rem]" : "w-[5.85rem]"} rounded-[1rem] border px-2 py-2 text-center shadow-[0_10px_24px_rgba(0,0,0,0.24)] backdrop-blur transition hover:border-wc-neon/40 hover:bg-white/[0.07] ${hasEvents ? "border-wc-neon/45 bg-[rgba(95,255,123,0.08)]" : "border-white/12 bg-black/36"}`}>
+    <div className={`${compact ? "w-[5.15rem]" : "w-[5.85rem]"} rounded-[1rem] border px-2 py-2 text-center shadow-[0_10px_24px_rgba(0,0,0,0.24)] backdrop-blur transition hover:border-wc-neon/40 hover:bg-white/[0.07] ${hasGoal ? "border-wc-neon/45 bg-[rgba(95,255,123,0.08)]" : "border-white/12 bg-black/36"}`}>
       <PlayerAvatar player={player} compact={compact} />
       <p
         className="mx-auto mt-2 min-h-[2rem] max-w-full overflow-hidden text-[11px] font-black leading-4 text-wc-fg1"
@@ -108,11 +108,12 @@ function PlayerToken({ player, compact }: { player: FormationPitchPlayer; compac
           {eventBadges.map((badge) => (
             <span
               key={badge.key}
-              className={`rounded-full px-1.5 py-0.5 text-[9px] font-black leading-none ${badge.className}`}
-              dir="rtl"
+              className={`inline-flex h-6 min-w-6 items-center justify-center gap-1 rounded-full border px-1.5 text-[10px] font-black leading-none ${badge.className}`}
               title={badge.title}
+              aria-label={badge.title}
             >
-              {badge.label}
+              <EventBadgeSymbol kind={badge.kind} />
+              {badge.count > 1 ? <span dir="ltr">{badge.count}</span> : null}
             </span>
           ))}
         </div>
@@ -128,7 +129,7 @@ function PlayerToken({ player, compact }: { player: FormationPitchPlayer; compac
 }
 
 function getPlayerEventBadges(player: FormationPitchPlayer) {
-  const badges: Array<{ key: string; label: string; title: string; className: string }> = [];
+  const badges: Array<{ key: string; kind: EventBadgeKind; count: number; title: string; className: string }> = [];
   const goals = readPositiveCount(player.match_goals);
   const assists = readPositiveCount(player.match_assists);
   const yellowCards = readPositiveCount(player.match_yellow_cards);
@@ -137,40 +138,62 @@ function getPlayerEventBadges(player: FormationPitchPlayer) {
   if (goals > 0) {
     badges.push({
       key: "goals",
-      label: goals > 1 ? `${goals} שערים` : "שער",
+      kind: "goal",
+      count: goals,
       title: goals > 1 ? `${goals} שערים במשחק` : "שער במשחק",
-      className: "bg-wc-neon text-wc-bg",
+      className: "border-wc-neon/35 bg-wc-neon/14 text-wc-neon",
     });
   }
 
   if (assists > 0) {
     badges.push({
       key: "assists",
-      label: assists > 1 ? `${assists} בישולים` : "בישול",
+      kind: "assist",
+      count: assists,
       title: assists > 1 ? `${assists} בישולים במשחק` : "בישול במשחק",
-      className: "bg-cyan-300 text-wc-bg",
+      className: "border-cyan-300/30 bg-cyan-300/12 text-cyan-200",
     });
   }
 
   if (yellowCards > 0) {
     badges.push({
       key: "yellow",
-      label: yellowCards > 1 ? `${yellowCards} צהובים` : "צהוב",
+      kind: "yellow",
+      count: yellowCards,
       title: yellowCards > 1 ? `${yellowCards} צהובים במשחק` : "כרטיס צהוב במשחק",
-      className: "bg-wc-amber text-wc-bg",
+      className: "border-wc-amber/35 bg-wc-amber/12 text-wc-amber",
     });
   }
 
   if (redCards > 0) {
     badges.push({
       key: "red",
-      label: redCards > 1 ? `${redCards} אדומים` : "אדום",
+      kind: "red",
+      count: redCards,
       title: redCards > 1 ? `${redCards} אדומים במשחק` : "כרטיס אדום במשחק",
-      className: "bg-wc-danger text-white",
+      className: "border-wc-danger/35 bg-wc-danger/12 text-wc-danger",
     });
   }
 
   return badges;
+}
+
+type EventBadgeKind = "goal" | "assist" | "yellow" | "red";
+
+function EventBadgeSymbol({ kind }: { kind: EventBadgeKind }) {
+  if (kind === "goal") {
+    return <span aria-hidden="true">⚽</span>;
+  }
+
+  if (kind === "assist") {
+    return <span aria-hidden="true">👟</span>;
+  }
+
+  if (kind === "yellow") {
+    return <span aria-hidden="true" className="h-3.5 w-2.5 rounded-[2px] bg-wc-amber shadow-[0_0_10px_rgba(255,199,77,0.35)]" />;
+  }
+
+  return <span aria-hidden="true" className="h-3.5 w-2.5 rounded-[2px] bg-wc-danger shadow-[0_0_10px_rgba(255,92,130,0.35)]" />;
 }
 
 function readPositiveCount(value: number | null | undefined) {

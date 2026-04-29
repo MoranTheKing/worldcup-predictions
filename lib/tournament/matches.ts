@@ -81,6 +81,16 @@ export function formatScorePair(homeScore: number, awayScore: number) {
   return `${homeScore} - ${awayScore}`;
 }
 
+export function formatRtlVisualScoreSummary(summary: MatchScoreSummary) {
+  const regularScore = formatScorePair(summary.awayScore, summary.homeScore);
+
+  if (summary.hasPenalties && summary.homePenaltyScore !== null && summary.awayPenaltyScore !== null) {
+    return `${regularScore} (${formatScorePair(summary.awayPenaltyScore, summary.homePenaltyScore)} PEN)`;
+  }
+
+  return summary.statusSuffix ? `${regularScore} ${summary.statusSuffix}` : regularScore;
+}
+
 const STAGE_LABELS_HE: Record<MatchStageKind, string> = {
   group: "שלב בתים",
   round_of_32: "32 האחרונות",

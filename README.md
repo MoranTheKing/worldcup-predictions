@@ -543,3 +543,11 @@ Brevo Free מוגבל בכמות יומית לכל החשבון, לכן ביום
 - Match lineups now include an “אירועי שחקנים” summary under each side, so scorers, assistants and carded players are visible even if they were not in the projected starting XI.
 - Team player-stat leader cards now label attacking output as `שערים + בישולים` instead of the vague `תרומה`.
 - `/dashboard/stadiums/[id]` is included in protected dashboard routing, and stadium match-card scores now follow the BSD event-side mapping safely when the local home/away order is swapped.
+
+## Match page minimal lineup pass - 2026-04-30
+
+- RTL visual score rendering is now shared across the match list, match detail hero and stadium cards: the visual left/right numbers line up with the rendered teams, while stored home/away values remain unchanged for scoring and API sync.
+- Removed the separate “אירועי שחקנים” block from match pages. The page keeps one timeline for match events, and player involvement is shown only where it belongs: on the pitch token or bench row.
+- Local fallback lineups now render a bench under each projected XI. Bench players keep their photo/name/number, and scorers, assistants and carded players receive compact symbols beside the row.
+- Match involvement badges moved from text pills to symbols: ⚽ for goal, 👟 for assist, yellow-card rectangle and red-card rectangle. Only goals highlight a player token with the green match-event frame; assists and cards stay subtler.
+- Ran `POST /api/dev/tournament/clear` locally, then `POST /api/dev/bzzoiro/sync-teams`: 104 matches reset, 627 dev events cleared, 48 teams matched, 47 coaches synced, 1087 players synced, 16 legacy rows enriched, and 100 recent-form rows refreshed.
