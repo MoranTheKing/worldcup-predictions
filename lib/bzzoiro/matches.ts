@@ -7,6 +7,7 @@ import {
 import type { BzzoiroPlayerStatsRow } from "@/lib/bzzoiro/players";
 import { normalizeTeamNameKey } from "@/lib/i18n/team-names";
 import type { MatchWithTeams, TournamentTeamRecord } from "@/lib/tournament/matches";
+import { unstable_cache } from "next/cache";
 
 type BzzoiroTeamObject = {
   id?: number | string | null;
@@ -187,6 +188,23 @@ export async function getBzzoiroMatchCenter(match: MatchWithTeams): Promise<Bzzo
   if (!match.homeTeam || !match.awayTeam || !match.date_time) {
     return emptyMatchCenter("missing_teams");
   }
+
+  const loadMatchCenter = unstable_cache(
+    async () => loadBzzoiroMatchCenter(match),
+    [
+      "bzzoiro-match-center",
+      String(match.match_number),
+      match.date_time,
+      String(match.home_team_id ?? ""),
+      String(match.away_team_id ?? ""),
+    ],
+    { revalidate: 30 },
+  );
+
+  return loadMatchCenter();
+}
+
+async function loadBzzoiroMatchCenter(match: MatchWithTeams): Promise<BzzoiroMatchCenter> {
 
   try {
     const matchedEvent = await findMatchingBzzoiroEvent(match);
