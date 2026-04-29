@@ -57,7 +57,7 @@ export default async function OpponentPredictionsPage({
     .filter((value): value is string => typeof value === "string" && currentLeagueIds.has(value));
   const isGlobalLeagueView = requestedLeagueId === "global";
 
-  if (user.id !== targetUserId && sharedLeagueIds.length === 0) {
+  if (user.id !== targetUserId && sharedLeagueIds.length === 0 && !isGlobalLeagueView) {
     redirect("/game/leagues");
   }
 

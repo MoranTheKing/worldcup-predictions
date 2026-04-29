@@ -475,7 +475,7 @@ function LeagueMemberRowView({
   liveMatches: LeagueLiveMatchSummary[];
 }) {
   const router = useRouter();
-  const canOpenMember = !isGlobal || isSelf;
+  const canOpenMember = Boolean(member.user_id);
   const href = canOpenMember
     ? isGlobal
       ? `/game/users/${member.user_id}?league=global`
