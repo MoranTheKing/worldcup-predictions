@@ -562,3 +562,9 @@ Brevo Free מוגבל בכמות יומית לכל החשבון, לכן ביום
 - Match lineup cards now keep pitch and bench in the same responsive row on wider screens, while stacking teams later so each side has enough room.
 - Team player-stat leader tables now sort `שערים + בישולים` by total contribution once any player has goals/assists, and only fall back to top-scorer odds while the tournament stats are still all zero.
 - Verified with `npm run lint`, `npm run build`, and direct BSD/local checks for match 73, round-of-16, quarter-final, third-place and final event matching.
+
+## Match lineup empty-state UX - 2026-04-30
+
+- Match-page local fallback lineups no longer render a tall empty pitch when one team still has no synced squad. The team now gets a polished waiting card that explains the lineup will appear once BSD or local sync returns players.
+- Local projected XIs now keep the pitch as the primary visual and move the estimated bench beneath it as a compact grid, avoiding the cramped side-by-side layout that looked broken before official lineup data exists.
+- The bench preview is capped visually with a remaining-player chip, while player event symbols still appear on visible bench rows without changing API or Dev Tools score semantics.

@@ -743,37 +743,125 @@ function SquadPreviewSide({
   const formation = formationName ?? "4-3-3";
   const formationPlayers = players.map((player) => toFormationPlayer(player, eventSummaryByPlayerId));
   const lines = buildFootballFormation(formationPlayers, formation);
+  const projectedCount = lines.reduce((sum, line) => sum + line.players.length, 0);
   const starterIds = new Set(lines.flatMap((line) => line.players.map((player) => String(player.id))));
   const benchPlayers = formationPlayers
     .filter((player) => !starterIds.has(String(player.id)))
     .sort(compareBenchEventPriority)
     .slice(0, 12);
 
+  if (formationPlayers.length === 0) {
+    return <EmptyLocalSquadPreview title={title} formation={formation} />;
+  }
+
   return (
-    <div className="rounded-[1.35rem] border border-white/10 bg-black/14 p-4">
-      <div className="flex items-center justify-between gap-3">
-        <h3 className="font-sans text-lg font-black tracking-normal text-wc-fg1">{title}</h3>
-        <span className="rounded-full bg-white/8 px-3 py-1 text-xs font-black text-wc-fg3">משוער</span>
+    <div className="rounded-[1.35rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.055),rgba(255,255,255,0.018))] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h3 className="font-sans text-lg font-black tracking-normal text-wc-fg1">{title}</h3>
+          <p className="mt-1 text-xs leading-5 text-wc-fg3">
+            מבנה זמני עד לפרסום ההרכב הרשמי ב-BSD.
+          </p>
+        </div>
+        <div className="flex flex-wrap justify-end gap-2">
+          <span className="rounded-full border border-wc-neon/20 bg-wc-neon/10 px-3 py-1 text-xs font-black text-wc-neon" dir="ltr">
+            {formation}
+          </span>
+          <span className="rounded-full bg-white/8 px-3 py-1 text-xs font-black text-wc-fg3">
+            {projectedCount} בהרכב
+          </span>
+        </div>
       </div>
-      <p className="mt-2 text-xs leading-6 text-wc-fg3">
-        עד ש־BSD יחזיר הרכב רשמי, זהו מבנה משוער לפי מערך המאמן, עמדות ויחסי מלך השערים.
-      </p>
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_18rem]">
+      <div className="mt-4 grid gap-4">
         <FormationPitch lines={lines} formationName={formation} source="מבוסס סגל מקומי" compact />
-        <LineupGroup className="mt-4" title="ספסל" empty="אין עדיין ספסל מקומי" count={benchPlayers.length}>
-          {benchPlayers.map((player) => (
+        <CompactBenchPreview
+          players={benchPlayers}
+          allPlayers={players}
+          eventSummaryByPlayerId={eventSummaryByPlayerId}
+        />
+      </div>
+    </div>
+  );
+}
+
+function EmptyLocalSquadPreview({ title, formation }: { title: string; formation: string }) {
+  return (
+    <div className="rounded-[1.35rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.052),rgba(255,255,255,0.018))] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h3 className="font-sans text-lg font-black tracking-normal text-wc-fg1">{title}</h3>
+          <p className="mt-1 text-xs leading-5 text-wc-fg3">
+            הסגל עדיין לא זמין למשחק הזה.
+          </p>
+        </div>
+        <span className="rounded-full border border-white/10 bg-white/8 px-3 py-1 text-xs font-black text-wc-fg2" dir="ltr">
+          {formation}
+        </span>
+      </div>
+
+      <div className="mt-4 overflow-hidden rounded-[1.35rem] border border-dashed border-white/12 bg-[radial-gradient(circle_at_50%_0%,rgba(95,255,123,0.09),transparent_35%),linear-gradient(180deg,rgba(16,83,54,0.16),rgba(5,8,18,0.72))] p-4">
+        <div className="relative min-h-[18rem] rounded-[1.1rem] border border-white/10 bg-[linear-gradient(90deg,rgba(255,255,255,0.045)_1px,transparent_1px),linear-gradient(180deg,rgba(255,255,255,0.04)_1px,transparent_1px)] bg-[length:4rem_4rem]">
+          <div className="absolute inset-x-[22%] top-1/2 h-16 -translate-y-1/2 rounded-full border border-white/10" />
+          <div className="absolute inset-x-[33%] top-3 h-14 rounded-b-[2rem] border-x border-b border-white/10" />
+          <div className="absolute inset-x-[33%] bottom-3 h-14 rounded-t-[2rem] border-x border-t border-white/10" />
+          <div className="absolute inset-0 grid place-items-center p-6 text-center">
+            <div className="max-w-[19rem] rounded-2xl border border-white/10 bg-black/26 px-5 py-4 shadow-[0_18px_45px_rgba(0,0,0,0.28)] backdrop-blur">
+              <p className="text-sm font-black text-wc-fg1">ממתין לסגל</p>
+              <p className="mt-2 text-xs leading-6 text-wc-fg3">
+                כשה־API או הסנכרון המקומי יחזירו שחקנים, יוצגו כאן הרכב, ספסל ואירועי שחקנים.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CompactBenchPreview({
+  players,
+  allPlayers,
+  eventSummaryByPlayerId,
+}: {
+  players: FormationLineupPlayer[];
+  allPlayers: MatchPagePlayer[];
+  eventSummaryByPlayerId: Map<string, PlayerMatchEventSummary>;
+}) {
+  const visiblePlayers = players.slice(0, 8);
+  const hiddenCount = Math.max(0, players.length - visiblePlayers.length);
+
+  return (
+    <div className="rounded-[1.15rem] border border-white/10 bg-black/18 p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs font-black text-wc-fg2">ספסל משוער</p>
+        <span className="rounded-full bg-white/8 px-2.5 py-1 text-[11px] font-bold text-wc-fg3">
+          {players.length} שחקנים
+        </span>
+      </div>
+      {visiblePlayers.length > 0 ? (
+        <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+          {visiblePlayers.map((player) => (
             <LineupPlayerRow
               key={player.id}
               name={player.name}
               position={player.position}
               number={player.shirt_number}
               teamId={player.team_id}
-              players={players}
+              players={allPlayers}
               eventSummary={eventSummaryByPlayerId.get(String(player.id))}
             />
           ))}
-        </LineupGroup>
-      </div>
+          {hiddenCount > 0 ? (
+            <div className="grid min-h-[3.5rem] place-items-center rounded-xl border border-dashed border-white/10 bg-white/[0.035] px-3 py-2 text-center text-xs font-black text-wc-fg3">
+              ועוד {hiddenCount} בסגל
+            </div>
+          ) : null}
+        </div>
+      ) : (
+        <div className="mt-3 rounded-xl border border-dashed border-white/10 bg-white/[0.035] px-3 py-3 text-center text-xs leading-6 text-wc-fg3">
+          אין עדיין שחקני ספסל זמינים.
+        </div>
+      )}
     </div>
   );
 }
