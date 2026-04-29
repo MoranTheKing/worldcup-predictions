@@ -222,12 +222,12 @@ function ScoreSummaryHero({
 }) {
   return (
     <div className={`inline-flex items-center gap-3 ${className}`} dir="ltr">
-      <span>{summary.homeScore}</span>
-      <span>-</span>
       <span>{summary.awayScore}</span>
+      <span>-</span>
+      <span>{summary.homeScore}</span>
       {summary.hasPenalties && summary.homePenaltyScore !== null && summary.awayPenaltyScore !== null ? (
         <span className="text-xl text-wc-fg3">
-          ({summary.homePenaltyScore}-{summary.awayPenaltyScore} PEN)
+          ({summary.awayPenaltyScore}-{summary.homePenaltyScore} PEN)
         </span>
       ) : summary.statusSuffix ? (
         <span className="text-xl text-wc-fg3">{summary.statusSuffix}</span>

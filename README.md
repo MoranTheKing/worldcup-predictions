@@ -554,7 +554,7 @@ Brevo Free מוגבל בכמות יומית לכל החשבון, לכן ביום
 
 ## Match score/API alignment follow-up - 2026-04-30
 
-- Confirmed against BSD that `home_score` belongs to BSD `home_team` and `away_score` belongs to BSD `away_team`; match list, match detail, stadium cards and live league chips now render the stored home-away score order consistently instead of applying an RTL visual swap.
+- Confirmed against BSD that `home_score` belongs to BSD `home_team` and `away_score` belongs to BSD `away_team`; data, Dev Tools and match-state panels stay home-away, while the match hero renders the visual score as away-home so the right-side home team has its score on the right side of the dash in RTL.
 - Match event timelines now use the same home-away score order as the match hero and Dev Tools, so local scorer events cannot visually assign a goal to the wrong side.
 - BSD match-center lookup no longer requires local home/away team ids. Knockout, third-place and final pages now match BSD events by normalized placeholders such as `2A`, `3A/B/C`, `W73` and `L101`, so R32+ pages can show API venue/status data before local teams are resolved.
 - Stadium event matching uses the same normalized placeholder logic before falling back to kickoff time, reducing accidental duplicate or wrong local-match links for knockout venue cards.
