@@ -6,7 +6,6 @@ import { buildKnockoutWinnerTree } from "@/lib/tournament/knockout-tree";
 import {
   formatMatchDateLabel,
   formatMatchTimeLabel,
-  formatRtlVisualScoreSummary,
   getMatchScoreSummary,
   getMatchStageKind,
   getLiveMatchStatusLabel,
@@ -299,7 +298,16 @@ function ScoreSummaryBadge({
 }) {
   return (
     <span className={`inline-flex items-center gap-2 ${className}`}>
-      {formatRtlVisualScoreSummary(summary)}
+      <span>{summary.homeScore}</span>
+      <span>-</span>
+      <span>{summary.awayScore}</span>
+      {summary.hasPenalties && summary.homePenaltyScore !== null && summary.awayPenaltyScore !== null ? (
+        <span className="text-base text-wc-fg3">
+          ({summary.homePenaltyScore}-{summary.awayPenaltyScore} PEN)
+        </span>
+      ) : summary.statusSuffix ? (
+        <span className="text-base text-wc-fg3">{summary.statusSuffix}</span>
+      ) : null}
     </span>
   );
 }

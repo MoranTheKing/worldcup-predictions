@@ -2,12 +2,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getBzzoiroVenuePageData } from "@/lib/bzzoiro/venues";
-import type { BzzoiroMatchEvent } from "@/lib/bzzoiro/matches";
+import { normalizeBzzoiroPlaceholderKey, type BzzoiroMatchEvent } from "@/lib/bzzoiro/matches";
 import { normalizeTeamNameKey, translateTeamNameToHebrew } from "@/lib/i18n/team-names";
 import { createClient } from "@/lib/supabase/server";
 import {
   attachTeamsToMatches,
-  formatRtlVisualScoreSummary,
   getMatchScoreSummary,
   getStageLabelHe,
   getTeamDisplayLogo,
@@ -141,7 +140,7 @@ function StadiumMatchCard({
   const score = localMatch && isMatchScoreVisible(localMatch)
     ? getMatchScoreSummary(getEventSideScoreMatch(event, localMatch))
     : null;
-  const centerLabel = score ? formatRtlVisualScoreSummary(score) : "VS";
+  const centerLabel = score ? score.displayScore : "VS";
   const statusLabel = localMatch ? translateStatus(localMatch.status) : translateStatus(event.status);
   const content = (
     <article className="group relative min-h-[11.5rem] overflow-hidden rounded-[1.45rem] border border-white/10 bg-[linear-gradient(150deg,rgba(255,255,255,0.085),rgba(255,255,255,0.035)_44%,rgba(0,0,0,0.20))] p-4 shadow-[0_18px_45px_rgba(0,0,0,0.18),inset_0_1px_0_rgba(255,255,255,0.055)] transition duration-200 hover:-translate-y-1 hover:border-wc-neon/45 hover:bg-white/[0.065]">
@@ -279,6 +278,20 @@ function findLocalMatchForEvent(event: BzzoiroMatchEvent, matches: MatchWithTeam
 
   if (!hasPlaceholderTeam) return null;
 
+  const placeholderMatch = matches
+    .filter((match) => {
+      const matchTime = new Date(match.date_time).getTime();
+      if (!Number.isFinite(matchTime) || Math.abs(matchTime - eventTime) > 36 * 60 * 60 * 1000) return false;
+      return matchEventPlaceholderPair(match, event);
+    })
+    .sort((left, right) => {
+      const leftDelta = Math.abs(new Date(left.date_time).getTime() - eventTime);
+      const rightDelta = Math.abs(new Date(right.date_time).getTime() - eventTime);
+      return leftDelta - rightDelta;
+    })[0] ?? null;
+
+  if (placeholderMatch) return placeholderMatch;
+
   return matches
     .filter((match) => {
       const matchTime = new Date(match.date_time).getTime();
@@ -290,6 +303,17 @@ function findLocalMatchForEvent(event: BzzoiroMatchEvent, matches: MatchWithTeam
       const rightDelta = Math.abs(new Date(right.date_time).getTime() - eventTime);
       return leftDelta - rightDelta;
     })[0] ?? null;
+}
+
+function matchEventPlaceholderPair(match: MatchWithTeams, event: BzzoiroMatchEvent) {
+  const homeKey = normalizeBzzoiroPlaceholderKey(match.home_placeholder);
+  const awayKey = normalizeBzzoiroPlaceholderKey(match.away_placeholder);
+
+  return (
+    Boolean(homeKey && awayKey) &&
+    homeKey === normalizeBzzoiroPlaceholderKey(event.home_team) &&
+    awayKey === normalizeBzzoiroPlaceholderKey(event.away_team)
+  );
 }
 
 function matchEventPair(match: MatchWithTeams, event: BzzoiroMatchEvent, swapped: boolean) {
@@ -366,6 +390,9 @@ function teamMatchesRemote(
   remoteName: string | null | undefined,
 ) {
   if (sameRemoteId(team?.bzzoiro_team_id, remoteId)) return true;
+  const placeholderKey = normalizeBzzoiroPlaceholderKey(placeholder);
+  const remotePlaceholderKey = normalizeBzzoiroPlaceholderKey(remoteName);
+  if (placeholderKey && remotePlaceholderKey && placeholderKey === remotePlaceholderKey) return true;
   return [team?.name, team?.name_he, placeholder].some((candidate) => namesMatch(candidate, remoteName));
 }
 

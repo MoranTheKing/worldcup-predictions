@@ -80,9 +80,8 @@ export default function FormationPitch({
 
 function PlayerToken({ player, compact }: { player: FormationPitchPlayer; compact: boolean }) {
   const eventBadges = getPlayerEventBadges(player);
-  const hasGoal = readPositiveCount(player.match_goals) > 0;
   const content = (
-    <div className={`${compact ? "w-[5.15rem]" : "w-[5.85rem]"} rounded-[1rem] border px-2 py-2 text-center shadow-[0_10px_24px_rgba(0,0,0,0.24)] backdrop-blur transition hover:border-wc-neon/40 hover:bg-white/[0.07] ${hasGoal ? "border-wc-neon/45 bg-[rgba(95,255,123,0.08)]" : "border-white/12 bg-black/36"}`}>
+    <div className={`${compact ? "w-[5.15rem]" : "w-[5.85rem]"} rounded-[1rem] border border-white/12 bg-black/36 px-2 py-2 text-center shadow-[0_10px_24px_rgba(0,0,0,0.24)] backdrop-blur transition hover:border-wc-neon/40 hover:bg-white/[0.07]`}>
       <PlayerAvatar player={player} compact={compact} />
       <p
         className="mx-auto mt-2 min-h-[2rem] max-w-full overflow-hidden text-[11px] font-black leading-4 text-wc-fg1"

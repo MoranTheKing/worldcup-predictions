@@ -551,3 +551,14 @@ Brevo Free מוגבל בכמות יומית לכל החשבון, לכן ביום
 - Local fallback lineups now render a bench under each projected XI. Bench players keep their photo/name/number, and scorers, assistants and carded players receive compact symbols beside the row.
 - Match involvement badges moved from text pills to symbols: ⚽ for goal, 👟 for assist, yellow-card rectangle and red-card rectangle. Only goals highlight a player token with the green match-event frame; assists and cards stay subtler.
 - Ran `POST /api/dev/tournament/clear` locally, then `POST /api/dev/bzzoiro/sync-teams`: 104 matches reset, 627 dev events cleared, 48 teams matched, 47 coaches synced, 1087 players synced, 16 legacy rows enriched, and 100 recent-form rows refreshed.
+
+## Match score/API alignment follow-up - 2026-04-30
+
+- Confirmed against BSD that `home_score` belongs to BSD `home_team` and `away_score` belongs to BSD `away_team`; match list, match detail, stadium cards and live league chips now render the stored home-away score order consistently instead of applying an RTL visual swap.
+- Match event timelines now use the same home-away score order as the match hero and Dev Tools, so local scorer events cannot visually assign a goal to the wrong side.
+- BSD match-center lookup no longer requires local home/away team ids. Knockout, third-place and final pages now match BSD events by normalized placeholders such as `2A`, `3A/B/C`, `W73` and `L101`, so R32+ pages can show API venue/status data before local teams are resolved.
+- Stadium event matching uses the same normalized placeholder logic before falling back to kickoff time, reducing accidental duplicate or wrong local-match links for knockout venue cards.
+- Player pitch tokens no longer get a green frame for goals or assists. The match involvement stays as compact symbols on the token/bench row without overloading the lineup UI.
+- Match lineup cards now keep pitch and bench in the same responsive row on wider screens, while stacking teams later so each side has enough room.
+- Team player-stat leader tables now sort `שערים + בישולים` by total contribution once any player has goals/assists, and only fall back to top-scorer odds while the tournament stats are still all zero.
+- Verified with `npm run lint`, `npm run build`, and direct BSD/local checks for match 73, round-of-16, quarter-final, third-place and final event matching.

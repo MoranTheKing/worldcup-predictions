@@ -464,13 +464,29 @@ function buildPlayerTotals(players: TeamPlayer[]) {
 }
 
 function compareAttackers(left: TeamPlayer, right: TeamPlayer) {
+  const leftContribution = getGoalContribution(left);
+  const rightContribution = getGoalContribution(right);
+
+  if (leftContribution > 0 || rightContribution > 0) {
+    return (
+      rightContribution - leftContribution ||
+      (right.goals ?? 0) - (left.goals ?? 0) ||
+      (right.assists ?? 0) - (left.assists ?? 0) ||
+      comparePlayerOdds(left, right) ||
+      (right.appearances ?? 0) - (left.appearances ?? 0) ||
+      left.name.localeCompare(right.name, "he")
+    );
+  }
+
   return (
-    (right.goals ?? 0) - (left.goals ?? 0) ||
-    (right.assists ?? 0) - (left.assists ?? 0) ||
     comparePlayerOdds(left, right) ||
     (right.appearances ?? 0) - (left.appearances ?? 0) ||
     left.name.localeCompare(right.name, "he")
   );
+}
+
+function getGoalContribution(player: TeamPlayer) {
+  return (player.goals ?? 0) + (player.assists ?? 0);
 }
 
 function compareCards(left: TeamPlayer, right: TeamPlayer) {

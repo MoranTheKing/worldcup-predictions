@@ -1181,15 +1181,28 @@ function getTopPlayers(players: TeamPlayer[]) {
   return players
     .slice()
     .sort((left, right) => {
+      const leftContribution = getGoalContribution(left);
+      const rightContribution = getGoalContribution(right);
+      if (leftContribution > 0 || rightContribution > 0) {
+        const contributionScore =
+          rightContribution - leftContribution ||
+          (right.goals ?? 0) - (left.goals ?? 0) ||
+          (right.assists ?? 0) - (left.assists ?? 0) ||
+          comparePlayerOdds(left, right);
+        if (contributionScore !== 0) return contributionScore;
+      }
+
       const score =
-        (right.goals ?? 0) - (left.goals ?? 0) ||
-        (right.assists ?? 0) - (left.assists ?? 0) ||
         comparePlayerOdds(left, right) ||
         (right.yellow_cards ?? 0) - (left.yellow_cards ?? 0) ||
         (right.red_cards ?? 0) - (left.red_cards ?? 0);
       if (score !== 0) return score;
       return left.name.localeCompare(right.name, "he");
     });
+}
+
+function getGoalContribution(player: TeamPlayer) {
+  return (player.goals ?? 0) + (player.assists ?? 0);
 }
 
 function getSquadPreviewPlayers(players: TeamPlayer[]) {

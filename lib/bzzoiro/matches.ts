@@ -198,7 +198,7 @@ const MATCH_CENTER_TTL_MS = 30_000;
 const matchCenterCache = new Map<string, { expiresAt: number; promise: Promise<BzzoiroMatchCenter> }>();
 
 export async function getBzzoiroMatchCenter(match: MatchWithTeams): Promise<BzzoiroMatchCenter> {
-  if (!match.homeTeam || !match.awayTeam || !match.date_time) {
+  if (!match.date_time) {
     return emptyMatchCenter("missing_teams");
   }
 
@@ -293,31 +293,51 @@ async function findMatchingBzzoiroEvent(match: MatchWithTeams) {
 function findBestEventMatch(events: BzzoiroMatchEvent[], match: MatchWithTeams) {
   const homeTeam = match.homeTeam;
   const awayTeam = match.awayTeam;
-  if (!homeTeam || !awayTeam) return null;
-
   const matchTime = new Date(match.date_time).getTime();
-  const homeKeys = buildTeamKeys(homeTeam);
-  const awayKeys = buildTeamKeys(awayTeam);
+  if (!Number.isFinite(matchTime)) return null;
+
+  const homeKeys = homeTeam ? buildTeamKeys(homeTeam) : new Set<string>();
+  const awayKeys = awayTeam ? buildTeamKeys(awayTeam) : new Set<string>();
+  const homePlaceholderKey = normalizeBzzoiroPlaceholderKey(match.home_placeholder);
+  const awayPlaceholderKey = normalizeBzzoiroPlaceholderKey(match.away_placeholder);
 
   return events
-    .filter((event) => {
+    .map((event) => {
       const eventTime = new Date(event.event_date ?? event.date ?? "").getTime();
       const withinWindow =
         Number.isFinite(eventTime) && Math.abs(eventTime - matchTime) <= 36 * 60 * 60 * 1000;
+      if (!withinWindow) return null;
+
       const idsMatch =
+        homeTeam &&
+        awayTeam &&
         sameRemoteId(event.home_team_obj?.id, homeTeam.bzzoiro_team_id) &&
         sameRemoteId(event.away_team_obj?.id, awayTeam.bzzoiro_team_id);
       const namesMatch =
+        homeTeam &&
+        awayTeam &&
         homeKeys.has(normalizeTeamNameKey(event.home_team_obj?.name ?? event.home_team)) &&
         awayKeys.has(normalizeTeamNameKey(event.away_team_obj?.name ?? event.away_team));
+      const placeholdersMatch =
+        Boolean(homePlaceholderKey && awayPlaceholderKey) &&
+        homePlaceholderKey === normalizeBzzoiroPlaceholderKey(event.home_team_obj?.name ?? event.home_team) &&
+        awayPlaceholderKey === normalizeBzzoiroPlaceholderKey(event.away_team_obj?.name ?? event.away_team);
 
-      return withinWindow && (idsMatch || namesMatch);
+      if (!idsMatch && !namesMatch && !placeholdersMatch) return null;
+
+      const timeDistance = Math.abs(eventTime - matchTime);
+      const score =
+        (idsMatch ? 30_000 : 0) +
+        (namesMatch ? 20_000 : 0) +
+        (placeholdersMatch ? 12_000 : 0) -
+        timeDistance / 60_000;
+
+      return { event, score, timeDistance };
     })
+    .filter((candidate): candidate is { event: BzzoiroMatchEvent; score: number; timeDistance: number } => candidate !== null)
     .sort((left, right) => {
-      const leftTime = Math.abs(new Date(left.event_date ?? left.date ?? "").getTime() - matchTime);
-      const rightTime = Math.abs(new Date(right.event_date ?? right.date ?? "").getTime() - matchTime);
-      return leftTime - rightTime;
-    })[0] ?? null;
+      return right.score - left.score || left.timeDistance - right.timeDistance;
+    })[0]?.event ?? null;
 }
 
 async function fetchEventDetail(eventId: number | string) {
@@ -402,6 +422,47 @@ function buildTeamKeys(team: Pick<TournamentTeamRecord, "name" | "name_he">) {
       .map((value) => normalizeTeamNameKey(value))
       .filter(Boolean),
   );
+}
+
+export function normalizeBzzoiroPlaceholderKey(value: string | null | undefined) {
+  if (!value) return "";
+
+  const compact = value
+    .toLowerCase()
+    .replace(/winner\s*match\s*(\d+)/g, "w$1")
+    .replace(/loser\s*match\s*(\d+)/g, "l$1")
+    .replace(/\s+/g, "")
+    .replace(/[^a-z0-9/]/g, "");
+
+  const tokens = compact.split("/").filter(Boolean);
+  if (tokens.length === 0) return "";
+
+  let lastRank = "";
+  const normalizedTokens = tokens.map((token) => {
+    const winnerLoser = token.match(/^([wl])(\d+)$/);
+    if (winnerLoser) return `${winnerLoser[1]}${winnerLoser[2]}`;
+
+    const rankGroup = token.match(/^([1-4])([a-l])$/);
+    if (rankGroup) {
+      lastRank = rankGroup[1];
+      return `${rankGroup[1]}${rankGroup[2]}`;
+    }
+
+    const groupRank = token.match(/^([a-l])([1-4])$/);
+    if (groupRank) {
+      lastRank = groupRank[2];
+      return `${groupRank[2]}${groupRank[1]}`;
+    }
+
+    const shorthandGroup = token.match(/^([a-l])$/);
+    if (shorthandGroup && lastRank) {
+      return `${lastRank}${shorthandGroup[1]}`;
+    }
+
+    return token;
+  });
+
+  return normalizedTokens.sort().join("/");
 }
 
 function sameRemoteId(left: number | string | null | undefined, right: number | string | null | undefined) {

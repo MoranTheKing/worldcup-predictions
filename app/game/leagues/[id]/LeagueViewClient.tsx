@@ -651,7 +651,7 @@ function formatScore(homeScore: number | null, awayScore: number | null) {
 }
 
 function formatRtlVisualScore(homeScore: number | null, awayScore: number | null) {
-  return formatScore(awayScore, homeScore);
+  return formatScore(homeScore, awayScore);
 }
 
 function resolveLivePredictionTone(

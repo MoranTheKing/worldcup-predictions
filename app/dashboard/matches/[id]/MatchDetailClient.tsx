@@ -20,7 +20,6 @@ import { normalizeTeamNameKey, translateTeamNameToHebrew } from "@/lib/i18n/team
 import { buildFootballFormation, normalizeFootballPosition } from "@/lib/football/formation";
 import {
   formatMatchTimeLabel,
-  formatRtlVisualScoreSummary,
   getLiveMatchStatusLabel,
   getMatchScoreSummary,
   getStageLabelHe,
@@ -223,7 +222,16 @@ function ScoreSummaryHero({
 }) {
   return (
     <div className={`inline-flex items-center gap-3 ${className}`} dir="ltr">
-      {formatRtlVisualScoreSummary(summary)}
+      <span>{summary.homeScore}</span>
+      <span>-</span>
+      <span>{summary.awayScore}</span>
+      {summary.hasPenalties && summary.homePenaltyScore !== null && summary.awayPenaltyScore !== null ? (
+        <span className="text-xl text-wc-fg3">
+          ({summary.homePenaltyScore}-{summary.awayPenaltyScore} PEN)
+        </span>
+      ) : summary.statusSuffix ? (
+        <span className="text-xl text-wc-fg3">{summary.statusSuffix}</span>
+      ) : null}
     </div>
   );
 }
@@ -617,7 +625,7 @@ function LineupsPanel({
           />
         </div>
       ) : hasPredicted ? (
-        <div className="mt-4 grid gap-4 xl:grid-cols-2">
+        <div className="mt-4 grid gap-4 2xl:grid-cols-2">
           <PredictedLineupSide
             title={getTeamDisplayName(match.homeTeam, match.home_placeholder)}
             teamId={match.home_team_id}
@@ -671,7 +679,7 @@ function LocalLineupsPanel({
   return (
     <section className="mt-5 rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-4 md:p-5">
       <SectionHeader title="הרכבים וסגלים למשחק" eyebrow="סימולציה מקומית" />
-      <div className="mt-4 grid gap-4 xl:grid-cols-2">
+      <div className="mt-4 grid gap-4 2xl:grid-cols-2">
         <SquadPreviewSide
           title={getTeamDisplayName(match.homeTeam, match.home_placeholder)}
           players={getPreviewPlayers(players, match.home_team_id)}
@@ -704,7 +712,7 @@ function LocalSquadPreview({
   const awayPlayers = getPreviewPlayers(players, match.away_team_id);
 
   return (
-    <div className="mt-4 grid gap-4 xl:grid-cols-2">
+    <div className="mt-4 grid gap-4 2xl:grid-cols-2">
       <SquadPreviewSide
         title={getTeamDisplayName(match.homeTeam, match.home_placeholder)}
         players={homePlayers}
@@ -750,20 +758,22 @@ function SquadPreviewSide({
       <p className="mt-2 text-xs leading-6 text-wc-fg3">
         עד ש־BSD יחזיר הרכב רשמי, זהו מבנה משוער לפי מערך המאמן, עמדות ויחסי מלך השערים.
       </p>
-      <FormationPitch lines={lines} formationName={formation} source="מבוסס סגל מקומי" compact />
-      <LineupGroup title="ספסל" empty="אין עדיין ספסל מקומי" count={benchPlayers.length}>
-        {benchPlayers.map((player) => (
-          <LineupPlayerRow
-            key={player.id}
-            name={player.name}
-            position={player.position}
-            number={player.shirt_number}
-            teamId={player.team_id}
-            players={players}
-            eventSummary={eventSummaryByPlayerId.get(String(player.id))}
-          />
-        ))}
-      </LineupGroup>
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_18rem]">
+        <FormationPitch lines={lines} formationName={formation} source="מבוסס סגל מקומי" compact />
+        <LineupGroup className="mt-4" title="ספסל" empty="אין עדיין ספסל מקומי" count={benchPlayers.length}>
+          {benchPlayers.map((player) => (
+            <LineupPlayerRow
+              key={player.id}
+              name={player.name}
+              position={player.position}
+              number={player.shirt_number}
+              teamId={player.team_id}
+              players={players}
+              eventSummary={eventSummaryByPlayerId.get(String(player.id))}
+            />
+          ))}
+        </LineupGroup>
+      </div>
     </div>
   );
 }
@@ -831,24 +841,28 @@ function PredictedLineupSide({
           {formationName}
         </span>
       </div>
-      {pitchPlayers.length > 0 ? (
-        <FormationPitch lines={lines} formationName={formationName} source="הרכב משוער" />
-      ) : (
-        <EmptyMini text="אין עדיין פותחים" />
-      )}
-      <LineupGroup title="ספסל" empty="אין עדיין ספסל" count={substitutes.length}>
-        {substitutes.slice(0, 12).map((player, index) => (
-          <LineupPlayerRow
-            key={`${player.name}-${index}`}
-            name={player.name ?? "-"}
-            position={player.position}
-            number={player.jersey_number}
-            teamId={teamId}
-            players={players}
-            eventSummary={getEventSummaryForLineupName(player.name, players, teamId, eventSummaryByPlayerId)}
-          />
-        ))}
-      </LineupGroup>
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_18rem]">
+        {pitchPlayers.length > 0 ? (
+          <FormationPitch lines={lines} formationName={formationName} source="הרכב משוער" />
+        ) : (
+          <div className="mt-4">
+            <EmptyMini text="אין עדיין פותחים" />
+          </div>
+        )}
+        <LineupGroup className="mt-4" title="ספסל" empty="אין עדיין ספסל" count={substitutes.length}>
+          {substitutes.slice(0, 12).map((player, index) => (
+            <LineupPlayerRow
+              key={`${player.name}-${index}`}
+              name={player.name ?? "-"}
+              position={player.position}
+              number={player.jersey_number}
+              teamId={teamId}
+              players={players}
+              eventSummary={getEventSummaryForLineupName(player.name, players, teamId, eventSummaryByPlayerId)}
+            />
+          ))}
+        </LineupGroup>
+      </div>
       <UnavailableList players={unavailable} />
     </div>
   );
@@ -989,19 +1003,21 @@ function LineupGroup({
   empty,
   count,
   children,
+  className = "mt-4",
 }: {
   title: string;
   empty: string;
   count: number;
   children: React.ReactNode;
+  className?: string;
 }) {
   return (
-    <div className="mt-4">
+    <div className={className}>
       <div className="mb-2 flex items-center justify-between gap-3">
         <p className="text-xs font-black text-wc-fg2">{title}</p>
         <span className="text-[11px] font-bold text-wc-fg3">{count}</span>
       </div>
-      {count > 0 ? <div className="grid gap-2 sm:grid-cols-2">{children}</div> : <EmptyMini text={empty} />}
+      {count > 0 ? <div className="grid gap-2">{children}</div> : <EmptyMini text={empty} />}
     </div>
   );
 }
@@ -1908,7 +1924,7 @@ function namesMatch(leftValue: string | null | undefined, rightValue: string | n
 }
 
 function formatTimelineScore(homeGoals: number, awayGoals: number) {
-  return `${awayGoals}-${homeGoals}`;
+  return `${homeGoals}-${awayGoals}`;
 }
 
 function formatPosition(position: string | null | undefined) {
