@@ -63,6 +63,13 @@ export type MatchDetailDevEvent = {
   is_home: boolean | null;
 };
 
+type PlayerMatchEventSummary = {
+  goals: number;
+  assists: number;
+  yellowCards: number;
+  redCards: number;
+};
+
 type FormationLineupPlayer = MatchPagePlayer & FormationPitchPlayer & {
   id: MatchPagePlayer["id"] | string;
   ai_score?: number | null;
@@ -159,12 +166,13 @@ export default function MatchDetailClient({
         <>
           <MatchContextPanel event={event} match={match} />
           <BroadcastPanel broadcasts={bzzoiro.broadcasts} />
-          <LiveStatsPanel event={event} match={match} />
+          <LiveStatsPanel event={event} match={match} devEvents={devEvents} />
           <LineupsPanel
             event={event}
             predictedLineup={bzzoiro.predictedLineup}
             match={match}
             players={players}
+            devEvents={devEvents}
           />
           <div className="mt-5 grid gap-5 xl:grid-cols-[1fr_0.95fr]">
             <TimelinePanel event={event} match={match} players={players} devEvents={devEvents} />
@@ -304,8 +312,16 @@ function VenueTile({ event }: { event: BzzoiroMatchEvent | null }) {
   );
 }
 
-function LiveStatsPanel({ event, match }: { event: BzzoiroMatchEvent; match: MatchDetailRow }) {
-  const pairs = getLiveStatPairs(event, match);
+function LiveStatsPanel({
+  event,
+  match,
+  devEvents,
+}: {
+  event: BzzoiroMatchEvent;
+  match: MatchDetailRow;
+  devEvents: MatchDetailDevEvent[];
+}) {
+  const pairs = getLiveStatPairs(event, match, devEvents);
 
   return (
     <section className="mt-5 rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-4 md:p-5">
@@ -550,11 +566,13 @@ function LineupsPanel({
   predictedLineup,
   match,
   players,
+  devEvents,
 }: {
   event: BzzoiroMatchEvent;
   predictedLineup: BzzoiroMatchCenter["predictedLineup"];
   match: MatchDetailRow;
   players: MatchPagePlayer[];
+  devEvents: MatchDetailDevEvent[];
 }) {
   const actualHome = (event.lineups ?? []).filter((player) => player.is_home === true);
   const actualAway = (event.lineups ?? []).filter((player) => player.is_home === false);
@@ -562,6 +580,7 @@ function LineupsPanel({
   const homePredicted = predictedLineup?.lineups?.home ?? null;
   const awayPredicted = predictedLineup?.lineups?.away ?? null;
   const hasPredicted = Boolean(homePredicted || awayPredicted);
+  const eventSummaryByPlayerId = buildPlayerEventSummaryMap(devEvents);
 
   return (
     <section className="mt-5 rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-4 md:p-5">
@@ -574,6 +593,7 @@ function LineupsPanel({
             players={players}
             lineupPlayers={actualHome}
             formationName={event.home_coach?.preferred_formation}
+            eventSummaryByPlayerId={eventSummaryByPlayerId}
           />
           <ActualLineupSide
             title={getTeamDisplayName(match.awayTeam, match.away_placeholder)}
@@ -581,6 +601,7 @@ function LineupsPanel({
             players={players}
             lineupPlayers={actualAway}
             formationName={event.away_coach?.preferred_formation}
+            eventSummaryByPlayerId={eventSummaryByPlayerId}
           />
         </div>
       ) : hasPredicted ? (
@@ -592,6 +613,7 @@ function LineupsPanel({
             lineup={homePredicted}
             eventUnavailable={event.unavailable_players?.home ?? []}
             coachFormation={event.home_coach?.preferred_formation}
+            eventSummaryByPlayerId={eventSummaryByPlayerId}
           />
           <PredictedLineupSide
             title={getTeamDisplayName(match.awayTeam, match.away_placeholder)}
@@ -600,11 +622,12 @@ function LineupsPanel({
             lineup={awayPredicted}
             eventUnavailable={event.unavailable_players?.away ?? []}
             coachFormation={event.away_coach?.preferred_formation}
+            eventSummaryByPlayerId={eventSummaryByPlayerId}
           />
         </div>
       ) : (
         players.length > 0 ? (
-          <LocalSquadPreview match={match} event={event} players={players} />
+          <LocalSquadPreview match={match} event={event} players={players} eventSummaryByPlayerId={eventSummaryByPlayerId} />
         ) : (
           <EmptyState text="כש־BSD יחזיר predicted-lineup או lineups בפועל, יוצגו כאן פותחים, ספסל וחסרים." />
         )
@@ -613,7 +636,17 @@ function LineupsPanel({
   );
 }
 
-function LocalSquadPreview({ match, event, players }: { match: MatchDetailRow; event: BzzoiroMatchEvent; players: MatchPagePlayer[] }) {
+function LocalSquadPreview({
+  match,
+  event,
+  players,
+  eventSummaryByPlayerId,
+}: {
+  match: MatchDetailRow;
+  event: BzzoiroMatchEvent;
+  players: MatchPagePlayer[];
+  eventSummaryByPlayerId: Map<string, PlayerMatchEventSummary>;
+}) {
   const homePlayers = getPreviewPlayers(players, match.home_team_id);
   const awayPlayers = getPreviewPlayers(players, match.away_team_id);
 
@@ -623,19 +656,31 @@ function LocalSquadPreview({ match, event, players }: { match: MatchDetailRow; e
         title={getTeamDisplayName(match.homeTeam, match.home_placeholder)}
         players={homePlayers}
         formationName={event.home_coach?.preferred_formation}
+        eventSummaryByPlayerId={eventSummaryByPlayerId}
       />
       <SquadPreviewSide
         title={getTeamDisplayName(match.awayTeam, match.away_placeholder)}
         players={awayPlayers}
         formationName={event.away_coach?.preferred_formation}
+        eventSummaryByPlayerId={eventSummaryByPlayerId}
       />
     </div>
   );
 }
 
-function SquadPreviewSide({ title, players, formationName }: { title: string; players: MatchPagePlayer[]; formationName?: string | null }) {
+function SquadPreviewSide({
+  title,
+  players,
+  formationName,
+  eventSummaryByPlayerId,
+}: {
+  title: string;
+  players: MatchPagePlayer[];
+  formationName?: string | null;
+  eventSummaryByPlayerId: Map<string, PlayerMatchEventSummary>;
+}) {
   const formation = formationName ?? "4-3-3";
-  const lines = buildFootballFormation(players.map((player) => toFormationPlayer(player)), formation);
+  const lines = buildFootballFormation(players.map((player) => toFormationPlayer(player, eventSummaryByPlayerId)), formation);
 
   return (
     <div className="rounded-[1.35rem] border border-white/10 bg-black/14 p-4">
@@ -657,14 +702,16 @@ function ActualLineupSide({
   players,
   lineupPlayers,
   formationName,
+  eventSummaryByPlayerId,
 }: {
   title: string;
   teamId: string | null;
   players: MatchPagePlayer[];
   lineupPlayers: Array<{ player_name?: string | null; player?: string | null; position?: string | null; number?: number | string | null; jersey_number?: number | string | null }>;
   formationName?: string | null;
+  eventSummaryByPlayerId: Map<string, PlayerMatchEventSummary>;
 }) {
-  const lineup = lineupPlayers.map((player, index) => mapApiLineupPlayer(player, players, teamId, index));
+  const lineup = lineupPlayers.map((player, index) => mapApiLineupPlayer(player, players, teamId, index, eventSummaryByPlayerId));
   const lines = buildFootballFormation(lineup, formationName ?? "4-3-3", lineup);
 
   return (
@@ -687,6 +734,7 @@ function PredictedLineupSide({
   lineup,
   eventUnavailable,
   coachFormation,
+  eventSummaryByPlayerId,
 }: {
   title: string;
   teamId: string | null;
@@ -694,12 +742,13 @@ function PredictedLineupSide({
   lineup: BzzoiroPredictedTeamLineup | null;
   eventUnavailable: BzzoiroUnavailablePlayer[];
   coachFormation?: string | null;
+  eventSummaryByPlayerId: Map<string, PlayerMatchEventSummary>;
 }) {
   const starters = (lineup?.starters ?? []).filter((player) => player.name);
   const substitutes = (lineup?.substitutes ?? []).filter((player) => player.name);
   const unavailable = [...(lineup?.unavailable ?? []), ...eventUnavailable].filter((player) => player.name);
   const formationName = lineup?.predicted_formation ?? coachFormation ?? "4-3-3";
-  const pitchPlayers = mapPredictedStarters(starters, players, teamId);
+  const pitchPlayers = mapPredictedStarters(starters, players, teamId, eventSummaryByPlayerId);
   const lines = buildFootballFormation(pitchPlayers, formationName, pitchPlayers);
 
   return (
@@ -724,6 +773,7 @@ function PredictedLineupSide({
             number={player.jersey_number}
             teamId={teamId}
             players={players}
+            eventSummary={getEventSummaryForLineupName(player.name, players, teamId, eventSummaryByPlayerId)}
           />
         ))}
       </LineupGroup>
@@ -737,12 +787,13 @@ function mapApiLineupPlayer(
   players: MatchPagePlayer[],
   teamId: string | null,
   index: number,
+  eventSummaryByPlayerId: Map<string, PlayerMatchEventSummary>,
 ): FormationLineupPlayer {
   const name = readApiPlayerName(player);
   const localPlayer = findLocalPlayer(name, players, teamId);
   const shirtNumber = readOptionalNumber(player.number ?? player.jersey_number);
 
-  return {
+  return applyEventSummary({
     ...toFormationPlayer(localPlayer ?? {
       id: `api-lineup-${index}-${name}`,
       name,
@@ -756,19 +807,20 @@ function mapApiLineupPlayer(
     isLocal: Boolean(localPlayer),
     position: localPlayer?.position ?? normalizeFootballPosition(player.position),
     shirt_number: localPlayer?.shirt_number ?? shirtNumber,
-  };
+  }, eventSummaryByPlayerId);
 }
 
 function mapPredictedStarters(
   starters: BzzoiroPredictedLineupPlayer[],
   players: MatchPagePlayer[],
   teamId: string | null,
+  eventSummaryByPlayerId: Map<string, PlayerMatchEventSummary>,
 ) {
   return starters.map((starter, index): FormationLineupPlayer => {
     const name = starter.name ?? "שחקן";
     const localPlayer = findLocalPlayer(name, players, teamId);
 
-    return {
+    return applyEventSummary({
       ...toFormationPlayer(localPlayer ?? {
         id: `api-predicted-${index}-${name}`,
         name,
@@ -783,15 +835,81 @@ function mapPredictedStarters(
       isLocal: Boolean(localPlayer),
       position: localPlayer?.position ?? normalizeFootballPosition(starter.position),
       shirt_number: localPlayer?.shirt_number ?? starter.jersey_number ?? null,
-    };
+    }, eventSummaryByPlayerId);
   });
 }
 
-function toFormationPlayer(player: MatchPagePlayer): FormationLineupPlayer {
-  return {
+function toFormationPlayer(
+  player: MatchPagePlayer,
+  eventSummaryByPlayerId?: Map<string, PlayerMatchEventSummary>,
+): FormationLineupPlayer {
+  return applyEventSummary({
     ...player,
     isLocal: true,
+  }, eventSummaryByPlayerId);
+}
+
+function buildPlayerEventSummaryMap(events: MatchDetailDevEvent[]) {
+  const summaries = new Map<string, PlayerMatchEventSummary>();
+
+  for (const event of events) {
+    if (event.player_id !== null && event.player_id !== undefined) {
+      const summary = getOrCreatePlayerEventSummary(summaries, event.player_id);
+      if (event.event_type === "goal") summary.goals += 1;
+      if (event.event_type === "yellow_card") summary.yellowCards += 1;
+      if (event.event_type === "red_card") summary.redCards += 1;
+    }
+
+    if (event.event_type === "goal" && event.related_player_id !== null && event.related_player_id !== undefined) {
+      getOrCreatePlayerEventSummary(summaries, event.related_player_id).assists += 1;
+    }
+  }
+
+  return summaries;
+}
+
+function getOrCreatePlayerEventSummary(
+  summaries: Map<string, PlayerMatchEventSummary>,
+  playerId: number | string,
+) {
+  const key = String(playerId);
+  const existing = summaries.get(key);
+  if (existing) return existing;
+
+  const summary = { goals: 0, assists: 0, yellowCards: 0, redCards: 0 };
+  summaries.set(key, summary);
+  return summary;
+}
+
+function applyEventSummary<T extends FormationPitchPlayer>(
+  player: T,
+  eventSummaryByPlayerId?: Map<string, PlayerMatchEventSummary>,
+): T {
+  const summary = eventSummaryByPlayerId?.get(String(player.id));
+  if (!summary || !hasEventSummary(summary)) return player;
+
+  return {
+    ...player,
+    match_goals: summary.goals,
+    match_assists: summary.assists,
+    match_yellow_cards: summary.yellowCards,
+    match_red_cards: summary.redCards,
   };
+}
+
+function getEventSummaryForLineupName(
+  name: string | null | undefined,
+  players: MatchPagePlayer[],
+  teamId: string | null,
+  eventSummaryByPlayerId: Map<string, PlayerMatchEventSummary>,
+) {
+  const localPlayer = findLocalPlayer(name, players, teamId);
+  if (!localPlayer) return null;
+  return eventSummaryByPlayerId.get(String(localPlayer.id)) ?? null;
+}
+
+function hasEventSummary(summary: PlayerMatchEventSummary | null | undefined): summary is PlayerMatchEventSummary {
+  return Boolean(summary && (summary.goals > 0 || summary.assists > 0 || summary.yellowCards > 0 || summary.redCards > 0));
 }
 
 function LineupGroup({
@@ -822,12 +940,14 @@ function LineupPlayerRow({
   number,
   teamId,
   players,
+  eventSummary,
 }: {
   name: string;
   position?: string | null;
   number?: number | string | null;
   teamId: string | null;
   players: MatchPagePlayer[];
+  eventSummary?: PlayerMatchEventSummary | null;
 }) {
   const localPlayer = findLocalPlayer(name, players, teamId);
   const content = (
@@ -839,6 +959,7 @@ function LineupPlayerRow({
         <p className="truncate text-sm font-black text-wc-fg1">{localPlayer?.name ?? name}</p>
         <p className="mt-0.5 text-[11px] font-bold text-wc-fg3">{formatPosition(position ?? localPlayer?.position)}</p>
       </div>
+      <InlineEventBadges summary={eventSummary} />
     </div>
   );
 
@@ -848,6 +969,27 @@ function LineupPlayerRow({
     </PlayerLink>
   ) : (
     content
+  );
+}
+
+function InlineEventBadges({ summary }: { summary?: PlayerMatchEventSummary | null }) {
+  if (!hasEventSummary(summary)) return null;
+
+  const badges = [
+    summary.goals > 0 ? { key: "g", value: summary.goals, label: "שער", className: "bg-wc-neon text-wc-bg" } : null,
+    summary.assists > 0 ? { key: "a", value: summary.assists, label: "בישול", className: "bg-cyan-300 text-wc-bg" } : null,
+    summary.yellowCards > 0 ? { key: "y", value: summary.yellowCards, label: "צהוב", className: "bg-wc-amber text-wc-bg" } : null,
+    summary.redCards > 0 ? { key: "r", value: summary.redCards, label: "אדום", className: "bg-wc-danger text-white" } : null,
+  ].filter((badge): badge is { key: string; value: number; label: string; className: string } => Boolean(badge));
+
+  return (
+    <span className="flex shrink-0 flex-wrap justify-end gap-1">
+      {badges.map((badge) => (
+        <span key={badge.key} className={`rounded-full px-1.5 py-0.5 text-[9px] font-black leading-none ${badge.className}`}>
+          {badge.value > 1 ? `${badge.label} ${badge.value}` : badge.label}
+        </span>
+      ))}
+    </span>
   );
 }
 
@@ -1291,7 +1433,11 @@ type StatPair = {
   away: string;
 };
 
-function getLiveStatPairs(event: BzzoiroMatchEvent, match: MatchDetailRow): StatPair[] {
+function getLiveStatPairs(
+  event: BzzoiroMatchEvent,
+  match: MatchDetailRow,
+  devEvents: MatchDetailDevEvent[],
+): StatPair[] {
   const homeStats = event.live_stats?.home ?? null;
   const awayStats = event.live_stats?.away ?? null;
   const pairDefinitions: Array<{ label: string; keys: string[]; formatter?: (value: number) => string }> = [
@@ -1304,16 +1450,8 @@ function getLiveStatPairs(event: BzzoiroMatchEvent, match: MatchDetailRow): Stat
   ];
 
   const pairs: StatPair[] = [];
-  const homeXg = readOptionalNumber(event.home_xg_live ?? event.actual_home_xg);
-  const awayXg = readOptionalNumber(event.away_xg_live ?? event.actual_away_xg);
-
-  if (homeXg !== null || awayXg !== null) {
-    pairs.push({
-      label: "xG",
-      home: formatDecimal(homeXg),
-      away: formatDecimal(awayXg),
-    });
-  }
+  const xgPair = getBestXgPair(event, match, devEvents);
+  if (xgPair) pairs.push(xgPair);
 
   const score = getBestScoreSummary(match, event);
   if (score) {
@@ -1336,6 +1474,56 @@ function getLiveStatPairs(event: BzzoiroMatchEvent, match: MatchDetailRow): Stat
   }
 
   return pairs.slice(0, 8);
+}
+
+function getBestXgPair(
+  event: BzzoiroMatchEvent,
+  match: MatchDetailRow,
+  devEvents: MatchDetailDevEvent[],
+): StatPair | null {
+  const homeXg = readOptionalNumber(event.home_xg_live ?? event.actual_home_xg);
+  const awayXg = readOptionalNumber(event.away_xg_live ?? event.actual_away_xg);
+
+  if (homeXg !== null || awayXg !== null) {
+    return {
+      label: "xG",
+      home: formatDecimal(homeXg),
+      away: formatDecimal(awayXg),
+    };
+  }
+
+  if (!shouldPreferLocalScore(match, event)) return null;
+
+  const score = getMatchScoreSummary(match);
+  if (!score) return null;
+
+  return {
+    label: "xG סימולציה",
+    home: formatDecimal(buildSimulatedXgValue(match.match_number, score.homeScore, score.awayScore, true, devEvents)),
+    away: formatDecimal(buildSimulatedXgValue(match.match_number, score.awayScore, score.homeScore, false, devEvents)),
+  };
+}
+
+function buildSimulatedXgValue(
+  matchNumber: number,
+  goalsFor: number,
+  goalsAgainst: number,
+  isHome: boolean,
+  devEvents: MatchDetailDevEvent[],
+) {
+  const sideGoalEvents = devEvents.filter((event) => event.event_type === "goal" && event.is_home === isHome).length;
+  const seed = deterministicFraction(matchNumber * (isHome ? 37 : 53) + goalsFor * 11 + goalsAgainst * 7);
+  const base = goalsFor * 0.78 + (goalsFor === 0 ? 0.36 : 0.52);
+  const pressure = Math.max(0, goalsAgainst - goalsFor) * 0.12;
+  const eventConfidence = sideGoalEvents === goalsFor && goalsFor > 0 ? 0.1 : 0;
+  const value = base + pressure + eventConfidence + seed * 0.42;
+
+  return Math.max(0.05, Math.min(5.8, value));
+}
+
+function deterministicFraction(seed: number) {
+  const value = Math.sin(seed) * 10000;
+  return value - Math.floor(value);
 }
 
 function getBestScoreSummary(match: MatchDetailRow, event: BzzoiroMatchEvent | null) {

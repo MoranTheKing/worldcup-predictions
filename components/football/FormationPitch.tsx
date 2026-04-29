@@ -10,6 +10,10 @@ export type FormationPitchPlayer = {
   shirt_number?: number | string | null;
   top_scorer_odds?: number | string | null;
   isLocal?: boolean;
+  match_goals?: number | null;
+  match_assists?: number | null;
+  match_yellow_cards?: number | null;
+  match_red_cards?: number | null;
 };
 
 export function FormationBadge({ value, label = "מערך" }: { value: string | null | undefined; label?: string }) {
@@ -75,8 +79,10 @@ export default function FormationPitch({
 }
 
 function PlayerToken({ player, compact }: { player: FormationPitchPlayer; compact: boolean }) {
+  const eventBadges = getPlayerEventBadges(player);
+  const hasEvents = eventBadges.length > 0;
   const content = (
-    <div className={`${compact ? "w-[5.15rem]" : "w-[5.85rem]"} rounded-[1rem] border border-white/12 bg-black/36 px-2 py-2 text-center shadow-[0_10px_24px_rgba(0,0,0,0.24)] backdrop-blur transition hover:border-wc-neon/40 hover:bg-white/[0.07]`}>
+    <div className={`${compact ? "w-[5.15rem]" : "w-[5.85rem]"} rounded-[1rem] border px-2 py-2 text-center shadow-[0_10px_24px_rgba(0,0,0,0.24)] backdrop-blur transition hover:border-wc-neon/40 hover:bg-white/[0.07] ${hasEvents ? "border-wc-neon/45 bg-[rgba(95,255,123,0.08)]" : "border-white/12 bg-black/36"}`}>
       <PlayerAvatar player={player} compact={compact} />
       <p
         className="mx-auto mt-2 min-h-[2rem] max-w-full overflow-hidden text-[11px] font-black leading-4 text-wc-fg1"
@@ -97,6 +103,19 @@ function PlayerToken({ player, compact }: { player: FormationPitchPlayer; compac
           #{player.shirt_number}
         </p>
       ) : null}
+      {eventBadges.length > 0 ? (
+        <div className="mt-2 flex flex-wrap items-center justify-center gap-1">
+          {eventBadges.map((badge) => (
+            <span
+              key={badge.key}
+              className={`rounded-full px-1.5 py-0.5 text-[9px] font-black leading-none ${badge.className}`}
+              title={badge.title}
+            >
+              {badge.label}
+            </span>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 
@@ -105,6 +124,57 @@ function PlayerToken({ player, compact }: { player: FormationPitchPlayer; compac
       {content}
     </PlayerLink>
   );
+}
+
+function getPlayerEventBadges(player: FormationPitchPlayer) {
+  const badges: Array<{ key: string; label: string; title: string; className: string }> = [];
+  const goals = readPositiveCount(player.match_goals);
+  const assists = readPositiveCount(player.match_assists);
+  const yellowCards = readPositiveCount(player.match_yellow_cards);
+  const redCards = readPositiveCount(player.match_red_cards);
+
+  if (goals > 0) {
+    badges.push({
+      key: "goals",
+      label: goals > 1 ? `שער ${goals}` : "שער",
+      title: goals > 1 ? `${goals} שערים במשחק` : "שער במשחק",
+      className: "bg-wc-neon text-wc-bg",
+    });
+  }
+
+  if (assists > 0) {
+    badges.push({
+      key: "assists",
+      label: assists > 1 ? `ביש ${assists}` : "בישול",
+      title: assists > 1 ? `${assists} בישולים במשחק` : "בישול במשחק",
+      className: "bg-cyan-300 text-wc-bg",
+    });
+  }
+
+  if (yellowCards > 0) {
+    badges.push({
+      key: "yellow",
+      label: yellowCards > 1 ? `צהוב ${yellowCards}` : "צהוב",
+      title: yellowCards > 1 ? `${yellowCards} צהובים במשחק` : "כרטיס צהוב במשחק",
+      className: "bg-wc-amber text-wc-bg",
+    });
+  }
+
+  if (redCards > 0) {
+    badges.push({
+      key: "red",
+      label: redCards > 1 ? `אדום ${redCards}` : "אדום",
+      title: redCards > 1 ? `${redCards} אדומים במשחק` : "כרטיס אדום במשחק",
+      className: "bg-wc-danger text-white",
+    });
+  }
+
+  return badges;
+}
+
+function readPositiveCount(value: number | null | undefined) {
+  const count = Number(value ?? 0);
+  return Number.isFinite(count) && count > 0 ? Math.round(count) : 0;
 }
 
 function PlayerAvatar({ player, compact }: { player: FormationPitchPlayer; compact: boolean }) {

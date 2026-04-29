@@ -32,6 +32,7 @@ type RecentMatchRecord = {
   team_id: string;
   result: "win" | "draw" | "loss";
   played_at: string;
+  source?: "api" | "local";
 };
 
 type TeamForm = {
@@ -101,7 +102,10 @@ export default async function TeamsIndexPage() {
 
   const placementByTeamId = buildPodiumPlacements(matches);
   const playersByTeamId = countPlayersByTeam((playersData ?? []) as PlayerTeamRef[]);
-  const recentByTeamId = groupRecentMatches((recentMatchesData ?? []) as RecentMatchRecord[]);
+  const apiRecentByTeamId = groupRecentMatches((recentMatchesData ?? []) as RecentMatchRecord[]);
+  const localRecentByTeamId = buildLocalRecentMatches(matches);
+  const recentByTeamId = mergeRecentMatches(localRecentByTeamId, apiRecentByTeamId);
+  const localRecentCount = [...localRecentByTeamId.values()].reduce((sum, teamMatches) => sum + teamMatches.length, 0);
   const teamsWithSquad = [...playersByTeamId.values()].filter((count) => count > 0).length;
   const teamsWithCoach = teams.filter((team) => Boolean(team.coach_name)).length;
   const teamsWithRecentForm = [...recentByTeamId.values()].filter((matches) => matches.length > 0).length;
@@ -216,7 +220,10 @@ export default async function TeamsIndexPage() {
       ) : null}
 
       <section className="mt-5 rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-4 md:p-5">
-        <SectionHeader title="כושר API" eyebrow="5 המשחקים האחרונים" />
+        <SectionHeader
+          title="כושר אחרון"
+          eyebrow={localRecentCount > 0 ? "API + תוצאות סימולציה" : "5 המשחקים האחרונים"}
+        />
         {formLeaders.length > 0 ? (
           <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
             {formLeaders.map(({ team, standing, form }) => (
@@ -583,6 +590,82 @@ function countPlayersByTeam(players: PlayerTeamRef[]) {
   }
 
   return counts;
+}
+
+function buildLocalRecentMatches(matches: TournamentMatchRecord[]) {
+  const rows: RecentMatchRecord[] = [];
+
+  for (const match of matches) {
+    if (match.status !== "finished" || !match.home_team_id || !match.away_team_id) continue;
+
+    const homeScore = toScoreNumber(match.home_score);
+    const awayScore = toScoreNumber(match.away_score);
+    if (homeScore === null || awayScore === null) continue;
+
+    rows.push({
+      team_id: match.home_team_id,
+      result: getLocalResult(homeScore, awayScore, match.home_penalty_score, match.away_penalty_score),
+      played_at: match.date_time,
+      source: "local",
+    });
+    rows.push({
+      team_id: match.away_team_id,
+      result: getLocalResult(awayScore, homeScore, match.away_penalty_score, match.home_penalty_score),
+      played_at: match.date_time,
+      source: "local",
+    });
+  }
+
+  return groupRecentMatches(rows);
+}
+
+function mergeRecentMatches(
+  primary: Map<string, RecentMatchRecord[]>,
+  fallback: Map<string, RecentMatchRecord[]>,
+) {
+  const teamIds = new Set([...primary.keys(), ...fallback.keys()]);
+  const merged = new Map<string, RecentMatchRecord[]>();
+
+  for (const teamId of teamIds) {
+    const seen = new Set<string>();
+    const rows: RecentMatchRecord[] = [];
+
+    for (const match of [...(primary.get(teamId) ?? []), ...(fallback.get(teamId) ?? [])]) {
+      const key = `${match.source ?? "api"}-${match.played_at}-${match.result}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      rows.push(match);
+    }
+
+    merged.set(
+      teamId,
+      rows
+        .sort((left, right) => new Date(right.played_at).getTime() - new Date(left.played_at).getTime())
+        .slice(0, 5),
+    );
+  }
+
+  return merged;
+}
+
+function getLocalResult(
+  goalsFor: number,
+  goalsAgainst: number,
+  penaltyFor?: number | null,
+  penaltyAgainst?: number | null,
+): "win" | "draw" | "loss" {
+  if (goalsFor > goalsAgainst) return "win";
+  if (goalsFor < goalsAgainst) return "loss";
+  if (penaltyFor !== null && penaltyFor !== undefined && penaltyAgainst !== null && penaltyAgainst !== undefined) {
+    if (penaltyFor > penaltyAgainst) return "win";
+    if (penaltyFor < penaltyAgainst) return "loss";
+  }
+  return "draw";
+}
+
+function toScoreNumber(value: number | string | null | undefined) {
+  const number = typeof value === "string" ? Number(value) : value;
+  return typeof number === "number" && Number.isFinite(number) ? number : null;
 }
 
 function groupRecentMatches(matches: RecentMatchRecord[]) {

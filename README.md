@@ -519,3 +519,10 @@ Brevo Free מוגבל בכמות יומית לכל החשבון, לכן ביום
 - `/dashboard/matches/[id]` and `/dashboard/teams/[id]/squad` now use the same pitch UI and the same lineup scoring logic, so predicted and fallback XIs look consistent across match and team views.
 - Replaced ambiguous RTL pair values like `שערים בעד/נגד 4-7` with split labeled cells (`בעד`, `נגד`).
 - Added `RecordBreakdown` in `components/StatNumbers.tsx` and used it in team stat tabs, so records render as labeled wins / draws / losses instead of a bare `W-D-L` string.
+
+## Dev simulation form and match-event display - 2026-04-30
+
+- `/dashboard/teams` now overlays finished local tournament results on top of BSD recent-form rows. Dev simulations therefore update the visible five-match form immediately, while `team_recent_matches` remains an API baseline and survives `Clear All Match Data`.
+- `/dashboard/matches/[id]` keeps BSD xG authoritative whenever the API returns live/full xG, and uses a deterministic local `xG סימולציה` only when the page is already showing a local simulated score because BSD still reports pre-match state.
+- Match formations and squad fallback pitches now show compact event badges for local Dev events: goals, assists, yellow cards and red cards from `dev_match_player_events`.
+- Verified with `npm run lint`, `npm run build`, and localhost HTTP checks for `/dashboard/teams` and `/dashboard/matches/1`.
