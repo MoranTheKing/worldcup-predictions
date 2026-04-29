@@ -12,7 +12,7 @@ export async function POST(request: Request) {
 
   const supabase = createAdminClient();
 
-  const [matchReset, knockoutSlotsReset, predictionPointsReset, outrightPointsReset, profileReset, teamReset, playerReset] =
+  const [matchReset, knockoutSlotsReset, predictionPointsReset, outrightPointsReset, profileReset, teamReset, playerReset, devEventsReset] =
     await Promise.all([
       resetMatches(),
       resetKnockoutSlots(),
@@ -21,6 +21,7 @@ export async function POST(request: Request) {
       resetProfileScores(),
       resetTeamTournamentStats(),
       resetPlayerTournamentStats(),
+      resetDevMatchPlayerEvents(),
     ]);
 
   for (const result of [
@@ -31,6 +32,7 @@ export async function POST(request: Request) {
     profileReset,
     teamReset,
     playerReset,
+    devEventsReset,
   ]) {
     if ("error" in result) {
       return NextResponse.json({ error: result.error }, { status: 500 });
@@ -48,6 +50,7 @@ export async function POST(request: Request) {
     profilesReset: getResetCount(profileReset),
     teamsReset: getResetCount(teamReset),
     playersReset: getResetCount(playerReset),
+    devEventsReset: getResetCount(devEventsReset),
   });
 
   async function resetMatches(): Promise<ResetResult> {
@@ -148,6 +151,19 @@ export async function POST(request: Request) {
 
     return error ? { error: error.message } : { count: count ?? 0 };
   }
+
+  async function resetDevMatchPlayerEvents(): Promise<ResetResult> {
+    const { count, error } = await supabase
+      .from("dev_match_player_events")
+      .delete({ count: "exact" })
+      .gte("match_number", 1);
+
+    if (isMissingOptionalTableError(error)) {
+      return { count: 0 };
+    }
+
+    return error ? { error: error.message } : { count: count ?? 0 };
+  }
 }
 
 function revalidateTournamentPaths() {
@@ -164,4 +180,13 @@ function revalidateTournamentPaths() {
 
 function getResetCount(result: ResetResult) {
   return "count" in result ? result.count : 0;
+}
+
+function isMissingOptionalTableError(error: { code?: string; message?: string } | null) {
+  return Boolean(
+    error &&
+      (error.code === "42P01" ||
+        error.code === "PGRST205" ||
+        String(error.message ?? "").includes("dev_match_player_events")),
+  );
 }

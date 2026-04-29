@@ -2,7 +2,11 @@ import { createClient } from "@/lib/supabase/server";
 import { attachTeamsToMatches } from "@/lib/tournament/matches";
 import { getBzzoiroMatchCenter } from "@/lib/bzzoiro/matches";
 import { notFound } from "next/navigation";
-import MatchDetailClient, { type MatchDetailRow, type MatchPagePlayer } from "./MatchDetailClient";
+import MatchDetailClient, {
+  type MatchDetailDevEvent,
+  type MatchDetailRow,
+  type MatchPagePlayer,
+} from "./MatchDetailClient";
 
 export const dynamic = "force-dynamic";
 
@@ -52,7 +56,7 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
 
   const match = attachedMatch as MatchDetailRow;
   const teamIds = [match.home_team_id, match.away_team_id].filter(Boolean) as string[];
-  const [{ data: playersData }, bzzoiro] = await Promise.all([
+  const [{ data: playersData }, bzzoiro, { data: devEventsData, error: devEventsError }] = await Promise.all([
     teamIds.length > 0
       ? supabase
           .from("players")
@@ -61,6 +65,11 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
           .order("name", { ascending: true })
       : Promise.resolve({ data: [] }),
     getBzzoiroMatchCenter(match),
+    supabase
+      .from("dev_match_player_events")
+      .select("id, match_number, team_id, player_id, related_player_id, event_type, minute, is_home")
+      .eq("match_number", matchId)
+      .order("minute", { ascending: true }),
   ]);
 
   return (
@@ -68,6 +77,7 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
       match={match}
       bzzoiro={bzzoiro}
       players={(playersData ?? []) as MatchPagePlayer[]}
+      devEvents={(devEventsError ? [] : devEventsData ?? []) as MatchDetailDevEvent[]}
     />
   );
 }

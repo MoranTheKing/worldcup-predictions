@@ -52,6 +52,17 @@ export type MatchPagePlayer = {
   red_cards?: number | null;
 };
 
+export type MatchDetailDevEvent = {
+  id: string;
+  match_number: number;
+  team_id: string | null;
+  player_id: number | string | null;
+  related_player_id: number | string | null;
+  event_type: "goal" | "yellow_card" | "red_card";
+  minute: number | null;
+  is_home: boolean | null;
+};
+
 type FormationLineupPlayer = MatchPagePlayer & FormationPitchPlayer & {
   id: MatchPagePlayer["id"] | string;
   ai_score?: number | null;
@@ -76,10 +87,12 @@ export default function MatchDetailClient({
   match,
   bzzoiro,
   players,
+  devEvents,
 }: {
   match: MatchDetailRow;
   bzzoiro: BzzoiroMatchCenter;
   players: MatchPagePlayer[];
+  devEvents: MatchDetailDevEvent[];
 }) {
   useDevLiveRefresh({ pollIntervalMs: 1500 });
   useMatchAutoRefresh(shouldAutoRefresh(match, bzzoiro), 15000);
@@ -149,7 +162,7 @@ export default function MatchDetailClient({
             players={players}
           />
           <div className="mt-5 grid gap-5 xl:grid-cols-[1fr_0.95fr]">
-            <TimelinePanel event={event} match={match} players={players} />
+            <TimelinePanel event={event} match={match} players={players} devEvents={devEvents} />
             <PlayerStatsPanel rows={bzzoiro.playerStats} match={match} players={players} />
           </div>
           <MomentumAndShotsPanel event={event} match={match} players={players} />
@@ -855,28 +868,115 @@ function TimelinePanel({
   event,
   match,
   players,
+  devEvents,
 }: {
   event: BzzoiroMatchEvent;
   match: MatchDetailRow;
   players: MatchPagePlayer[];
+  devEvents: MatchDetailDevEvent[];
 }) {
   const incidents = (event.incidents ?? [])
     .slice()
     .sort((left, right) => readNumber(left.minute) - readNumber(right.minute));
+  const devRows = buildDevTimelineRows(devEvents, match, players);
+  const hasApiTimeline = incidents.length > 0;
 
   return (
     <section className="rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-4 md:p-5">
-      <SectionHeader title="אירועי משחק" eyebrow="Goals, cards, subs, VAR" />
-      {incidents.length > 0 ? (
+      <SectionHeader title="אירועי משחק" eyebrow={hasApiTimeline ? "Goals, cards, subs, VAR" : "Dev Tools timeline"} />
+      {hasApiTimeline ? (
         <div className="mt-4 grid gap-3">
           {incidents.map((incident, index) => (
             <IncidentRow key={`${incident.minute}-${incident.type}-${index}`} incident={incident} match={match} players={players} />
+          ))}
+        </div>
+      ) : devRows.length > 0 ? (
+        <div className="mt-4 grid gap-3">
+          {devRows.map((row) => (
+            <DevIncidentRow key={row.id} row={row} />
           ))}
         </div>
       ) : (
         <EmptyState text="אירועים יופיעו כאן בזמן המשחק או לאחר ש־BSD יעדכן את האירוע המלא." />
       )}
     </section>
+  );
+}
+
+type DevTimelineRow = MatchDetailDevEvent & {
+  player: MatchPagePlayer | null;
+  assistPlayer: MatchPagePlayer | null;
+  score: string | null;
+};
+
+function buildDevTimelineRows(
+  events: MatchDetailDevEvent[],
+  match: MatchDetailRow,
+  players: MatchPagePlayer[],
+): DevTimelineRow[] {
+  let homeGoals = 0;
+  let awayGoals = 0;
+
+  return events
+    .slice()
+    .sort((left, right) => readNumber(left.minute) - readNumber(right.minute))
+    .map((event) => {
+      let score: string | null = null;
+      if (event.event_type === "goal") {
+        if (event.is_home) {
+          homeGoals += 1;
+        } else {
+          awayGoals += 1;
+        }
+        score = `${homeGoals}-${awayGoals}`;
+      }
+
+      const teamId = event.is_home === true ? match.home_team_id : event.is_home === false ? match.away_team_id : null;
+      return {
+        ...event,
+        player: findLocalPlayerById(event.player_id, players, teamId),
+        assistPlayer: findLocalPlayerById(event.related_player_id, players, teamId),
+        score,
+      };
+    });
+}
+
+function DevIncidentRow({ row }: { row: DevTimelineRow }) {
+  const title = formatDevEventTitle(row.event_type);
+  const accentClass =
+    row.event_type === "goal"
+      ? "border-wc-neon/30 bg-[rgba(95,255,123,0.075)]"
+      : row.event_type === "red_card"
+        ? "border-wc-danger/30 bg-[rgba(255,92,130,0.075)]"
+        : "border-wc-amber/30 bg-[rgba(255,199,77,0.07)]";
+
+  const playerNode = row.player ? (
+    <PlayerLink player={row.player} className="font-black text-wc-fg1 hover:text-wc-neon">
+      {row.player.name}
+    </PlayerLink>
+  ) : null;
+
+  return (
+    <div className={`grid grid-cols-[3rem_1fr_auto] items-center gap-3 rounded-[1rem] border px-3 py-3 ${accentClass}`}>
+      <span className="text-center font-mono text-sm font-black text-wc-fg2" dir="ltr">
+        {row.minute !== null ? `${row.minute}'` : "-"}
+      </span>
+      <div className="min-w-0">
+        <p className="text-sm font-black text-wc-fg2">{title}</p>
+        {playerNode ? <p className="mt-1 truncate text-xs text-wc-fg3">{playerNode}</p> : null}
+        {row.assistPlayer ? (
+          <p className="mt-1 truncate text-xs text-wc-fg3">
+            בישול:{" "}
+            <PlayerLink player={row.assistPlayer} className="font-bold text-wc-fg2 hover:text-wc-neon">
+              {row.assistPlayer.name}
+            </PlayerLink>
+          </p>
+        ) : null}
+      </div>
+      <span className="rounded-full bg-white/8 px-2 py-1 text-xs font-black text-wc-fg2" dir="ltr">
+        {row.score ?? getSideLabel(row.is_home)}
+      </span>
+    </div>
   );
 }
 
@@ -1392,6 +1492,14 @@ function findLocalPlayer(name: string | null | undefined, players: MatchPagePlay
   }) ?? null;
 }
 
+function findLocalPlayerById(id: number | string | null | undefined, players: MatchPagePlayer[], teamId: string | null) {
+  if (id === null || id === undefined || id === "") return null;
+  return players.find((player) => {
+    if (teamId && player.team_id !== teamId) return false;
+    return String(player.id) === String(id);
+  }) ?? null;
+}
+
 function findLocalPlayerByBzzoiroId(id: number | string | null | undefined, players: MatchPagePlayer[]) {
   if (id === null || id === undefined || id === "") return null;
   return players.find((player) => String(player.bzzoiro_player_id ?? "") === String(id)) ?? null;
@@ -1437,6 +1545,12 @@ function formatIncidentTitle(incident: BzzoiroIncident) {
   if (type.includes("var")) return "בדיקת VAR";
   if (type.includes("pen")) return "פנדל";
   return incident.type ?? "אירוע";
+}
+
+function formatDevEventTitle(type: MatchDetailDevEvent["event_type"]) {
+  if (type === "goal") return "שער";
+  if (type === "red_card") return "כרטיס אדום";
+  return "כרטיס צהוב";
 }
 
 function formatShotType(type: string | null | undefined) {

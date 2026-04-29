@@ -35,6 +35,10 @@ export async function POST(request: Request) {
   }
 
   const matches = (matchesData ?? []) as Pick<TournamentMatchRecord, "match_number" | "stage">[];
+  const clearDevEventsError = await clearDevMatchPlayerEvents(supabase);
+  if (clearDevEventsError) {
+    return NextResponse.json({ error: clearDevEventsError }, { status: 500 });
+  }
 
   for (const match of matches) {
     const homeScore = randomScore();
@@ -72,4 +76,22 @@ export async function POST(request: Request) {
     sync,
     scoring,
   });
+}
+
+async function clearDevMatchPlayerEvents(supabase: ReturnType<typeof createAdminClient>) {
+  const { error } = await supabase
+    .from("dev_match_player_events")
+    .delete()
+    .gte("match_number", 1);
+
+  if (!error) return null;
+  if (
+    error.code === "42P01" ||
+    error.code === "PGRST205" ||
+    String(error.message ?? "").includes("dev_match_player_events")
+  ) {
+    return null;
+  }
+
+  return error.message;
 }

@@ -40,8 +40,19 @@ export default async function StadiumPage({ params }: { params: Promise<{ id: st
         חזרה למשחקים
       </Link>
 
-      <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-[linear-gradient(135deg,rgba(95,255,123,0.12),rgba(111,60,255,0.22)_48%,rgba(8,14,29,0.96))] shadow-[0_28px_80px_rgba(0,0,0,0.38)]">
-        <div className="grid gap-6 p-5 md:p-7 lg:grid-cols-[1fr_24rem] lg:items-center">
+      <section className="relative isolate overflow-hidden rounded-[2rem] border border-white/10 bg-[linear-gradient(135deg,rgba(95,255,123,0.12),rgba(111,60,255,0.22)_48%,rgba(8,14,29,0.96))] shadow-[0_28px_80px_rgba(0,0,0,0.38)]">
+        {data.imageUrl ? (
+          <Image
+            src={data.imageUrl}
+            alt=""
+            fill
+            className="-z-10 object-cover opacity-[0.16] saturate-125"
+            sizes="100vw"
+            unoptimized
+          />
+        ) : null}
+        <div className="absolute inset-0 -z-10 bg-[linear-gradient(135deg,rgba(5,8,18,0.42),rgba(8,14,29,0.96)_65%)]" />
+        <div className="relative grid gap-6 p-5 md:p-7 lg:grid-cols-[1fr_24rem] lg:items-center">
           <div className="min-w-0">
             <p className="wc-kicker">World Cup Venue</p>
             <h1 className="mt-2 font-sans text-4xl font-black leading-tight tracking-normal text-wc-fg1 md:text-6xl">
@@ -102,20 +113,36 @@ function StadiumMatchCard({
   event: BzzoiroMatchEvent;
   localMatch: MatchWithTeams | null;
 }) {
+  const stageLabel = localMatch ? getStageLabelHe(localMatch.stage) : translateStatus(event.status);
+  const homeName = translateTeamNameToHebrew(event.home_team);
+  const awayName = translateTeamNameToHebrew(event.away_team);
   const content = (
-    <article className="rounded-[1.25rem] border border-white/10 bg-black/14 p-4 transition hover:border-wc-neon/35 hover:bg-white/[0.055]">
-      <div className="flex items-center justify-between gap-3 text-xs text-wc-fg3">
-        <span className="font-black text-wc-neon">{localMatch ? getStageLabelHe(localMatch.stage) : translateStatus(event.status)}</span>
-        <span>{formatDateTime(event.event_date ?? event.date)}</span>
+    <article className="group relative overflow-hidden rounded-[1.35rem] border border-white/10 bg-[linear-gradient(145deg,rgba(255,255,255,0.07),rgba(255,255,255,0.025)_42%,rgba(0,0,0,0.18))] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition hover:-translate-y-0.5 hover:border-wc-neon/40 hover:bg-white/[0.06]">
+      <div className="pointer-events-none absolute inset-x-4 top-0 h-px bg-gradient-to-l from-transparent via-wc-neon/55 to-transparent opacity-0 transition group-hover:opacity-100" />
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <span className="inline-flex rounded-full bg-wc-neon/10 px-2.5 py-1 text-[11px] font-black text-wc-neon">{stageLabel}</span>
+          <p className="mt-2 text-xs font-bold text-wc-fg3">{formatDateTime(event.event_date ?? event.date)}</p>
+        </div>
+        <span className="shrink-0 rounded-full bg-white/8 px-2.5 py-1 text-[11px] font-black text-wc-fg3">
+          {localMatch ? `משחק ${localMatch.match_number}` : "BSD"}
+        </span>
       </div>
-      <div className="mt-4 grid grid-cols-[1fr_auto_1fr] items-center gap-3 text-center">
-        <p className="truncate font-black text-wc-fg1">{translateTeamNameToHebrew(event.home_team)}</p>
-        <span className="font-sans text-xl font-black tracking-normal text-wc-fg3">VS</span>
-        <p className="truncate font-black text-wc-fg1">{translateTeamNameToHebrew(event.away_team)}</p>
+      <div className="mt-5 grid grid-cols-[minmax(0,1fr)_3.5rem_minmax(0,1fr)] items-center gap-3 text-center">
+        <p className="truncate text-base font-black text-wc-fg1">{homeName}</p>
+        <span className="grid h-11 place-items-center rounded-full border border-white/10 bg-black/22 font-sans text-sm font-black tracking-normal text-wc-fg3">VS</span>
+        <p className="truncate text-base font-black text-wc-fg1">{awayName}</p>
       </div>
       {localMatch ? (
-        <p className="mt-3 text-center text-xs font-bold text-wc-fg3">משחק {localMatch.match_number}</p>
-      ) : null}
+        <div className="mt-4 flex items-center justify-center gap-2 rounded-2xl bg-white/[0.045] px-3 py-2 text-xs font-black text-wc-fg2">
+          <span>פתח עמוד משחק</span>
+          <span aria-hidden="true">←</span>
+        </div>
+      ) : (
+        <p className="mt-4 rounded-2xl border border-dashed border-white/10 bg-black/12 px-3 py-2 text-center text-xs font-bold text-wc-fg3">
+          אירוע BSD ללא התאמה מקומית
+        </p>
+      )}
     </article>
   );
 
@@ -150,7 +177,7 @@ function findLocalMatchForEvent(event: BzzoiroMatchEvent, matches: MatchWithTeam
   const eventTime = new Date(event.event_date ?? event.date ?? "").getTime();
   if (!Number.isFinite(eventTime)) return null;
 
-  return matches
+  const nameMatch = matches
     .filter((match) => {
       const matchTime = new Date(match.date_time).getTime();
       if (!Number.isFinite(matchTime) || Math.abs(matchTime - eventTime) > 36 * 60 * 60 * 1000) return false;
@@ -163,11 +190,46 @@ function findLocalMatchForEvent(event: BzzoiroMatchEvent, matches: MatchWithTeam
       const rightDelta = Math.abs(new Date(right.date_time).getTime() - eventTime);
       return leftDelta - rightDelta;
     })[0] ?? null;
+
+  if (nameMatch) return nameMatch;
+
+  const hasPlaceholderTeam =
+    isPlaceholderSide(event.home_team) ||
+    isPlaceholderSide(event.away_team);
+
+  if (!hasPlaceholderTeam) return null;
+
+  return matches
+    .filter((match) => {
+      const matchTime = new Date(match.date_time).getTime();
+      if (!Number.isFinite(matchTime) || Math.abs(matchTime - eventTime) > 8 * 60 * 60 * 1000) return false;
+      return isPlaceholderSide(match.home_placeholder) || isPlaceholderSide(match.away_placeholder) || match.match_number >= 73;
+    })
+    .sort((left, right) => {
+      const leftDelta = Math.abs(new Date(left.date_time).getTime() - eventTime);
+      const rightDelta = Math.abs(new Date(right.date_time).getTime() - eventTime);
+      return leftDelta - rightDelta;
+    })[0] ?? null;
+}
+
+function isPlaceholderSide(value: string | null | undefined) {
+  const raw = String(value ?? "").trim().toLowerCase();
+  const normalized = normalizeName(value);
+  if (!normalized) return false;
+  return (
+    /^[1234][a-l]$/i.test(normalized) ||
+    /^w\d+$/i.test(normalized) ||
+    /^l\d+$/i.test(normalized) ||
+    raw.includes("/") ||
+    normalized.includes("winner") ||
+    normalized.includes("runner")
+  );
 }
 
 function getEventKey(event: BzzoiroMatchEvent, index: number) {
   return [
     event.id ?? index,
+    index,
     event.event_date ?? event.date ?? "",
     event.home_team ?? "",
     event.away_team ?? "",

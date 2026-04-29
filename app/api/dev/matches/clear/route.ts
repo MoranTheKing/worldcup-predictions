@@ -40,6 +40,7 @@ export async function POST(request: Request) {
     profilesReset,
     teamOddsReset,
     playerOddsReset,
+    devEventsReset,
   ] = await Promise.all([
     deleteRows("predictions", "user_id"),
     deleteRows("tournament_predictions", "user_id"),
@@ -48,6 +49,7 @@ export async function POST(request: Request) {
     resetProfileScores(),
     resetTeamOutrightOdds(),
     resetPlayerTopScorerOdds(),
+    resetDevMatchPlayerEvents(),
   ]);
 
   if (isResetError(predictionsReset)) return errorResponse(predictionsReset.error);
@@ -57,6 +59,7 @@ export async function POST(request: Request) {
   if (isResetError(profilesReset)) return errorResponse(profilesReset.error);
   if (isResetError(teamOddsReset)) return errorResponse(teamOddsReset.error);
   if (isResetError(playerOddsReset)) return errorResponse(playerOddsReset.error);
+  if (isResetError(devEventsReset)) return errorResponse(devEventsReset.error);
 
   // Explicitly wipe resolved team slots from all knockout matches so they
   // revert to placeholder display before the sync rebuilds them.
@@ -114,6 +117,7 @@ export async function POST(request: Request) {
     profilesReset: profilesReset.count,
     teamOddsReset: teamOddsReset.count,
     playerOddsReset: playerOddsReset.count,
+    devEventsReset: devEventsReset.count,
   });
 
   async function deleteRows(table: string, nonNullColumn: string): Promise<ResetResult> {
@@ -155,6 +159,20 @@ export async function POST(request: Request) {
     if (error) return { error: error.message };
     return { count: updatedCount ?? 0 };
   }
+
+  async function resetDevMatchPlayerEvents(): Promise<ResetResult> {
+    const { error, count: deletedCount } = await admin
+      .from("dev_match_player_events")
+      .delete({ count: "exact" })
+      .gte("match_number", 1);
+
+    if (isMissingOptionalTableError(error)) {
+      return { count: 0 };
+    }
+
+    if (error) return { error: error.message };
+    return { count: deletedCount ?? 0 };
+  }
 }
 
 function isResetError(result: ResetResult): result is { error: string } {
@@ -163,4 +181,13 @@ function isResetError(result: ResetResult): result is { error: string } {
 
 function errorResponse(error: string) {
   return NextResponse.json({ error }, { status: 500 });
+}
+
+function isMissingOptionalTableError(error: { code?: string; message?: string } | null) {
+  return Boolean(
+    error &&
+      (error.code === "42P01" ||
+        error.code === "PGRST205" ||
+        String(error.message ?? "").includes("dev_match_player_events")),
+  );
 }

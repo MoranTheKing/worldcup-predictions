@@ -603,7 +603,7 @@ function DevToolsClientInner({ matches, teams, error }: Props) {
   }
 
   async function randomizePlayerStats() {
-    if (!confirm("ליצור סטטיסטיקות אקראיות לכל השחקנים?")) {
+    if (!confirm("ליצור סטטיסטיקות שחקנים לפי תוצאות המשחקים? הפעולה תמלא סקוררים, בישולים וכרטיסים לאירועי Dev מקומיים, ותעדכן את טבלאות השחקנים לפי התוצאות הקיימות.")) {
       return;
     }
 
@@ -619,7 +619,11 @@ function DevToolsClientInner({ matches, teams, error }: Props) {
       }
 
       const body = await res.json().catch(() => ({}));
-      refreshWithMessage(`נוצרו סטטיסטיקות אקראיות ל-${body.updated ?? 0} שחקנים.`);
+      refreshWithMessage(
+        body.mode === "score_aware"
+          ? `נוצרו סטטיסטיקות לפי תוצאה ל-${body.updated ?? 0} שחקנים: ${body.eventsCreated ?? 0} אירועי משחק, ${body.goalsAssigned ?? 0} שערים ו-${body.assistsAssigned ?? 0} בישולים.`
+          : `נוצרו סטטיסטיקות אקראיות ל-${body.updated ?? 0} שחקנים. אין עדיין משחקים עם תוצאה ולכן הופעל מצב fallback.`,
+      );
     } finally {
       setBulkSaving(false);
     }
@@ -925,7 +929,7 @@ function DevToolsClientInner({ matches, teams, error }: Props) {
               disabled={pending}
               className="rounded-2xl border border-[rgba(20,184,166,0.46)] bg-[rgba(20,184,166,0.11)] px-4 py-3 text-sm font-bold text-teal-200 transition hover:bg-[rgba(20,184,166,0.2)] disabled:opacity-50"
             >
-              רנדום סטט׳ שחקנים
+              רנדום שחקנים לפי תוצאות
             </button>
             <button
               onClick={syncBzzoiroOdds}
