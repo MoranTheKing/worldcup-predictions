@@ -226,7 +226,8 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
               <InfoRow label="שם קצר" value={detail.short_name ?? "-"} dir="ltr" />
               <InfoRow label="אזרחות" value={detail.nationality ?? "-"} />
               <InfoRow label="גיל" value={formatAge(detail.date_of_birth)} dir="ltr" />
-              <InfoRow label="גובה / משקל" value={formatBody(detail)} />
+              <InfoRow label="גובה" value={formatHeight(detail.height)} />
+              <InfoRow label="משקל" value={formatWeight(detail.weight)} />
               <InfoRow label="רגל חזקה" value={translateFoot(detail.preferred_foot)} />
               <InfoRow label="שווי שוק" value={formatMarketValue(detail.market_value)} dir="ltr" />
               <InfoRow label="קבוצה נוכחית" value={detail.current_team?.name ?? "-"} />
@@ -249,9 +250,27 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
               <MetricCard label="משחקים" value={String(allStats.matches)} />
               <MetricCard label="דקות" value={String(allStats.minutes)} />
               <MetricCard label="דירוג ממוצע" value={formatDecimal(allStats.avgRating)} />
-              <MetricCard label="שערים + בישולים" value={`${allStats.goals} + ${allStats.assists}`} />
-              <MetricCard label="xG / xA" value={`${formatDecimal(allStats.xg)} / ${formatDecimal(allStats.xa)}`} />
-              <MetricCard label="בעיטות למסגרת" value={`${allStats.shotsOnTarget}/${allStats.shots}`} />
+              <SplitMetricCard
+                title="שערים ובישולים"
+                parts={[
+                  { label: "שערים", value: allStats.goals },
+                  { label: "בישולים", value: allStats.assists },
+                ]}
+              />
+              <SplitMetricCard
+                title="שערים צפויים"
+                parts={[
+                  { label: "xG", value: formatDecimal(allStats.xg) },
+                  { label: "xA", value: formatDecimal(allStats.xa) },
+                ]}
+              />
+              <SplitMetricCard
+                title="בעיטות"
+                parts={[
+                  { label: "למסגרת", value: allStats.shotsOnTarget },
+                  { label: "סה״כ", value: allStats.shots },
+                ]}
+              />
               <MetricCard label="דיוק מסירה" value={formatPercentRatio(allStats.accuratePasses, allStats.passes)} />
               <MetricCard label="מסירות מפתח" value={String(allStats.keyPasses)} />
             </div>
@@ -273,7 +292,13 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
             <MetricCard label="שערים" value={String(selectedStats.goals)} />
             <MetricCard label="בישולים" value={String(selectedStats.assists)} />
             <MetricCard label="xG" value={formatDecimal(selectedStats.xg)} />
-            <MetricCard label="תיקולים מוצלחים" value={`${selectedStats.tacklesWon}/${selectedStats.tackles}`} />
+            <SplitMetricCard
+              title="תיקולים"
+              parts={[
+                { label: "מוצלחים", value: selectedStats.tacklesWon },
+                { label: "נסיונות", value: selectedStats.tackles },
+              ]}
+            />
           </div>
         </section>
       ) : null}
@@ -283,17 +308,47 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
         {stats.length > 0 ? (
           <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <MetricCard label="נגיעות" value={String(allStats.touches)} />
-            <MetricCard label="דריבלים מוצלחים" value={`${allStats.dribblesWon}/${allStats.dribblesAttempted}`} />
-            <MetricCard label="דו-קרבים" value={`${allStats.duelsWon}/${allStats.duelsWon + allStats.duelsLost}`} />
-            <MetricCard label="אוויריים" value={`${allStats.aerialWon}/${allStats.aerialWon + allStats.aerialLost}`} />
+            <SplitMetricCard
+              title="דריבלים"
+              parts={[
+                { label: "מוצלחים", value: allStats.dribblesWon },
+                { label: "נסיונות", value: allStats.dribblesAttempted },
+              ]}
+            />
+            <SplitMetricCard
+              title="דו-קרבים"
+              parts={[
+                { label: "ניצח", value: allStats.duelsWon },
+                { label: "סה״כ", value: allStats.duelsWon + allStats.duelsLost },
+              ]}
+            />
+            <SplitMetricCard
+              title="מאבקי אוויר"
+              parts={[
+                { label: "ניצח", value: allStats.aerialWon },
+                { label: "סה״כ", value: allStats.aerialWon + allStats.aerialLost },
+              ]}
+            />
             <MetricCard label="חילוצים" value={String(allStats.recoveries)} />
             <MetricCard label="הרחקות" value={String(allStats.clearances)} />
             <MetricCard label="חטיפות" value={String(allStats.interceptions)} />
             <MetricCard label="איבודי כדור" value={String(allStats.possessionLost)} />
             <MetricCard label="סחט עבירות" value={String(allStats.fouled)} />
             <MetricCard label="עבירות" value={String(allStats.fouls)} />
-            <MetricCard label="צהובים / אדומים" value={`${allStats.yellowCards} / ${allStats.redCards}`} />
-            <MetricCard label="הצלות / ספיגות" value={`${allStats.saves} / ${allStats.goalsConceded}`} />
+            <SplitMetricCard
+              title="כרטיסים"
+              parts={[
+                { label: "צהובים", value: allStats.yellowCards, tone: "amber" },
+                { label: "אדומים", value: allStats.redCards, tone: "red" },
+              ]}
+            />
+            <SplitMetricCard
+              title="שוער"
+              parts={[
+                { label: "הצלות", value: allStats.saves },
+                { label: "ספיגות", value: allStats.goalsConceded, tone: "red" },
+              ]}
+            />
           </div>
         ) : (
           <EmptyPanel
@@ -414,6 +469,42 @@ function MetricCard({
       <p className={`mt-2 font-sans text-3xl font-black tracking-normal ${toneClass}`} dir="ltr">{value}</p>
     </div>
   );
+}
+
+type SplitMetricPart = {
+  label: string;
+  value: number | string;
+  tone?: "default" | "amber" | "red";
+};
+
+function SplitMetricCard({
+  title,
+  parts,
+}: {
+  title: string;
+  parts: SplitMetricPart[];
+}) {
+  return (
+    <div className="rounded-[1.35rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.055),rgba(255,255,255,0.025))] p-4">
+      <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-wc-fg3">{title}</p>
+      <div className="mt-3 grid grid-cols-2 divide-x divide-x-reverse divide-white/10 text-center">
+        {parts.map((part) => (
+          <div key={part.label} className="px-2">
+            <p className={`font-sans text-3xl font-black tracking-normal ${getMetricToneClass(part.tone)}`} dir="ltr">
+              {part.value}
+            </p>
+            <p className="mt-1 text-[11px] font-bold text-wc-fg3">{part.label}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function getMetricToneClass(tone: SplitMetricPart["tone"]) {
+  if (tone === "amber") return "text-wc-amber";
+  if (tone === "red") return "text-wc-danger";
+  return "text-wc-fg1";
 }
 
 function InfoRow({
@@ -666,10 +757,12 @@ function formatAge(dateOfBirth: string | null | undefined) {
   return `${age} (${formatDate(dateOfBirth)})`;
 }
 
-function formatBody(detail: BzzoiroPlayerDetail) {
-  const height = detail.height ? `${detail.height} ס״מ` : "-";
-  const weight = detail.weight ? `${detail.weight} ק״ג` : "-";
-  return `${height} / ${weight}`;
+function formatHeight(value: number | string | null | undefined) {
+  return value ? `${value} ס״מ` : "-";
+}
+
+function formatWeight(value: number | string | null | undefined) {
+  return value ? `${value} ק״ג` : "-";
 }
 
 function formatAvailability(detail: BzzoiroPlayerDetail) {
