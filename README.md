@@ -480,3 +480,4 @@ Brevo Free מוגבל בכמות יומית לכל החשבון, לכן ביום
 - The coach record card now renders separate labeled cells for wins, draws and losses. This avoids any RTL ambiguity such as interpreting Mexico's `3 wins, 2 draws, 0 losses` backwards.
 - Missing BSD predicted lineups now return a quiet `null` fallback on 404 instead of logging a server console error; this is expected while BSD has not generated lineups for future World Cup fixtures yet.
 - `/dashboard/players/[id]` now avoids Hebrew slash-pair metric cards. Cards such as yellow/red cards, saves/conceded, xG/xA, shots, duels, tackles and height/weight are split into labeled values so numbers cannot be read backwards in RTL.
+- Player profile metric cards and recent-match mini metrics are centered, and recent-match score chips now show `ניצחון`, `תיקו`, or `הפסד` with color and a team-perspective score when the player team can be matched to the event.

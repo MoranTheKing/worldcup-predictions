@@ -373,7 +373,17 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
           {recentStats.length > 0 ? (
             <div className="mt-4 grid gap-3">
               {recentStats.map((row, index) => (
-                <RecentStatRow key={`${row.event?.id ?? "event"}-${index}`} row={row} />
+                <RecentStatRow
+                  key={`${row.event?.id ?? "event"}-${index}`}
+                  row={row}
+                  teamNames={[
+                    detail?.current_team?.name,
+                    detail?.current_team?.short_name,
+                    detail?.national_team?.name,
+                    detail?.national_team?.short_name,
+                    team?.name,
+                  ]}
+                />
               ))}
             </div>
           ) : (
@@ -464,7 +474,7 @@ function MetricCard({
     tone === "amber" ? "text-wc-amber" : tone === "red" ? "text-wc-danger" : "text-wc-fg1";
 
   return (
-    <div className="rounded-[1.35rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.055),rgba(255,255,255,0.025))] p-4">
+    <div className="rounded-[1.35rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.055),rgba(255,255,255,0.025))] p-4 text-center">
       <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-wc-fg3">{label}</p>
       <p className={`mt-2 font-sans text-3xl font-black tracking-normal ${toneClass}`} dir="ltr">{value}</p>
     </div>
@@ -485,7 +495,7 @@ function SplitMetricCard({
   parts: SplitMetricPart[];
 }) {
   return (
-    <div className="rounded-[1.35rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.055),rgba(255,255,255,0.025))] p-4">
+    <div className="rounded-[1.35rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.055),rgba(255,255,255,0.025))] p-4 text-center">
       <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-wc-fg3">{title}</p>
       <div className="mt-3 grid grid-cols-2 divide-x divide-x-reverse divide-white/10 text-center">
         {parts.map((part) => (
@@ -562,7 +572,15 @@ function ChipGroup({
   );
 }
 
-function RecentStatRow({ row }: { row: BzzoiroPlayerStatsRow }) {
+function RecentStatRow({
+  row,
+  teamNames = [],
+}: {
+  row: BzzoiroPlayerStatsRow;
+  teamNames?: Array<string | null | undefined>;
+}) {
+  const outcome = getPlayerEventOutcome(row, teamNames);
+
   return (
     <div className="rounded-[1.25rem] border border-white/10 bg-black/14 p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -572,8 +590,9 @@ function RecentStatRow({ row }: { row: BzzoiroPlayerStatsRow }) {
           </p>
           <p className="mt-1 text-xs text-wc-fg3">{formatDate(row.event?.event_date)}</p>
         </div>
-        <span className="rounded-full bg-white/8 px-3 py-1 text-xs font-black text-wc-fg2" dir="ltr">
-          {formatScore(row)}
+        <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-black ${outcome.chipClassName}`}>
+          <span>{outcome.label}</span>
+          <span dir="ltr">{outcome.score}</span>
         </span>
       </div>
       <div className="mt-3 grid grid-cols-4 gap-2 text-center">
@@ -588,7 +607,7 @@ function RecentStatRow({ row }: { row: BzzoiroPlayerStatsRow }) {
 
 function MiniMetric({ label, value }: { label: string; value: number | string }) {
   return (
-    <div className="rounded-lg bg-white/[0.045] px-2 py-1">
+    <div className="rounded-lg bg-white/[0.045] px-2 py-1 text-center">
       <p className="text-[10px] font-bold text-wc-fg3">{label}</p>
       <p className="mt-0.5 text-sm font-black text-wc-fg1" dir="ltr">{value}</p>
     </div>
@@ -810,11 +829,64 @@ function formatPercentRatio(numerator: number, denominator: number) {
   return `${Math.round((numerator / denominator) * 100)}%`;
 }
 
-function formatScore(row: BzzoiroPlayerStatsRow) {
-  const home = row.event?.home_score;
-  const away = row.event?.away_score;
-  if (!Number.isFinite(Number(home)) || !Number.isFinite(Number(away))) return "-";
-  return `${home}-${away}`;
+function getPlayerEventOutcome(row: BzzoiroPlayerStatsRow, teamNames: Array<string | null | undefined>) {
+  const homeScore = toNullableNumber(row.event?.home_score);
+  const awayScore = toNullableNumber(row.event?.away_score);
+
+  if (homeScore === null || awayScore === null) {
+    return {
+      label: "תוצאה",
+      score: "-",
+      chipClassName: "bg-white/8 text-wc-fg2",
+    };
+  }
+
+  let teamScore = homeScore;
+  let opponentScore = awayScore;
+  let hasPlayerPerspective = false;
+  const playerTeamNames = [row.player?.team, ...teamNames];
+
+  if (playerTeamNames.some((teamName) => namesMatch(teamName, row.event?.home_team))) {
+    hasPlayerPerspective = true;
+    teamScore = homeScore;
+    opponentScore = awayScore;
+  } else if (playerTeamNames.some((teamName) => namesMatch(teamName, row.event?.away_team))) {
+    hasPlayerPerspective = true;
+    teamScore = awayScore;
+    opponentScore = homeScore;
+  }
+
+  const score = hasPlayerPerspective ? `${teamScore}-${opponentScore}` : `${homeScore}-${awayScore}`;
+
+  if (!hasPlayerPerspective) {
+    return {
+      label: "תוצאה",
+      score,
+      chipClassName: "bg-white/8 text-wc-fg2",
+    };
+  }
+
+  if (teamScore > opponentScore) {
+    return {
+      label: "ניצחון",
+      score,
+      chipClassName: "bg-[rgba(95,255,123,0.14)] text-wc-neon",
+    };
+  }
+
+  if (teamScore < opponentScore) {
+    return {
+      label: "הפסד",
+      score,
+      chipClassName: "bg-[rgba(255,92,130,0.14)] text-wc-danger",
+    };
+  }
+
+  return {
+    label: "תיקו",
+    score,
+    chipClassName: "bg-[rgba(255,182,73,0.14)] text-wc-amber",
+  };
 }
 
 function getEventTime(row: BzzoiroPlayerStatsRow) {
@@ -826,12 +898,23 @@ function safeNumber(value: number | string | null | undefined) {
   return Number.isFinite(number) ? number : 0;
 }
 
+function toNullableNumber(value: number | string | null | undefined) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
 function normalizeName(value: string | null | undefined) {
   return String(value ?? "")
     .normalize("NFKD")
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9א-ת]+/gi, "")
     .toLowerCase();
+}
+
+function namesMatch(leftValue: string | null | undefined, rightValue: string | null | undefined) {
+  const left = normalizeName(leftValue);
+  const right = normalizeName(rightValue);
+  return Boolean(left && right && (left === right || left.includes(right) || right.includes(left)));
 }
 
 function getInitials(name: string) {
