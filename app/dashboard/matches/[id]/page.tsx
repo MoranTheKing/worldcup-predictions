@@ -56,7 +56,7 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
     teamIds.length > 0
       ? supabase
           .from("players")
-          .select("id, name, team_id, position, photo_url, shirt_number, top_scorer_odds, bzzoiro_player_id")
+          .select("id, name, team_id, position, photo_url, shirt_number, top_scorer_odds, bzzoiro_player_id, goals, assists, appearances, minutes_played, yellow_cards, red_cards")
           .in("team_id", teamIds)
           .order("name", { ascending: true })
       : Promise.resolve({ data: [] }),

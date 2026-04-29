@@ -57,7 +57,7 @@ async function getBzzoiroVenueWorldCupEvents(venueId: string | number) {
       6,
     );
 
-    return events
+    return dedupeEvents(events)
       .filter((event) => String(event.venue?.id ?? "") === String(venueId))
       .sort((left, right) => getEventTime(left) - getEventTime(right));
   } catch (error) {
@@ -68,4 +68,24 @@ async function getBzzoiroVenueWorldCupEvents(venueId: string | number) {
 
 function getEventTime(event: BzzoiroMatchEvent) {
   return new Date(event.event_date ?? event.date ?? "").getTime() || Number.MAX_SAFE_INTEGER;
+}
+
+function dedupeEvents(events: BzzoiroMatchEvent[]) {
+  const seen = new Set<string>();
+  const unique: BzzoiroMatchEvent[] = [];
+
+  for (const event of events) {
+    const key = [
+      event.id ?? "",
+      event.event_date ?? event.date ?? "",
+      event.home_team ?? "",
+      event.away_team ?? "",
+    ].join("|");
+
+    if (seen.has(key)) continue;
+    seen.add(key);
+    unique.push(event);
+  }
+
+  return unique;
 }

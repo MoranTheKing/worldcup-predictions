@@ -500,3 +500,14 @@ Brevo Free מוגבל בכמות יומית לכל החשבון, לכן ביום
 - Ran the local BSD team sync again: 112 remote teams checked, 48 matched, 47 coaches synced, 1087 player rows synced, and 96 recent-form rows refreshed.
 - Added `SECURITY_SCAN_PROMPT.md` with future scan context, especially the intended dev-clear behavior and why fixed email allowlists should not be reintroduced.
 - PR `#33` was addressed on `master` with a local 30-second TTL/de-dupe cache. PR `#34` remains intentionally rejected because it reintroduces the fixed-email dev-clear restriction that breaks the intended localhost developer workflow.
+
+## Match center UI and BSD pagination follow-up - 2026-04-29
+
+- Fixed BSD pagination for `/events/` and `/live/`: those endpoints now use `limit/offset` instead of `page/page_size`, matching BSD docs and preventing repeated first-page event payloads.
+- Stadium pages de-dupe BSD venue events before rendering and use a composite event key, so repeated BSD events no longer trigger duplicate React key warnings or duplicated match cards.
+- Match pages now refresh BSD live data every 15 seconds while a match is live/in-progress. Scores, incidents, VAR/card/substitution rows, shotmap, momentum, xG and player stats update from the server-side BSD payload when BSD exposes them.
+- The pre-match context panel was simplified into a lighter sports-site style preview: form chips, coach name and head-to-head only. The confusing points/xG mini cards were removed.
+- The live match-state panel now uses centered comparison rows and compact odds rows instead of wide stat cards.
+- The lineups panel now renders actual, predicted or local fallback XIs on a pitch. The fallback uses the coach formation plus all synced team players, then chooses the XI by position, minutes, appearances, shirt number, goals/assists and odds rather than a fixed 4-3-3 or a random list.
+- Ran the local BSD team sync again after the pagination fix: 112 remote teams checked, 48 matched, 47 coaches synced, 1087 player rows synced, and 100 recent-form rows refreshed.
+- GitHub PR check on this pass found no open PRs. The latest visible PRs remain closed, including `#33` and `#34`.

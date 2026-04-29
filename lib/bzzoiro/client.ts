@@ -63,6 +63,33 @@ export async function bzzoiroGetPaginated<T>(
   maxPages = 12,
 ): Promise<T[]> {
   const results: T[] = [];
+  const normalizedPath = `/${path.replace(/^\/+/, "")}`;
+
+  if (normalizedPath === "/events/" || normalizedPath === "/events" || normalizedPath === "/live/" || normalizedPath === "/live") {
+    const limit = 200;
+    let offset = 0;
+    let page = 1;
+
+    while (page <= maxPages) {
+      const payload = await bzzoiroGet<BzzoiroPage<T>>(path, {
+        ...query,
+        limit,
+        offset,
+      });
+
+      results.push(...(payload.results ?? []));
+
+      if (!payload.next || (payload.results ?? []).length === 0) {
+        break;
+      }
+
+      offset += limit;
+      page += 1;
+    }
+
+    return results;
+  }
+
   let page = 1;
 
   while (page <= maxPages) {

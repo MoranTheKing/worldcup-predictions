@@ -9,6 +9,7 @@ import type {
   BzzoiroMatchCenter,
   BzzoiroMatchEvent,
   BzzoiroMomentumPoint,
+  BzzoiroPredictedLineupPlayer,
   BzzoiroPredictedTeamLineup,
   BzzoiroShot,
   BzzoiroUnavailablePlayer,
@@ -41,6 +42,24 @@ export type MatchPagePlayer = {
   shirt_number?: number | null;
   top_scorer_odds?: number | string | null;
   bzzoiro_player_id?: string | number | null;
+  goals?: number | null;
+  assists?: number | null;
+  appearances?: number | null;
+  minutes_played?: number | null;
+  yellow_cards?: number | null;
+  red_cards?: number | null;
+};
+
+type FormationLineupPlayer = MatchPagePlayer & {
+  id: MatchPagePlayer["id"] | string;
+  ai_score?: number | null;
+  isLocal?: boolean;
+};
+
+type FormationLine = {
+  key: string;
+  label: string;
+  players: FormationLineupPlayer[];
 };
 
 function formatDateTime(iso: string) {
@@ -68,7 +87,7 @@ export default function MatchDetailClient({
   players: MatchPagePlayer[];
 }) {
   useDevLiveRefresh({ pollIntervalMs: 1500 });
-  useMatchAutoRefresh(shouldAutoRefresh(match, bzzoiro), 30000);
+  useMatchAutoRefresh(shouldAutoRefresh(match, bzzoiro), 15000);
 
   const event = bzzoiro.event;
   const scoreSummary = getBestScoreSummary(match, event);
@@ -274,18 +293,14 @@ function VenueTile({ event }: { event: BzzoiroMatchEvent | null }) {
 
 function LiveStatsPanel({ event, match }: { event: BzzoiroMatchEvent; match: MatchDetailRow }) {
   const pairs = getLiveStatPairs(event, match);
-  const statGridClass =
-    pairs.length <= 2
-      ? "mt-4 grid gap-3 md:grid-cols-2"
-      : "mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4";
 
   return (
     <section className="mt-5 rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-4 md:p-5">
       <SectionHeader title="מצב משחק" eyebrow="BSD live/full" />
       {pairs.length > 0 ? (
-        <div className={statGridClass}>
+        <div className="mt-4 overflow-hidden rounded-[1.25rem] border border-white/10 bg-black/14">
           {pairs.map((pair) => (
-            <StatCompareCard key={pair.label} pair={pair} />
+            <StatCompareRow key={pair.label} pair={pair} />
           ))}
         </div>
       ) : (
@@ -305,8 +320,8 @@ function MatchContextPanel({ event, match }: { event: BzzoiroMatchEvent; match: 
   if (!hasContext) return null;
 
   return (
-    <section className="mt-5 rounded-[1.75rem] border border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.045),rgba(95,255,123,0.035))] p-4 md:p-5">
-      <SectionHeader title="רקע לפני משחק" eyebrow="Form, H2H, coaches" />
+    <section className="mt-5 rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-4 md:p-5">
+      <SectionHeader title="תמונת פתיחה" eyebrow="API preview" />
       <div className="mt-4 grid gap-3 xl:grid-cols-3">
         <FormCard
           title={getTeamDisplayName(match.homeTeam, match.home_placeholder)}
@@ -333,27 +348,30 @@ function FormCard({
   form: Record<string, unknown> | null;
   coach?: string | null;
 }) {
+  const formString = readRecordString(form, "form_string");
+  const matchesPlayed = readRecordOptionalNumber(form, "matches_played");
+  const goalsFor = readRecordOptionalNumber(form, "goals_scored_last_n");
+  const goalsAgainst = readRecordOptionalNumber(form, "goals_conceded_last_n");
+
   return (
     <div className="rounded-[1.25rem] border border-white/10 bg-black/14 p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="truncate text-sm font-black text-wc-fg1">{title}</p>
-          <p className="mt-1 truncate text-xs font-bold text-wc-fg3">{coach ? `מאמן: ${coach}` : "מאמן לא זמין"}</p>
-        </div>
-        <span className="rounded-full bg-white/8 px-2.5 py-1 text-xs font-black text-wc-fg2" dir="ltr">
-          {readRecordString(form, "form_string") || "-"}
-        </span>
+      <div className="min-w-0 text-center">
+        <p className="truncate text-sm font-black text-wc-fg1">{title}</p>
+        <p className="mt-1 truncate text-xs font-bold text-wc-fg3">{coach ? `מאמן: ${coach}` : "מאמן לא זמין"}</p>
       </div>
-      <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-        <MiniMetric label="נק׳" value={readRecordNumber(form, "points_last_n")} />
-        <MiniMetric label="שערים" value={readRecordNumber(form, "goals_scored_last_n")} />
-        <MiniMetric label="xG ממוצע" value={formatDecimal(readRecordOptionalNumber(form, "avg_xg"))} />
+      <FormSequence value={formString} />
+      <div className="mt-4 grid grid-cols-2 gap-2 text-center">
+        <MiniMetric label="משחקים אחרונים" value={matchesPlayed ?? "-"} />
+        <MiniMetric label="שערים בעד/נגד" value={goalsFor === null && goalsAgainst === null ? "-" : `${goalsFor ?? 0}-${goalsAgainst ?? 0}`} />
       </div>
     </div>
   );
 }
 
 function HeadToHeadCard({ headToHead }: { headToHead: Record<string, unknown> | null }) {
+  const total = readRecordOptionalNumber(headToHead, "total_matches");
+  const avgGoals = readRecordOptionalNumber(headToHead, "avg_total_goals");
+
   return (
     <div className="rounded-[1.25rem] border border-white/10 bg-black/14 p-4 text-center">
       <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-wc-fg3">ראש בראש</p>
@@ -363,10 +381,50 @@ function HeadToHeadCard({ headToHead }: { headToHead: Record<string, unknown> | 
         <MiniMetric label="חוץ" value={readRecordNumber(headToHead, "away_wins")} />
       </div>
       <p className="mt-3 text-xs font-bold text-wc-fg3">
-        {readRecordNumber(headToHead, "total_matches")} משחקים · {formatDecimal(readRecordOptionalNumber(headToHead, "avg_total_goals"))} שערים בממוצע
+        {total ?? 0} משחקים · {formatDecimal(avgGoals)} שערים בממוצע
       </p>
     </div>
   );
+}
+
+function FormSequence({ value }: { value: string }) {
+  const letters = value
+    .split("")
+    .map((letter) => letter.trim().toUpperCase())
+    .filter(Boolean)
+    .slice(0, 6);
+
+  if (letters.length === 0) {
+    return <p className="mt-4 text-center text-xs font-bold text-wc-fg3">אין רצף כושר זמין מ-BSD</p>;
+  }
+
+  return (
+    <div className="mt-4 flex items-center justify-center gap-1.5" dir="ltr">
+      {letters.map((letter, index) => (
+        <span
+          key={`${letter}-${index}`}
+          className={`grid h-7 w-7 place-items-center rounded-full text-[11px] font-black ${getFormLetterClass(letter)}`}
+          title={formatFormLetter(letter)}
+        >
+          {letter}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function getFormLetterClass(letter: string) {
+  if (letter === "W") return "bg-wc-neon text-wc-bg";
+  if (letter === "D") return "bg-wc-amber text-wc-bg";
+  if (letter === "L") return "bg-wc-danger text-white";
+  return "bg-white/10 text-wc-fg2";
+}
+
+function formatFormLetter(letter: string) {
+  if (letter === "W") return "ניצחון";
+  if (letter === "D") return "תיקו";
+  if (letter === "L") return "הפסד";
+  return letter;
 }
 
 function BroadcastPanel({ broadcasts }: { broadcasts: BzzoiroBroadcast[] }) {
@@ -412,19 +470,33 @@ function BroadcastCard({ broadcast }: { broadcast: BzzoiroBroadcast }) {
   );
 }
 
-function StatCompareCard({ pair }: { pair: StatPair }) {
+function StatCompareRow({ pair }: { pair: StatPair }) {
+  const homeNumber = readOptionalNumber(pair.home);
+  const awayNumber = readOptionalNumber(pair.away);
+  const total = (homeNumber ?? 0) + (awayNumber ?? 0);
+  const homePercent = total > 0 ? `${Math.max(8, ((homeNumber ?? 0) / total) * 100)}%` : "50%";
+  const awayPercent = total > 0 ? `${Math.max(8, ((awayNumber ?? 0) / total) * 100)}%` : "50%";
+
   return (
-    <div className="rounded-[1.25rem] border border-white/10 bg-black/14 p-4 text-center">
-      <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-wc-fg3">{pair.label}</p>
-      <div className="mt-3 grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] divide-x divide-x-reverse divide-white/10">
-        <div className="min-w-0 px-2">
-          <p className="truncate font-sans text-2xl font-black tracking-normal text-wc-fg1" dir="ltr">{pair.home}</p>
-          <p className="mt-1 text-[10px] font-bold text-wc-fg3">בית</p>
+    <div className="border-b border-white/8 px-3 py-3 last:border-b-0">
+      <div className="grid grid-cols-[4rem_minmax(0,1fr)_4rem] items-center gap-3 text-center">
+        <span className="truncate font-sans text-xl font-black tracking-normal text-wc-fg1" dir="ltr">{pair.home}</span>
+        <span className="text-[11px] font-black uppercase tracking-[0.14em] text-wc-fg3">{pair.label}</span>
+        <span className="truncate font-sans text-xl font-black tracking-normal text-wc-fg1" dir="ltr">{pair.away}</span>
+      </div>
+      {homeNumber !== null || awayNumber !== null ? (
+        <div className="mt-2 grid grid-cols-2 gap-1" dir="ltr">
+          <div className="flex justify-end">
+            <span className="h-1.5 rounded-full bg-wc-neon/70" style={{ width: homePercent }} />
+          </div>
+          <div className="flex justify-start">
+            <span className="h-1.5 rounded-full bg-wc-violet/75" style={{ width: awayPercent }} />
+          </div>
         </div>
-        <div className="min-w-0 px-2">
-          <p className="truncate font-sans text-2xl font-black tracking-normal text-wc-fg1" dir="ltr">{pair.away}</p>
-          <p className="mt-1 text-[10px] font-bold text-wc-fg3">חוץ</p>
-        </div>
+      ) : null}
+      <div className="mt-1 flex justify-between text-[10px] font-bold text-wc-fg3">
+        <span>בית</span>
+        <span>חוץ</span>
       </div>
     </div>
   );
@@ -442,7 +514,7 @@ function OddsStrip({ event, match }: { event: BzzoiroMatchEvent; match: MatchDet
   return (
     <div className="mt-4 grid gap-2 rounded-[1.25rem] border border-white/10 bg-black/14 p-3 sm:grid-cols-3">
       {odds.map((item) => (
-        <div key={item.label} className="flex items-center justify-between gap-3 rounded-xl bg-white/[0.045] px-3 py-2">
+        <div key={item.label} className="grid grid-cols-[2rem_1fr] items-center gap-3 rounded-xl bg-white/[0.045] px-3 py-2 text-center">
           <span className="text-xs font-black text-wc-fg3">{item.label}</span>
           <span className="font-sans text-lg font-black tracking-normal text-wc-fg1" dir="ltr">
             {item.value ?? "-"}
@@ -481,12 +553,14 @@ function LineupsPanel({
             teamId={match.home_team_id}
             players={players}
             lineupPlayers={actualHome}
+            formationName={event.home_coach?.preferred_formation}
           />
           <ActualLineupSide
             title={getTeamDisplayName(match.awayTeam, match.away_placeholder)}
             teamId={match.away_team_id}
             players={players}
             lineupPlayers={actualAway}
+            formationName={event.away_coach?.preferred_formation}
           />
         </div>
       ) : hasPredicted ? (
@@ -497,6 +571,7 @@ function LineupsPanel({
             players={players}
             lineup={homePredicted}
             eventUnavailable={event.unavailable_players?.home ?? []}
+            coachFormation={event.home_coach?.preferred_formation}
           />
           <PredictedLineupSide
             title={getTeamDisplayName(match.awayTeam, match.away_placeholder)}
@@ -504,11 +579,12 @@ function LineupsPanel({
             players={players}
             lineup={awayPredicted}
             eventUnavailable={event.unavailable_players?.away ?? []}
+            coachFormation={event.away_coach?.preferred_formation}
           />
         </div>
       ) : (
         players.length > 0 ? (
-          <LocalSquadPreview match={match} players={players} />
+          <LocalSquadPreview match={match} event={event} players={players} />
         ) : (
           <EmptyState text="כש־BSD יחזיר predicted-lineup או lineups בפועל, יוצגו כאן פותחים, ספסל וחסרים." />
         )
@@ -517,43 +593,40 @@ function LineupsPanel({
   );
 }
 
-function LocalSquadPreview({ match, players }: { match: MatchDetailRow; players: MatchPagePlayer[] }) {
+function LocalSquadPreview({ match, event, players }: { match: MatchDetailRow; event: BzzoiroMatchEvent; players: MatchPagePlayer[] }) {
   const homePlayers = getPreviewPlayers(players, match.home_team_id);
   const awayPlayers = getPreviewPlayers(players, match.away_team_id);
 
   return (
     <div className="mt-4 grid gap-4 xl:grid-cols-2">
-      <SquadPreviewSide title={getTeamDisplayName(match.homeTeam, match.home_placeholder)} players={homePlayers} />
-      <SquadPreviewSide title={getTeamDisplayName(match.awayTeam, match.away_placeholder)} players={awayPlayers} />
+      <SquadPreviewSide
+        title={getTeamDisplayName(match.homeTeam, match.home_placeholder)}
+        players={homePlayers}
+        formationName={event.home_coach?.preferred_formation}
+      />
+      <SquadPreviewSide
+        title={getTeamDisplayName(match.awayTeam, match.away_placeholder)}
+        players={awayPlayers}
+        formationName={event.away_coach?.preferred_formation}
+      />
     </div>
   );
 }
 
-function SquadPreviewSide({ title, players }: { title: string; players: MatchPagePlayer[] }) {
+function SquadPreviewSide({ title, players, formationName }: { title: string; players: MatchPagePlayer[]; formationName?: string | null }) {
+  const formation = formationName ?? "4-3-3";
+  const lines = buildFormation(players.map((player) => toFormationPlayer(player)), formation);
+
   return (
     <div className="rounded-[1.35rem] border border-white/10 bg-black/14 p-4">
       <div className="flex items-center justify-between gap-3">
         <h3 className="font-sans text-lg font-black tracking-normal text-wc-fg1">{title}</h3>
-        <span className="rounded-full bg-white/8 px-3 py-1 text-xs font-black text-wc-fg3">סגל מקומי</span>
+        <span className="rounded-full bg-white/8 px-3 py-1 text-xs font-black text-wc-fg3" dir="ltr">{formation}</span>
       </div>
       <p className="mt-2 text-xs leading-6 text-wc-fg3">
-        עד ש־BSD יחזיר הרכב למשחק, מוצגים שחקני מפתח לפי יחסי מלך השערים ומידע הסגל המקומי.
+        עד ש־BSD יחזיר הרכב רשמי, זהו מבנה משוער לפי מערך המאמן, עמדות ויחסי מלך השערים.
       </p>
-      <div className="mt-3 grid gap-2">
-        {players.map((player) => (
-          <PlayerLink key={player.id} player={player} className="block">
-            <div className="flex items-center justify-between gap-3 rounded-xl bg-white/[0.045] px-3 py-2 transition hover:bg-white/[0.075]">
-              <div className="min-w-0">
-                <p className="truncate text-sm font-black text-wc-fg1">{player.name}</p>
-                <p className="text-[11px] font-bold text-wc-fg3">{formatPosition(player.position)}</p>
-              </div>
-              <span className="rounded-full bg-white/8 px-2 py-1 text-xs font-black text-wc-neon" dir="ltr">
-                {formatDecimal(player.top_scorer_odds)}
-              </span>
-            </div>
-          </PlayerLink>
-        ))}
-      </div>
+      <LineupPitch lines={lines} compact />
     </div>
   );
 }
@@ -563,12 +636,17 @@ function ActualLineupSide({
   teamId,
   players,
   lineupPlayers,
+  formationName,
 }: {
   title: string;
   teamId: string | null;
   players: MatchPagePlayer[];
   lineupPlayers: Array<{ player_name?: string | null; player?: string | null; position?: string | null; number?: number | string | null; jersey_number?: number | string | null }>;
+  formationName?: string | null;
 }) {
+  const lineup = lineupPlayers.map((player, index) => mapApiLineupPlayer(player, players, teamId, index));
+  const lines = buildFormation(lineup, formationName ?? "4-3-3", lineup);
+
   return (
     <div className="rounded-[1.35rem] border border-white/10 bg-black/14 p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -577,18 +655,7 @@ function ActualLineupSide({
           {lineupPlayers.length} שחקנים
         </span>
       </div>
-      <div className="mt-3 grid gap-2 sm:grid-cols-2">
-        {lineupPlayers.map((player, index) => (
-          <LineupPlayerRow
-            key={`${readApiPlayerName(player)}-${index}`}
-            name={readApiPlayerName(player)}
-            position={player.position}
-            number={player.number ?? player.jersey_number}
-            teamId={teamId}
-            players={players}
-          />
-        ))}
-      </div>
+      <LineupPitch lines={lines} />
     </div>
   );
 }
@@ -599,37 +666,31 @@ function PredictedLineupSide({
   players,
   lineup,
   eventUnavailable,
+  coachFormation,
 }: {
   title: string;
   teamId: string | null;
   players: MatchPagePlayer[];
   lineup: BzzoiroPredictedTeamLineup | null;
   eventUnavailable: BzzoiroUnavailablePlayer[];
+  coachFormation?: string | null;
 }) {
   const starters = (lineup?.starters ?? []).filter((player) => player.name);
   const substitutes = (lineup?.substitutes ?? []).filter((player) => player.name);
   const unavailable = [...(lineup?.unavailable ?? []), ...eventUnavailable].filter((player) => player.name);
+  const formationName = lineup?.predicted_formation ?? coachFormation ?? "4-3-3";
+  const pitchPlayers = mapPredictedStarters(starters, players, teamId);
+  const lines = buildFormation(pitchPlayers, formationName, pitchPlayers);
 
   return (
     <div className="rounded-[1.35rem] border border-white/10 bg-black/14 p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h3 className="font-sans text-lg font-black tracking-normal text-wc-fg1">{title}</h3>
         <span className="rounded-full bg-white/8 px-3 py-1 text-xs font-black text-wc-fg3" dir="ltr">
-          {lineup?.predicted_formation ?? "-"}
+          {formationName}
         </span>
       </div>
-      <LineupGroup title="פותחים" empty="אין עדיין פותחים" count={starters.length}>
-        {starters.map((player, index) => (
-          <LineupPlayerRow
-            key={`${player.name}-${index}`}
-            name={player.name ?? "-"}
-            position={player.position}
-            number={player.jersey_number}
-            teamId={teamId}
-            players={players}
-          />
-        ))}
-      </LineupGroup>
+      {pitchPlayers.length > 0 ? <LineupPitch lines={lines} /> : <EmptyMini text="אין עדיין פותחים" />}
       <LineupGroup title="ספסל" empty="אין עדיין ספסל" count={substitutes.length}>
         {substitutes.slice(0, 12).map((player, index) => (
           <LineupPlayerRow
@@ -645,6 +706,241 @@ function PredictedLineupSide({
       <UnavailableList players={unavailable} />
     </div>
   );
+}
+
+function LineupPitch({ lines, compact = false }: { lines: FormationLine[]; compact?: boolean }) {
+  return (
+    <div className="mt-4 overflow-hidden rounded-[1.25rem] border border-[rgba(95,255,123,0.16)] bg-[linear-gradient(180deg,rgba(95,255,123,0.13),rgba(10,45,34,0.18)_48%,rgba(5,8,18,0.9))] p-3">
+      <div className={`relative rounded-[1rem] border border-white/16 bg-[linear-gradient(90deg,rgba(255,255,255,0.045)_1px,transparent_1px),linear-gradient(180deg,rgba(255,255,255,0.045)_1px,transparent_1px)] bg-[length:4rem_4rem] p-3 ${compact ? "min-h-[24rem]" : "min-h-[30rem]"}`}>
+        <div className="absolute inset-x-[18%] top-1/2 h-16 -translate-y-1/2 rounded-full border border-white/14" />
+        <div className="absolute inset-x-[30%] top-3 h-16 rounded-b-[2.5rem] border-x border-b border-white/14" />
+        <div className="absolute inset-x-[30%] bottom-3 h-16 rounded-t-[2.5rem] border-x border-t border-white/14" />
+
+        <div className={`relative z-10 flex h-full flex-col justify-between gap-3 ${compact ? "min-h-[22rem]" : "min-h-[28rem]"}`}>
+          {lines.map((line) => (
+            <div key={line.key}>
+              <p className="mb-2 text-center text-[10px] font-black uppercase tracking-[0.16em] text-white/55">
+                {line.label}
+              </p>
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                {line.players.map((player) => (
+                  <LineupPlayerToken key={player.id} player={player} compact={compact} />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LineupPlayerToken({ player, compact }: { player: FormationLineupPlayer; compact: boolean }) {
+  const content = (
+    <div className={`${compact ? "w-20" : "w-24"} rounded-[1rem] border border-white/12 bg-black/34 p-2 text-center shadow-[0_10px_24px_rgba(0,0,0,0.24)] backdrop-blur transition hover:border-wc-neon/40 hover:bg-white/[0.07]`}>
+      <LineupAvatar player={player} compact={compact} />
+      <p className="mt-2 truncate text-[11px] font-black text-wc-fg1">{player.name}</p>
+      <p className="text-[10px] font-bold text-wc-fg3">{formatPosition(player.position)}</p>
+      {player.shirt_number ? (
+        <p className="mt-1 text-[10px] font-black text-wc-neon" dir="ltr">#{player.shirt_number}</p>
+      ) : null}
+    </div>
+  );
+
+  return player.isLocal === false ? content : (
+    <PlayerLink player={player} className="block">
+      {content}
+    </PlayerLink>
+  );
+}
+
+function LineupAvatar({ player, compact }: { player: FormationLineupPlayer; compact: boolean }) {
+  const size = compact ? 42 : 48;
+
+  return (
+    <div
+      className="relative mx-auto shrink-0 overflow-hidden rounded-2xl border border-white/10 bg-[linear-gradient(135deg,rgba(95,255,123,0.16),rgba(111,60,255,0.24))]"
+      style={{ width: size, height: size }}
+    >
+      {player.photo_url ? (
+        <Image
+          src={player.photo_url}
+          alt={player.name}
+          width={size}
+          height={size}
+          style={{ width: size, height: size }}
+          className="h-full w-full object-cover"
+          unoptimized
+        />
+      ) : (
+        <span className="grid h-full w-full place-items-center font-sans text-base font-black tracking-normal text-wc-fg1">
+          {getInitials(player.name)}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function buildFormation(
+  players: FormationLineupPlayer[],
+  formationName: string | null | undefined,
+  selectedStarters: FormationLineupPlayer[] = [],
+): FormationLine[] {
+  const structure = parseFormation(formationName);
+  const candidatePool = selectedStarters.length > 0 ? selectedStarters : players;
+  const grouped = {
+    goalkeeper: sortLineupCandidates(candidatePool.filter((player) => getPositionKey(player.position) === "goalkeeper"), "goalkeeper"),
+    defender: sortLineupCandidates(candidatePool.filter((player) => getPositionKey(player.position) === "defender"), "defender"),
+    midfielder: sortLineupCandidates(candidatePool.filter((player) => getPositionKey(player.position) === "midfielder"), "midfielder"),
+    forward: sortLineupCandidates(candidatePool.filter((player) => getPositionKey(player.position) === "forward"), "forward"),
+    other: sortLineupCandidates(candidatePool.filter((player) => getPositionKey(player.position) === "other"), "other"),
+  };
+  const orderedPlayers = sortLineupCandidates(players, "other");
+  const used = new Set<FormationLineupPlayer["id"]>();
+
+  const pick = (list: FormationLineupPlayer[], amount: number) => {
+    const selected = list.filter((player) => !used.has(player.id)).slice(0, amount);
+    selected.forEach((player) => used.add(player.id));
+    return selected;
+  };
+  const fill = (line: FormationLineupPlayer[], amount: number) => {
+    if (line.length >= amount) return line;
+    return [...line, ...pick([...grouped.other, ...orderedPlayers], amount - line.length)];
+  };
+
+  const forwards = fill(pick(grouped.forward, structure.forwards), structure.forwards);
+  const midfielders = fill(pick(grouped.midfielder, structure.midfielders), structure.midfielders);
+  const defenders = fill(pick(grouped.defender, structure.defenders), structure.defenders);
+  const goalkeepers = fill(pick(grouped.goalkeeper, 1), 1);
+
+  return [
+    { key: "forward", label: "התקפה", players: forwards },
+    { key: "midfielder", label: "קישור", players: midfielders },
+    { key: "defender", label: "הגנה", players: defenders },
+    { key: "goalkeeper", label: "שער", players: goalkeepers },
+  ].filter((line) => line.players.length > 0);
+}
+
+function mapApiLineupPlayer(
+  player: { player_name?: string | null; player?: string | null; position?: string | null; number?: number | string | null; jersey_number?: number | string | null },
+  players: MatchPagePlayer[],
+  teamId: string | null,
+  index: number,
+): FormationLineupPlayer {
+  const name = readApiPlayerName(player);
+  const localPlayer = findLocalPlayer(name, players, teamId);
+  const shirtNumber = readOptionalNumber(player.number ?? player.jersey_number);
+
+  return {
+    ...toFormationPlayer(localPlayer ?? {
+      id: `api-lineup-${index}-${name}`,
+      name,
+      team_id: teamId,
+      position: normalizePosition(player.position),
+      photo_url: null,
+      shirt_number: shirtNumber,
+      top_scorer_odds: null,
+      bzzoiro_player_id: null,
+    }),
+    isLocal: Boolean(localPlayer),
+    position: localPlayer?.position ?? normalizePosition(player.position),
+    shirt_number: localPlayer?.shirt_number ?? shirtNumber,
+  };
+}
+
+function mapPredictedStarters(
+  starters: BzzoiroPredictedLineupPlayer[],
+  players: MatchPagePlayer[],
+  teamId: string | null,
+) {
+  return starters.map((starter, index): FormationLineupPlayer => {
+    const name = starter.name ?? "שחקן";
+    const localPlayer = findLocalPlayer(name, players, teamId);
+
+    return {
+      ...toFormationPlayer(localPlayer ?? {
+        id: `api-predicted-${index}-${name}`,
+        name,
+        team_id: teamId,
+        position: normalizePosition(starter.position),
+        photo_url: null,
+        shirt_number: starter.jersey_number ?? null,
+        top_scorer_odds: null,
+        bzzoiro_player_id: null,
+      }),
+      ai_score: starter.ai_score,
+      isLocal: Boolean(localPlayer),
+      position: localPlayer?.position ?? normalizePosition(starter.position),
+      shirt_number: localPlayer?.shirt_number ?? starter.jersey_number ?? null,
+    };
+  });
+}
+
+function toFormationPlayer(player: MatchPagePlayer): FormationLineupPlayer {
+  return {
+    ...player,
+    isLocal: true,
+  };
+}
+
+function parseFormation(formationName: string | null | undefined) {
+  const parts = String(formationName ?? "")
+    .split("-")
+    .map((part) => Number(part.trim()))
+    .filter((part) => Number.isInteger(part) && part > 0);
+
+  if (parts.length < 3 || parts.reduce((sum, part) => sum + part, 0) !== 10) {
+    return { defenders: 4, midfielders: 3, forwards: 3 };
+  }
+
+  return {
+    defenders: parts[0] ?? 4,
+    midfielders: parts.slice(1, -1).reduce((sum, part) => sum + part, 0),
+    forwards: parts.at(-1) ?? 3,
+  };
+}
+
+function sortLineupCandidates(players: FormationLineupPlayer[], role: string) {
+  return players.slice().sort((left, right) => {
+    return getLineupScore(right, role) - getLineupScore(left, role) || left.name.localeCompare(right.name, "he");
+  });
+}
+
+function getLineupScore(player: FormationLineupPlayer, role: string) {
+  const shirtNumber = Number(player.shirt_number);
+  const odds = Number(player.top_scorer_odds);
+  let score = 0;
+
+  score += (player.appearances ?? 0) * 8;
+  score += Math.min(player.minutes_played ?? 0, 900) / 30;
+  score += (player.goals ?? 0) * 6;
+  score += (player.assists ?? 0) * 4;
+
+  if (Number.isFinite(odds)) {
+    score += Math.max(0, 420 - odds) / (role === "forward" ? 3 : 7);
+  }
+
+  if (Number.isFinite(shirtNumber)) {
+    if (role === "goalkeeper" && shirtNumber === 1) score += 80;
+    if (shirtNumber >= 1 && shirtNumber <= 11) score += 30;
+    if (shirtNumber >= 12 && shirtNumber <= 23) score += 8;
+  }
+
+  return score;
+}
+
+function getPositionKey(position: string | null | undefined) {
+  if (!position) return "other";
+  const normalized = position.trim().toLowerCase();
+  if (normalized === "g" || normalized === "gk") return "goalkeeper";
+  if (normalized === "d") return "defender";
+  if (normalized === "m") return "midfielder";
+  if (normalized === "f") return "forward";
+  if (normalized.includes("goal") || normalized.includes("keeper")) return "goalkeeper";
+  if (normalized.includes("def") || normalized.includes("back")) return "defender";
+  if (normalized.includes("mid")) return "midfielder";
+  if (normalized.includes("att") || normalized.includes("for") || normalized.includes("striker") || normalized.includes("wing")) return "forward";
+  return "other";
 }
 
 function LineupGroup({
@@ -1165,7 +1461,7 @@ function readNumber(value: number | string | null | undefined) {
 }
 
 function readOptionalNumber(value: number | string | null | undefined) {
-  const number = Number(value);
+  const number = typeof value === "string" ? Number(value.replace("%", "")) : Number(value);
   return Number.isFinite(number) ? number : null;
 }
 
@@ -1196,8 +1492,7 @@ function getPreviewPlayers(players: MatchPagePlayer[], teamId: string | null) {
   return players
     .filter((player) => !teamId || player.team_id === teamId)
     .slice()
-    .sort((left, right) => compareOdds(left.top_scorer_odds, right.top_scorer_odds) || left.name.localeCompare(right.name, "he"))
-    .slice(0, 6);
+    .sort((left, right) => compareOdds(left.top_scorer_odds, right.top_scorer_odds) || left.name.localeCompare(right.name, "he"));
 }
 
 function compareOdds(left: number | string | null | undefined, right: number | string | null | undefined) {
@@ -1253,6 +1548,15 @@ function getSideLabel(isHome: boolean | null | undefined) {
   return "-";
 }
 
+function normalizePosition(position: string | null | undefined) {
+  const normalized = String(position ?? "").trim().toUpperCase();
+  if (normalized === "G" || normalized === "GK") return "Goalkeeper";
+  if (normalized === "D") return "Defender";
+  if (normalized === "M") return "Midfielder";
+  if (normalized === "F") return "Forward";
+  return position ?? null;
+}
+
 function formatPosition(position: string | null | undefined) {
   if (!position) return "שחקן";
   const value = position.trim().toLowerCase();
@@ -1261,6 +1565,16 @@ function formatPosition(position: string | null | undefined) {
   if (value === "m" || value.includes("mid")) return "קישור";
   if (value === "f" || value.includes("att") || value.includes("for") || value.includes("wing") || value.includes("striker")) return "התקפה";
   return position;
+}
+
+function getInitials(name: string) {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.slice(0, 1))
+    .join("")
+    .toUpperCase();
 }
 
 function formatIncidentTitle(incident: BzzoiroIncident) {

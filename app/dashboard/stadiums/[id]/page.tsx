@@ -77,9 +77,9 @@ export default async function StadiumPage({ params }: { params: Promise<{ id: st
         <SectionHeader title="משחקים באצטדיון" eyebrow="BSD World Cup events" />
         {data.worldCupEvents.length > 0 ? (
           <div className="mt-4 grid gap-3 md:grid-cols-2">
-            {data.worldCupEvents.map((event) => (
+            {data.worldCupEvents.map((event, index) => (
               <StadiumMatchCard
-                key={String(event.id)}
+                key={getEventKey(event, index)}
                 event={event}
                 localMatch={findLocalMatchForEvent(event, localMatches)}
               />
@@ -163,6 +163,15 @@ function findLocalMatchForEvent(event: BzzoiroMatchEvent, matches: MatchWithTeam
       const rightDelta = Math.abs(new Date(right.date_time).getTime() - eventTime);
       return leftDelta - rightDelta;
     })[0] ?? null;
+}
+
+function getEventKey(event: BzzoiroMatchEvent, index: number) {
+  return [
+    event.id ?? index,
+    event.event_date ?? event.date ?? "",
+    event.home_team ?? "",
+    event.away_team ?? "",
+  ].join("-");
 }
 
 function namesMatch(left: string | null | undefined, right: string | null | undefined) {
