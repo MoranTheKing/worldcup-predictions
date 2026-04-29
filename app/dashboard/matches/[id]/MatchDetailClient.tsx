@@ -181,9 +181,11 @@ export default function MatchDetailClient({
           <MomentumAndShotsPanel event={event} match={match} players={players} />
         </>
       ) : (
-        <EmptyPanel
-          title="אין עדיין חיבור BSD למשחק הזה"
-          description={getBzzoiroEmptyDescription(bzzoiro.source)}
+        <LocalFallbackMatchCenter
+          match={match}
+          source={bzzoiro.source}
+          players={players}
+          devEvents={devEvents}
         />
       )}
     </div>
@@ -312,12 +314,38 @@ function VenueTile({ event }: { event: BzzoiroMatchEvent | null }) {
   );
 }
 
+function LocalFallbackMatchCenter({
+  match,
+  source,
+  players,
+  devEvents,
+}: {
+  match: MatchDetailRow;
+  source: BzzoiroMatchCenter["source"];
+  players: MatchPagePlayer[];
+  devEvents: MatchDetailDevEvent[];
+}) {
+  return (
+    <>
+      <section className="mt-5 rounded-[1.75rem] border border-[rgba(95,255,123,0.18)] bg-[linear-gradient(135deg,rgba(95,255,123,0.07),rgba(111,60,255,0.1),rgba(255,255,255,0.025))] p-4 md:p-5">
+        <SectionHeader title="מרכז משחק מקומי" eyebrow="סימולציה" />
+        <p className="mt-2 max-w-3xl text-sm leading-7 text-wc-fg2">
+          {getBzzoiroEmptyDescription(source)} עד ש-BSD יחבר את האירוע הרשמי, העמוד מציג את תוצאת הסימולציה, xG מקומי, אירועים והרכב משוער מתוך הדאטה המקומי.
+        </p>
+      </section>
+      <LiveStatsPanel event={null} match={match} devEvents={devEvents} />
+      <LocalLineupsPanel match={match} players={players} devEvents={devEvents} />
+      <LocalTimelinePanel match={match} players={players} devEvents={devEvents} />
+    </>
+  );
+}
+
 function LiveStatsPanel({
   event,
   match,
   devEvents,
 }: {
-  event: BzzoiroMatchEvent;
+  event: BzzoiroMatchEvent | null;
   match: MatchDetailRow;
   devEvents: MatchDetailDevEvent[];
 }) {
@@ -325,7 +353,7 @@ function LiveStatsPanel({
 
   return (
     <section className="mt-5 rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-4 md:p-5">
-      <SectionHeader title="מצב משחק" eyebrow="BSD live/full" />
+      <SectionHeader title="מצב משחק" eyebrow={event ? "BSD live/full" : "סימולציה מקומית"} />
       {pairs.length > 0 ? (
         <div className="mt-4 overflow-hidden rounded-[1.25rem] border border-white/10 bg-black/14">
           {pairs.map((pair) => (
@@ -333,9 +361,9 @@ function LiveStatsPanel({
           ))}
         </div>
       ) : (
-        <EmptyState text="הסטטיסטיקות החיות יופיעו כאן כש־BSD יחזיר live_stats או xG למשחק." />
+        <EmptyState text={event ? "הסטטיסטיקות החיות יופיעו כאן כש־BSD יחזיר live_stats או xG למשחק." : "תוצאה מקומית או אירועי Dev יופיעו כאן אחרי סימולציה."} />
       )}
-      <OddsStrip event={event} match={match} />
+      {event ? <OddsStrip event={event} match={match} /> : null}
     </section>
   );
 }
@@ -521,12 +549,12 @@ function StatCompareRow({ pair }: { pair: StatPair }) {
         <span className="truncate font-sans text-xl font-black tracking-normal text-wc-fg1" dir="ltr">{pair.away}</span>
       </div>
       {homeNumber !== null || awayNumber !== null ? (
-        <div className="mt-2 grid grid-cols-2 gap-1" dir="ltr">
+        <div className="mt-2 grid grid-cols-2 gap-1" dir="rtl">
           <div className="flex justify-end">
-            <span className="h-1.5 rounded-full bg-wc-neon/70" style={{ width: homePercent }} />
+            <span className="h-1.5 rounded-full bg-wc-violet/75" style={{ width: homePercent }} />
           </div>
           <div className="flex justify-start">
-            <span className="h-1.5 rounded-full bg-wc-violet/75" style={{ width: awayPercent }} />
+            <span className="h-1.5 rounded-full bg-wc-neon/70" style={{ width: awayPercent }} />
           </div>
         </div>
       ) : null}
@@ -632,6 +660,47 @@ function LineupsPanel({
           <EmptyState text="כש־BSD יחזיר predicted-lineup או lineups בפועל, יוצגו כאן פותחים, ספסל וחסרים." />
         )
       )}
+    </section>
+  );
+}
+
+function LocalLineupsPanel({
+  match,
+  players,
+  devEvents,
+}: {
+  match: MatchDetailRow;
+  players: MatchPagePlayer[];
+  devEvents: MatchDetailDevEvent[];
+}) {
+  const eventSummaryByPlayerId = buildPlayerEventSummaryMap(devEvents);
+
+  if (players.length === 0) {
+    return (
+      <section className="mt-5 rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-4 md:p-5">
+        <SectionHeader title="הרכבים וסגלים למשחק" eyebrow="סימולציה מקומית" />
+        <EmptyState text="ברגע שיהיו שחקנים מחוברים לנבחרות המשחק, יוצג כאן הרכב משוער לסימולציה." />
+      </section>
+    );
+  }
+
+  return (
+    <section className="mt-5 rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-4 md:p-5">
+      <SectionHeader title="הרכבים וסגלים למשחק" eyebrow="סימולציה מקומית" />
+      <div className="mt-4 grid gap-4 xl:grid-cols-2">
+        <SquadPreviewSide
+          title={getTeamDisplayName(match.homeTeam, match.home_placeholder)}
+          players={getPreviewPlayers(players, match.home_team_id)}
+          formationName="4-3-3"
+          eventSummaryByPlayerId={eventSummaryByPlayerId}
+        />
+        <SquadPreviewSide
+          title={getTeamDisplayName(match.awayTeam, match.away_placeholder)}
+          players={getPreviewPlayers(players, match.away_team_id)}
+          formationName="4-3-3"
+          eventSummaryByPlayerId={eventSummaryByPlayerId}
+        />
+      </div>
     </section>
   );
 }
@@ -1008,6 +1077,33 @@ function UnavailableList({ players }: { players: BzzoiroUnavailablePlayer[] }) {
         ))}
       </div>
     </div>
+  );
+}
+
+function LocalTimelinePanel({
+  match,
+  players,
+  devEvents,
+}: {
+  match: MatchDetailRow;
+  players: MatchPagePlayer[];
+  devEvents: MatchDetailDevEvent[];
+}) {
+  const devRows = buildDevTimelineRows(devEvents, match, players);
+
+  return (
+    <section className="mt-5 rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-4 md:p-5">
+      <SectionHeader title="אירועי משחק" eyebrow="סימולציה מקומית" />
+      {devRows.length > 0 ? (
+        <div className="mt-4 grid gap-3">
+          {devRows.map((row) => (
+            <DevIncidentRow key={row.id} row={row} />
+          ))}
+        </div>
+      ) : (
+        <EmptyState text="אחרי Randomize All Matches והרצת רנדום שחקנים לפי תוצאות, יופיעו כאן שערים, בישולים וכרטיסים." />
+      )}
+    </section>
   );
 }
 
@@ -1402,15 +1498,6 @@ function MiniMetricPair({
   );
 }
 
-function EmptyPanel({ title, description }: { title: string; description: string }) {
-  return (
-    <section className="mt-5 rounded-[1.75rem] border border-dashed border-white/12 bg-white/[0.035] p-8 text-center">
-      <p className="text-lg font-black text-wc-fg1">{title}</p>
-      <p className="mt-2 text-sm leading-7 text-wc-fg3">{description}</p>
-    </section>
-  );
-}
-
 function EmptyState({ text }: { text: string }) {
   return (
     <div className="mt-4 rounded-[1.25rem] border border-dashed border-white/10 bg-black/12 p-5 text-center text-sm leading-7 text-wc-fg3">
@@ -1434,12 +1521,12 @@ type StatPair = {
 };
 
 function getLiveStatPairs(
-  event: BzzoiroMatchEvent,
+  event: BzzoiroMatchEvent | null,
   match: MatchDetailRow,
   devEvents: MatchDetailDevEvent[],
 ): StatPair[] {
-  const homeStats = event.live_stats?.home ?? null;
-  const awayStats = event.live_stats?.away ?? null;
+  const homeStats = event?.live_stats?.home ?? null;
+  const awayStats = event?.live_stats?.away ?? null;
   const pairDefinitions: Array<{ label: string; keys: string[]; formatter?: (value: number) => string }> = [
     { label: "החזקה", keys: ["possession", "ball_possession", "possession_percent"], formatter: formatPercent },
     { label: "בעיטות", keys: ["total_shots", "shots", "shot"] },
@@ -1477,12 +1564,23 @@ function getLiveStatPairs(
 }
 
 function getBestXgPair(
-  event: BzzoiroMatchEvent,
+  event: BzzoiroMatchEvent | null,
   match: MatchDetailRow,
   devEvents: MatchDetailDevEvent[],
 ): StatPair | null {
-  const homeXg = readOptionalNumber(event.home_xg_live ?? event.actual_home_xg);
-  const awayXg = readOptionalNumber(event.away_xg_live ?? event.actual_away_xg);
+  if (shouldPreferLocalScore(match, event)) {
+    const score = getMatchScoreSummary(match);
+    if (!score) return null;
+
+    return {
+      label: "xG סימולציה",
+      home: formatDecimal(buildSimulatedXgValue(match.match_number, score.homeScore, score.awayScore, true, devEvents)),
+      away: formatDecimal(buildSimulatedXgValue(match.match_number, score.awayScore, score.homeScore, false, devEvents)),
+    };
+  }
+
+  const homeXg = event ? readOptionalNumber(event.home_xg_live ?? event.actual_home_xg) : null;
+  const awayXg = event ? readOptionalNumber(event.away_xg_live ?? event.actual_away_xg) : null;
 
   if (homeXg !== null || awayXg !== null) {
     return {
@@ -1491,17 +1589,7 @@ function getBestXgPair(
       away: formatDecimal(awayXg),
     };
   }
-
-  if (!shouldPreferLocalScore(match, event)) return null;
-
-  const score = getMatchScoreSummary(match);
-  if (!score) return null;
-
-  return {
-    label: "xG סימולציה",
-    home: formatDecimal(buildSimulatedXgValue(match.match_number, score.homeScore, score.awayScore, true, devEvents)),
-    away: formatDecimal(buildSimulatedXgValue(match.match_number, score.awayScore, score.homeScore, false, devEvents)),
-  };
+  return null;
 }
 
 function buildSimulatedXgValue(

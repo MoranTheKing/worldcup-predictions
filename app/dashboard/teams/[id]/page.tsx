@@ -5,7 +5,6 @@ import type { ReactNode } from "react";
 import CoachLink from "@/components/CoachLink";
 import PlayerLink from "@/components/PlayerLink";
 import TeamLink from "@/components/TeamLink";
-import { GoalsForAgainst } from "@/components/StatNumbers";
 import { translateTeamNameToHebrew } from "@/lib/i18n/team-names";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -13,6 +12,7 @@ import {
   formatMatchDateLabel,
   formatMatchTimeLabel,
   getLiveMatchStatusLabel,
+  getMatchStageKind,
   getMatchScoreSummary,
   getStageLabelHe,
   getTeamDisplayLogo,
@@ -190,7 +190,7 @@ export default async function TeamPage({ params }: { params: Promise<{ id: strin
   const standing = groupStandings.find((entry) => entry.team.id === id) ?? null;
   const stats = buildTeamStats(teamMatches, id);
   const teamEliminated = isTeamEliminated(team, standing);
-  const status = getTeamStatus(team, standing);
+  const status = getTeamStatus(team, standing, teamMatches);
   const nextMatch =
     teamMatches.find((match) => match.status === "live") ??
     (teamEliminated ? null : teamMatches.find((match) => match.status === "scheduled") ?? null);
@@ -239,7 +239,7 @@ export default async function TeamPage({ params }: { params: Promise<{ id: strin
               </p>
               <div className="mt-4 flex flex-wrap gap-2 text-xs font-semibold">
                 {team.group_letter ? <span className="wc-badge">בית {team.group_letter}</span> : null}
-                {standing ? <span className="wc-badge">מקום {standing.rank}</span> : null}
+                {standing ? <span className="wc-badge">מקום {standing.rank} בבית</span> : null}
                 <span className={`rounded-full px-3 py-1 ${status.className}`}>{status.label}</span>
               </div>
             </div>
@@ -304,9 +304,9 @@ export default async function TeamPage({ params }: { params: Promise<{ id: strin
       <section className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <InfoStat label="משחקים ששוחקו" value={String(stats.played)} sub={`${stats.scheduledCount} משחקים עתידיים`} />
         <InfoStat
-          label="שערי זכות / חובה"
-          valueNode={<GoalsForAgainst goalsFor={stats.goalsFor} goalsAgainst={stats.goalsAgainst} />}
-          sub="מוצג לפי הנבחרת הזו"
+          label="מאזן שערים"
+          valueNode={<GoalBalance goalsFor={stats.goalsFor} goalsAgainst={stats.goalsAgainst} />}
+          sub="כבשה, ספגה והפרש שערים"
         />
         <InfoStat label="רשת נקייה" value={String(stats.cleanSheets)} sub="במשחקים שהסתיימו" />
         <InfoStat label="דירוג פיפ״א" value={String(team.fifa_ranking ?? "-")} sub="דירוג עולמי נוכחי" />
@@ -335,7 +335,7 @@ export default async function TeamPage({ params }: { params: Promise<{ id: strin
               <NextMatchCard match={nextMatch} teamId={id} />
             ) : (
               <EmptyPanel
-                title={teamEliminated ? "הנבחרת הודחה מהטורניר" : "אין משחק עתידי ידוע"}
+                title={teamEliminated ? "המסע בטורניר הסתיים" : "אין משחק עתידי ידוע"}
                 description={
                   teamEliminated
                     ? "אין כרגע משחק הבא במסלול של הנבחרת הזו."
@@ -347,7 +347,7 @@ export default async function TeamPage({ params }: { params: Promise<{ id: strin
 
           {groupStandings.length > 0 ? (
             <section className="rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-4 md:p-5">
-              <SectionHeader title={`בית ${team.group_letter}`} eyebrow="טבלה חיה" />
+              <SectionHeader title={`בית ${team.group_letter}`} eyebrow="טבלת שלב הבתים" />
               <div className="mt-3 overflow-hidden rounded-2xl border border-white/10">
                 <table className="w-full text-sm">
                   <thead>
@@ -355,7 +355,7 @@ export default async function TeamPage({ params }: { params: Promise<{ id: strin
                       <th className="px-3 py-2 text-start">#</th>
                       <th className="px-3 py-2 text-start">נבחרת</th>
                       <th className="px-3 py-2 text-center">מאזן</th>
-                      <th className="px-3 py-2 text-center">זכות / חובה</th>
+                      <th className="px-3 py-2 text-center">שערים</th>
                       <th className="px-3 py-2 text-center">נק׳</th>
                     </tr>
                   </thead>
@@ -518,6 +518,44 @@ function InfoStat({
   );
 }
 
+function GoalBalance({ goalsFor, goalsAgainst }: { goalsFor: number; goalsAgainst: number }) {
+  const difference = goalsFor - goalsAgainst;
+
+  return (
+    <span className="grid gap-2">
+      <span className="grid grid-cols-3 overflow-hidden rounded-xl border border-white/10 bg-white/[0.035] text-center text-xs">
+        <span className="border-e border-white/10 px-2 py-1.5">
+          <b className="block font-sans text-lg font-black tracking-normal text-wc-neon" dir="ltr">{goalsFor}</b>
+          <span className="block truncate font-bold text-wc-fg3">כבשה</span>
+        </span>
+        <span className="border-e border-white/10 px-2 py-1.5">
+          <b className="block font-sans text-lg font-black tracking-normal text-wc-danger" dir="ltr">{goalsAgainst}</b>
+          <span className="block truncate font-bold text-wc-fg3">ספגה</span>
+        </span>
+        <span className="px-2 py-1.5">
+          <b className={`block font-sans text-lg font-black tracking-normal ${difference >= 0 ? "text-wc-neon" : "text-wc-danger"}`} dir="ltr">
+            {difference > 0 ? `+${difference}` : difference}
+          </b>
+          <span className="block truncate font-bold text-wc-fg3">הפרש</span>
+        </span>
+      </span>
+    </span>
+  );
+}
+
+function CompactGoalBalance({ goalsFor, goalsAgainst }: { goalsFor: number; goalsAgainst: number }) {
+  return (
+    <span className="inline-flex items-center justify-center gap-1.5 text-[11px]">
+      <span className="rounded-full bg-[rgba(95,255,123,0.1)] px-2 py-1 font-bold text-wc-neon">
+        כבשה <b className="tabular-nums" dir="ltr">{goalsFor}</b>
+      </span>
+      <span className="rounded-full bg-[rgba(255,92,130,0.1)] px-2 py-1 font-bold text-wc-danger">
+        ספגה <b className="tabular-nums" dir="ltr">{goalsAgainst}</b>
+      </span>
+    </span>
+  );
+}
+
 function TeamMatchCard({ match, teamId }: { match: TeamMatch; teamId: string }) {
   const isHome = match.home_team_id === teamId;
   const opponent = isHome ? match.awayTeam : match.homeTeam;
@@ -652,7 +690,7 @@ function GroupMiniRow({ entry, activeTeamId }: { entry: TeamStanding; activeTeam
         {entry.won}-{entry.drawn}-{entry.lost}
       </td>
       <td className="px-3 py-2 text-center text-wc-fg2">
-        <GoalsForAgainst goalsFor={entry.gf} goalsAgainst={entry.ga} />
+        <CompactGoalBalance goalsFor={entry.gf} goalsAgainst={entry.ga} />
       </td>
       <td className="px-3 py-2 text-center font-black text-wc-fg1">{entry.pts}</td>
     </tr>
@@ -1054,14 +1092,9 @@ function isTeamEliminated(team: TournamentTeamRecord, standing: TeamStanding | n
   return team.is_eliminated === true || standing?.status === "eliminated";
 }
 
-function getTeamStatus(team: TournamentTeamRecord, standing: TeamStanding | null) {
-  if (isTeamEliminated(team, standing)) {
-    return {
-      label: "הודחה",
-      description: "הנבחרת הודחה מהטורניר.",
-      className: "bg-[rgba(255,92,130,0.14)] text-wc-danger",
-    };
-  }
+function getTeamStatus(team: TournamentTeamRecord, standing: TeamStanding | null, matches: TeamMatch[]) {
+  const finalStatus = getFinalTournamentStatus(matches, team, standing);
+  if (finalStatus) return finalStatus;
 
   if (standing?.status === "qualified") {
     return {
@@ -1075,6 +1108,48 @@ function getTeamStatus(team: TournamentTeamRecord, standing: TeamStanding | null
     label: "עדיין פתוח",
     description: "הנבחרת עדיין בתמונת ההעפלה והמסלול שלה פתוח.",
     className: "bg-white/8 text-wc-fg3",
+  };
+}
+
+function getFinalTournamentStatus(matches: TeamMatch[], team: TournamentTeamRecord, standing: TeamStanding | null) {
+  const teamId = team.id;
+  const finished = matches
+    .filter((match) => match.status === "finished" && isMatchScoreVisible(match))
+    .slice()
+    .sort((left, right) => new Date(right.date_time).getTime() - new Date(left.date_time).getTime());
+  const lastMatch = finished[0] ?? null;
+
+  if (!lastMatch || !isTeamEliminated(team, standing)) {
+    return null;
+  }
+
+  const outcome = getTeamOutcome(lastMatch, teamId);
+  const stageKind = getMatchStageKind(lastMatch.stage);
+  const stageLabel = getStageLabelHe(lastMatch.stage);
+  const groupFinish = standing ? ` בבית ${standing.team.group_letter ?? ""} סיימה מקום ${standing.rank}.` : "";
+
+  if (stageKind === "final") {
+    return {
+      label: outcome.result === "win" ? "אלופה" : "סגנית",
+      description: outcome.result === "win" ? "הנבחרת זכתה בטורניר." : "הנבחרת סיימה את הטורניר במקום השני.",
+      className: outcome.result === "win" ? "bg-[rgba(95,255,123,0.14)] text-wc-neon" : "bg-[rgba(125,211,252,0.16)] text-cyan-300",
+    };
+  }
+
+  if (stageKind === "third_place") {
+    return {
+      label: outcome.result === "win" ? "מקום 3" : "מקום 4",
+      description: outcome.result === "win" ? "הנבחרת סיימה במקום השלישי." : "הנבחרת סיימה במקום הרביעי.",
+      className: outcome.result === "win" ? "bg-[rgba(255,182,73,0.16)] text-wc-amber" : "bg-white/8 text-wc-fg2",
+    };
+  }
+
+  return {
+    label: stageKind === "group" ? "סיימה בבתים" : `סיימה ב${stageLabel}`,
+    description: stageKind === "group"
+      ? `הנבחרת סיימה את דרכה בשלב הבתים.${groupFinish}`
+      : `הנבחרת סיימה את דרכה ב${stageLabel}.${groupFinish}`,
+    className: "bg-[rgba(255,92,130,0.14)] text-wc-danger",
   };
 }
 

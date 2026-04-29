@@ -526,3 +526,11 @@ Brevo Free מוגבל בכמות יומית לכל החשבון, לכן ביום
 - `/dashboard/matches/[id]` keeps BSD xG authoritative whenever the API returns live/full xG, and uses a deterministic local `xG סימולציה` only when the page is already showing a local simulated score because BSD still reports pre-match state.
 - Match formations and squad fallback pitches now show compact event badges for local Dev events: goals, assists, yellow cards and red cards from `dev_match_player_events`.
 - Verified with `npm run lint`, `npm run build`, and localhost HTTP checks for `/dashboard/teams` and `/dashboard/matches/1`.
+
+## Knockout simulation fallback and team-profile wording - 2026-04-30
+
+- Knockout and third-place match pages now render a local simulation match center even when no BSD event can be matched yet. The page shows simulated score, local xG, projected squads and Dev timeline events instead of stopping at an empty BSD message.
+- The match comparison bars now keep the home side on the right in purple and the away side on the left in green, so the visual weight follows the numbers in RTL layouts.
+- Local simulated xG now takes precedence over stale BSD `0.00` values when BSD still reports a not-started event while the local match is already live/finished.
+- Team profile pages no longer use the wording “טבלה חיה” for the group table, and no longer show “בעד/נגד” chips. The UI now uses clearer football wording: `כבשה`, `ספגה`, `הפרש`, and `טבלת שלב הבתים`.
+- Final team status wording is clearer after elimination: the hero chip says where the team finished, such as `סיימה בבתים`, `סיימה בשמינית הגמר`, `סגנית`, `מקום 3`, etc., while the group rank is labeled as `מקום X בבית`.
