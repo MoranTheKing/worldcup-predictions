@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import CoachLink from "@/components/CoachLink";
-import { GoalsForAgainst, SignedNumber } from "@/components/StatNumbers";
+import { GoalsForAgainst, RecordBreakdown, SignedNumber } from "@/components/StatNumbers";
 import CompactLeaderTable, {
   type CompactLeaderRow,
   type CompactLeaderTeam,
@@ -185,7 +185,11 @@ export default async function TeamStatsPage({ params }: { params: Promise<{ id: 
       </section>
 
       <section className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <InfoStat label="מאזן" value={`${stats.wins}-${stats.draws}-${stats.losses}`} sub={`${stats.played} משחקים ששוחקו`} />
+        <InfoStat
+          label="מאזן"
+          valueNode={<RecordBreakdown wins={stats.wins} draws={stats.draws} losses={stats.losses} />}
+          sub={`${stats.played} משחקים ששוחקו`}
+        />
         <InfoStat
           label="שערי זכות / חובה"
           valueNode={<GoalsForAgainst goalsFor={stats.goalsFor} goalsAgainst={stats.goalsAgainst} />}

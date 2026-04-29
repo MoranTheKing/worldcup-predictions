@@ -511,3 +511,11 @@ Brevo Free מוגבל בכמות יומית לכל החשבון, לכן ביום
 - The lineups panel now renders actual, predicted or local fallback XIs on a pitch. The fallback uses the coach formation plus all synced team players, then chooses the XI by position, minutes, appearances, shirt number, goals/assists and odds rather than a fixed 4-3-3 or a random list.
 - Ran the local BSD team sync again after the pagination fix: 112 remote teams checked, 48 matched, 47 coaches synced, 1087 player rows synced, and 100 recent-form rows refreshed.
 - GitHub PR check on this pass found no open PRs. The latest visible PRs remain closed, including `#33` and `#34`.
+
+## RTL-safe formation and stat UI - 2026-04-29
+
+- Added a shared football formation builder in `lib/football/formation.ts`. It preserves formation layers instead of collapsing all midfielders into one row, so shapes like `4-1-4-1` and `4-2-3-1` render as separate attacking/holding midfield bands.
+- Added shared `components/football/FormationPitch.tsx` for match pages and team squad pages. Player names now use direction-safe two-line labels instead of leading ellipses, and formation badges render the numeric shape in an isolated LTR token.
+- `/dashboard/matches/[id]` and `/dashboard/teams/[id]/squad` now use the same pitch UI and the same lineup scoring logic, so predicted and fallback XIs look consistent across match and team views.
+- Replaced ambiguous RTL pair values like `שערים בעד/נגד 4-7` with split labeled cells (`בעד`, `נגד`).
+- Added `RecordBreakdown` in `components/StatNumbers.tsx` and used it in team stat tabs, so records render as labeled wins / draws / losses instead of a bare `W-D-L` string.

@@ -2,12 +2,18 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import CoachLink from "@/components/CoachLink";
+import FormationPitch from "@/components/football/FormationPitch";
 import PlayerLink from "@/components/PlayerLink";
 import {
   getBzzoiroPredictedLineupForTeam,
   type BzzoiroPredictedStarter,
 } from "@/lib/bzzoiro/lineups";
 import { getBzzoiroManagerForTeam } from "@/lib/bzzoiro/managers";
+import {
+  buildFootballFormation,
+  getFootballPositionKey,
+  normalizeFootballPosition,
+} from "@/lib/football/formation";
 import { createClient } from "@/lib/supabase/server";
 import type { TournamentTeamRecord } from "@/lib/tournament/matches";
 
@@ -29,12 +35,6 @@ type TeamPlayer = {
 };
 
 type PositionGroup = {
-  key: string;
-  label: string;
-  players: TeamPlayer[];
-};
-
-type FormationLine = {
   key: string;
   label: string;
   players: TeamPlayer[];
@@ -74,7 +74,7 @@ export default async function TeamSquadPage({ params }: { params: Promise<{ id: 
   const players = ((playersData ?? []) as TeamPlayer[]).filter((player) => player.name);
   const groups = groupPlayersByPosition(players);
   const predictedStarters = mapPredictedStarters(predictedLineup?.starters, players);
-  const formation = buildFormation(players, formationName, predictedStarters);
+  const formation = buildFootballFormation(players, formationName, predictedStarters);
   const startersCount = formation.reduce((sum, line) => sum + line.players.length, 0);
   const formationSource = predictedLineup
     ? `הרכב API ${formatConfidence(predictedLineup.confidence)}`
@@ -135,10 +135,10 @@ export default async function TeamSquadPage({ params }: { params: Promise<{ id: 
         </section>
 
         <section className="rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-4 md:p-5">
-          <SectionHeader title="הרכב משוער" eyebrow={players.length > 0 ? formationSource : "ממתין לסגל"} />
+          <SectionHeader title="הרכב משוער" eyebrow={players.length > 0 ? "תצוגת מגרש" : "ממתין לסגל"} />
           {players.length > 0 ? (
             <>
-              <FormationPitch lines={formation} />
+              <FormationPitch lines={formation} formationName={formationName} source={formationSource} />
               <p className="mt-3 text-xs leading-6 text-wc-fg3">
                 {predictedLineup
                   ? `נמשך מ-BSD predicted-lineup למשחק ${predictedLineup.event.home_team ?? ""} - ${predictedLineup.event.away_team ?? ""}.`
@@ -220,7 +220,7 @@ function HeroStat({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-[1.15rem] border border-white/10 bg-black/18 p-3 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
       <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-wc-fg3">{label}</p>
-      <p className="mt-2 font-sans text-3xl font-black tracking-normal text-wc-fg1">{value}</p>
+      <p className="mt-2 font-sans text-3xl font-black tracking-normal text-wc-fg1" dir="auto" style={{ unicodeBidi: "plaintext" }}>{value}</p>
     </div>
   );
 }
@@ -265,47 +265,6 @@ function CoachSummary({ team }: { team: Pick<TournamentTeamRecord, "id" | "coach
         <p className="mt-1 text-xs font-bold text-wc-fg3">פרופיל טקטי וסטטיסטיקות</p>
       </div>
     </CoachLink>
-  );
-}
-
-function FormationPitch({ lines }: { lines: FormationLine[] }) {
-  return (
-    <div className="mt-4 overflow-hidden rounded-[1.6rem] border border-[rgba(95,255,123,0.18)] bg-[linear-gradient(180deg,rgba(95,255,123,0.16),rgba(13,70,48,0.18)_50%,rgba(8,14,29,0.94))] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
-      <div className="relative min-h-[32rem] rounded-[1.3rem] border border-white/18 bg-[linear-gradient(90deg,rgba(255,255,255,0.045)_1px,transparent_1px),linear-gradient(180deg,rgba(255,255,255,0.045)_1px,transparent_1px)] bg-[length:5rem_5rem] p-4">
-        <div className="absolute inset-x-[18%] top-1/2 h-20 -translate-y-1/2 rounded-full border border-white/18" />
-        <div className="absolute inset-x-[28%] top-4 h-20 rounded-b-[3rem] border-x border-b border-white/18" />
-        <div className="absolute inset-x-[28%] bottom-4 h-20 rounded-t-[3rem] border-x border-t border-white/18" />
-
-        <div className="relative z-10 flex h-full min-h-[30rem] flex-col justify-between gap-4">
-          {lines.map((line) => (
-            <div key={line.key}>
-              <p className="mb-2 text-center text-[10px] font-black uppercase tracking-[0.18em] text-white/55">
-                {line.label}
-              </p>
-              <div className="flex flex-wrap items-center justify-center gap-2 md:gap-3">
-                {line.players.map((player) => (
-                  <PlayerToken key={player.id} player={player} />
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function PlayerToken({ player }: { player: TeamPlayer }) {
-  return (
-    <PlayerLink
-      player={player}
-      className="block w-24 rounded-[1.1rem] border border-white/12 bg-black/32 p-2 text-center shadow-[0_12px_28px_rgba(0,0,0,0.26)] backdrop-blur transition hover:border-wc-neon/40 hover:bg-white/[0.07]"
-    >
-      <PlayerAvatar player={player} size="sm" />
-      <p className="mt-2 truncate text-xs font-black text-wc-fg1">{player.name}</p>
-      <p className="text-[10px] font-bold text-wc-fg3">{getPositionLabel(player.position)}</p>
-      <p className="mt-1 text-[10px] font-black text-wc-neon" dir="ltr">{formatOdds(player.top_scorer_odds)}</p>
-    </PlayerLink>
   );
 }
 
@@ -382,49 +341,6 @@ function EmptyPanel({ title, description }: { title: string; description: string
   );
 }
 
-function buildFormation(
-  players: TeamPlayer[],
-  formationName: string | null | undefined,
-  predictedStarters: TeamPlayer[] = [],
-): FormationLine[] {
-  const structure = parseFormation(formationName);
-  const candidatePool = predictedStarters.length > 0 ? predictedStarters : players;
-  const grouped = {
-    goalkeeper: sortLineupCandidates(candidatePool.filter((player) => getPositionKey(player.position) === "goalkeeper"), "goalkeeper"),
-    defender: sortLineupCandidates(candidatePool.filter((player) => getPositionKey(player.position) === "defender"), "defender"),
-    midfielder: sortLineupCandidates(candidatePool.filter((player) => getPositionKey(player.position) === "midfielder"), "midfielder"),
-    forward: sortLineupCandidates(candidatePool.filter((player) => getPositionKey(player.position) === "forward"), "forward"),
-    other: sortLineupCandidates(candidatePool.filter((player) => getPositionKey(player.position) === "other"), "other"),
-  };
-  const orderedPlayers = sortLineupCandidates(players, "other");
-  const used = new Set<TeamPlayer["id"]>();
-
-  const pick = (list: TeamPlayer[], amount: number) => {
-    const selected = list.filter((player) => !used.has(player.id)).slice(0, amount);
-    selected.forEach((player) => used.add(player.id));
-    return selected;
-  };
-  const fill = (line: TeamPlayer[], amount: number) => {
-    if (line.length >= amount) return line;
-    return [
-      ...line,
-      ...pick([...grouped.other, ...orderedPlayers], amount - line.length),
-    ];
-  };
-
-  const forwards = fill(pick(grouped.forward, structure.forwards), structure.forwards);
-  const midfielders = fill(pick(grouped.midfielder, structure.midfielders), structure.midfielders);
-  const defenders = fill(pick(grouped.defender, structure.defenders), structure.defenders);
-  const goalkeepers = fill(pick(grouped.goalkeeper, 1), 1);
-
-  return [
-    { key: "forward", label: "התקפה", players: forwards },
-    { key: "midfielder", label: "קישור", players: midfielders },
-    { key: "defender", label: "הגנה", players: defenders },
-    { key: "goalkeeper", label: "שער", players: goalkeepers },
-  ].filter((line) => line.players.length > 0);
-}
-
 function mapPredictedStarters(
   starters: BzzoiroPredictedStarter[] | null | undefined,
   localPlayers: TeamPlayer[],
@@ -442,7 +358,7 @@ function mapPredictedStarters(
       return {
         id: local?.id ?? `predicted-${index}-${starter.name}`,
         name: local?.name ?? starter.name ?? "שחקן",
-        position: local?.position ?? normalizePosition(starter.position),
+        position: local?.position ?? normalizeFootballPosition(starter.position),
         photo_url: local?.photo_url ?? null,
         shirt_number: local?.shirt_number ?? starter.jersey_number ?? null,
         goals: local?.goals ?? 0,
@@ -454,52 +370,6 @@ function mapPredictedStarters(
         top_scorer_odds: local?.top_scorer_odds ?? null,
       };
     });
-}
-
-function parseFormation(formationName: string | null | undefined) {
-  const parts = String(formationName ?? "")
-    .split("-")
-    .map((part) => Number(part.trim()))
-    .filter((part) => Number.isInteger(part) && part > 0);
-
-  if (parts.length < 3 || parts.reduce((sum, part) => sum + part, 0) !== 10) {
-    return { defenders: 4, midfielders: 3, forwards: 3 };
-  }
-
-  return {
-    defenders: parts[0] ?? 4,
-    midfielders: parts.slice(1, -1).reduce((sum, part) => sum + part, 0),
-    forwards: parts.at(-1) ?? 3,
-  };
-}
-
-function sortLineupCandidates(players: TeamPlayer[], role: string) {
-  return players.slice().sort((left, right) => {
-    return getLineupScore(right, role) - getLineupScore(left, role) || left.name.localeCompare(right.name, "he");
-  });
-}
-
-function getLineupScore(player: TeamPlayer, role: string) {
-  const shirtNumber = Number(player.shirt_number);
-  const odds = Number(player.top_scorer_odds);
-  let score = 0;
-
-  score += (player.appearances ?? 0) * 8;
-  score += Math.min(player.minutes_played ?? 0, 900) / 30;
-  score += (player.goals ?? 0) * 6;
-  score += (player.assists ?? 0) * 4;
-
-  if (Number.isFinite(odds)) {
-    score += Math.max(0, 420 - odds) / (role === "forward" ? 3 : 7);
-  }
-
-  if (Number.isFinite(shirtNumber)) {
-    if (role === "goalkeeper" && shirtNumber === 1) score += 80;
-    if (shirtNumber >= 1 && shirtNumber <= 11) score += 30;
-    if (shirtNumber >= 12 && shirtNumber <= 23) score += 8;
-  }
-
-  return score;
 }
 
 function formatConfidence(value: number | null | undefined) {
@@ -521,7 +391,7 @@ function groupPlayersByPosition(players: TeamPlayer[]): PositionGroup[] {
   const grouped = new Map<string, TeamPlayer[]>();
 
   for (const player of players) {
-    const key = getPositionKey(player.position);
+    const key = getFootballPositionKey(player.position);
     grouped.set(key, [...(grouped.get(key) ?? []), player]);
   }
 
@@ -555,25 +425,9 @@ function comparePlayerOdds(left: TeamPlayer, right: TeamPlayer) {
   return 0;
 }
 
-function getPositionKey(position: string | null) {
-  if (!position) return "other";
-  const normalized = position.trim().toLowerCase();
-  if (normalized === "g") return "goalkeeper";
-  if (normalized === "d") return "defender";
-  if (normalized === "m") return "midfielder";
-  if (normalized === "f") return "forward";
-  if (normalized.includes("goal")) return "goalkeeper";
-  if (normalized.includes("def")) return "defender";
-  if (normalized.includes("mid")) return "midfielder";
-  if (normalized.includes("att") || normalized.includes("for") || normalized.includes("striker") || normalized.includes("wing")) {
-    return "forward";
-  }
-  return "other";
-}
-
 function getPositionLabel(position: string | null) {
   if (!position) return "שחקן";
-  const key = getPositionKey(position);
+  const key = getFootballPositionKey(position);
   if (key === "goalkeeper") return "שוער";
   if (key === "defender") return "הגנה";
   if (key === "midfielder") return "קישור";
@@ -586,15 +440,6 @@ function formatOdds(value: number | string | null | undefined) {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) return "-";
   return numeric.toFixed(2);
-}
-
-function normalizePosition(position: string | null | undefined) {
-  const normalized = String(position ?? "").trim().toUpperCase();
-  if (normalized === "G") return "Goalkeeper";
-  if (normalized === "D") return "Defender";
-  if (normalized === "M") return "Midfielder";
-  if (normalized === "F") return "Forward";
-  return position ?? null;
 }
 
 function normalizePlayerName(value: string | null | undefined) {

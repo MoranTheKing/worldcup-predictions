@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
-import { GoalsForAgainst, SignedNumber } from "@/components/StatNumbers";
+import { GoalsForAgainst, RecordBreakdown, SignedNumber } from "@/components/StatNumbers";
 import TeamLink from "@/components/TeamLink";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -138,7 +138,11 @@ export default async function TeamGroupStatsPage({ params }: { params: Promise<{
       </section>
 
       <section className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <InfoStat label="מאזן" value={`${stats.wins}-${stats.draws}-${stats.losses}`} sub={`${stats.played} משחקים ששוחקו`} />
+        <InfoStat
+          label="מאזן"
+          valueNode={<RecordBreakdown wins={stats.wins} draws={stats.draws} losses={stats.losses} />}
+          sub={`${stats.played} משחקים ששוחקו`}
+        />
         <InfoStat
           label="שערי זכות / חובה"
           valueNode={<GoalsForAgainst goalsFor={stats.goalsFor} goalsAgainst={stats.goalsAgainst} />}
@@ -231,7 +235,9 @@ export default async function TeamGroupStatsPage({ params }: { params: Promise<{
                 <tr key={row.stage} className="border-b border-white/6 last:border-0">
                   <td className="px-3 py-2 font-black text-wc-fg1">{row.stage}</td>
                   <td className="px-3 py-2 text-center text-wc-fg2">{row.played}</td>
-                  <td className="px-3 py-2 text-center text-wc-fg2" dir="ltr">{row.wins}-{row.draws}-{row.losses}</td>
+                  <td className="px-3 py-2 text-center text-wc-fg2">
+                    <RecordBreakdown wins={row.wins} draws={row.draws} losses={row.losses} compact />
+                  </td>
                   <td className="px-3 py-2 text-center text-wc-fg2">
                     <GoalsForAgainst goalsFor={row.goalsFor} goalsAgainst={row.goalsAgainst} />
                   </td>

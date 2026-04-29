@@ -1,6 +1,7 @@
 "use client";
 
 import { useDevLiveRefresh } from "@/lib/dev/live-refresh";
+import FormationPitch, { type FormationPitchPlayer } from "@/components/football/FormationPitch";
 import PlayerLink from "@/components/PlayerLink";
 import TeamLink from "@/components/TeamLink";
 import type {
@@ -16,6 +17,7 @@ import type {
 } from "@/lib/bzzoiro/matches";
 import type { BzzoiroPlayerStatsRow } from "@/lib/bzzoiro/players";
 import { normalizeTeamNameKey, translateTeamNameToHebrew } from "@/lib/i18n/team-names";
+import { buildFootballFormation, normalizeFootballPosition } from "@/lib/football/formation";
 import {
   formatMatchTimeLabel,
   getLiveMatchStatusLabel,
@@ -50,16 +52,9 @@ export type MatchPagePlayer = {
   red_cards?: number | null;
 };
 
-type FormationLineupPlayer = MatchPagePlayer & {
+type FormationLineupPlayer = MatchPagePlayer & FormationPitchPlayer & {
   id: MatchPagePlayer["id"] | string;
   ai_score?: number | null;
-  isLocal?: boolean;
-};
-
-type FormationLine = {
-  key: string;
-  label: string;
-  players: FormationLineupPlayer[];
 };
 
 function formatDateTime(iso: string) {
@@ -362,7 +357,14 @@ function FormCard({
       <FormSequence value={formString} />
       <div className="mt-4 grid grid-cols-2 gap-2 text-center">
         <MiniMetric label="משחקים אחרונים" value={matchesPlayed ?? "-"} />
-        <MiniMetric label="שערים בעד/נגד" value={goalsFor === null && goalsAgainst === null ? "-" : `${goalsFor ?? 0}-${goalsAgainst ?? 0}`} />
+        <MiniMetricPair
+          title="שערים"
+          firstLabel="בעד"
+          firstValue={goalsFor ?? 0}
+          secondLabel="נגד"
+          secondValue={goalsAgainst ?? 0}
+          empty={goalsFor === null && goalsAgainst === null}
+        />
       </div>
     </div>
   );
@@ -615,18 +617,18 @@ function LocalSquadPreview({ match, event, players }: { match: MatchDetailRow; e
 
 function SquadPreviewSide({ title, players, formationName }: { title: string; players: MatchPagePlayer[]; formationName?: string | null }) {
   const formation = formationName ?? "4-3-3";
-  const lines = buildFormation(players.map((player) => toFormationPlayer(player)), formation);
+  const lines = buildFootballFormation(players.map((player) => toFormationPlayer(player)), formation);
 
   return (
     <div className="rounded-[1.35rem] border border-white/10 bg-black/14 p-4">
       <div className="flex items-center justify-between gap-3">
         <h3 className="font-sans text-lg font-black tracking-normal text-wc-fg1">{title}</h3>
-        <span className="rounded-full bg-white/8 px-3 py-1 text-xs font-black text-wc-fg3" dir="ltr">{formation}</span>
+        <span className="rounded-full bg-white/8 px-3 py-1 text-xs font-black text-wc-fg3">משוער</span>
       </div>
       <p className="mt-2 text-xs leading-6 text-wc-fg3">
         עד ש־BSD יחזיר הרכב רשמי, זהו מבנה משוער לפי מערך המאמן, עמדות ויחסי מלך השערים.
       </p>
-      <LineupPitch lines={lines} compact />
+      <FormationPitch lines={lines} formationName={formation} source="מבוסס סגל מקומי" compact />
     </div>
   );
 }
@@ -645,7 +647,7 @@ function ActualLineupSide({
   formationName?: string | null;
 }) {
   const lineup = lineupPlayers.map((player, index) => mapApiLineupPlayer(player, players, teamId, index));
-  const lines = buildFormation(lineup, formationName ?? "4-3-3", lineup);
+  const lines = buildFootballFormation(lineup, formationName ?? "4-3-3", lineup);
 
   return (
     <div className="rounded-[1.35rem] border border-white/10 bg-black/14 p-4">
@@ -655,7 +657,7 @@ function ActualLineupSide({
           {lineupPlayers.length} שחקנים
         </span>
       </div>
-      <LineupPitch lines={lines} />
+      <FormationPitch lines={lines} formationName={formationName} source="הרכב בפועל" />
     </div>
   );
 }
@@ -680,7 +682,7 @@ function PredictedLineupSide({
   const unavailable = [...(lineup?.unavailable ?? []), ...eventUnavailable].filter((player) => player.name);
   const formationName = lineup?.predicted_formation ?? coachFormation ?? "4-3-3";
   const pitchPlayers = mapPredictedStarters(starters, players, teamId);
-  const lines = buildFormation(pitchPlayers, formationName, pitchPlayers);
+  const lines = buildFootballFormation(pitchPlayers, formationName, pitchPlayers);
 
   return (
     <div className="rounded-[1.35rem] border border-white/10 bg-black/14 p-4">
@@ -690,7 +692,11 @@ function PredictedLineupSide({
           {formationName}
         </span>
       </div>
-      {pitchPlayers.length > 0 ? <LineupPitch lines={lines} /> : <EmptyMini text="אין עדיין פותחים" />}
+      {pitchPlayers.length > 0 ? (
+        <FormationPitch lines={lines} formationName={formationName} source="הרכב משוער" />
+      ) : (
+        <EmptyMini text="אין עדיין פותחים" />
+      )}
       <LineupGroup title="ספסל" empty="אין עדיין ספסל" count={substitutes.length}>
         {substitutes.slice(0, 12).map((player, index) => (
           <LineupPlayerRow
@@ -708,119 +714,6 @@ function PredictedLineupSide({
   );
 }
 
-function LineupPitch({ lines, compact = false }: { lines: FormationLine[]; compact?: boolean }) {
-  return (
-    <div className="mt-4 overflow-hidden rounded-[1.25rem] border border-[rgba(95,255,123,0.16)] bg-[linear-gradient(180deg,rgba(95,255,123,0.13),rgba(10,45,34,0.18)_48%,rgba(5,8,18,0.9))] p-3">
-      <div className={`relative rounded-[1rem] border border-white/16 bg-[linear-gradient(90deg,rgba(255,255,255,0.045)_1px,transparent_1px),linear-gradient(180deg,rgba(255,255,255,0.045)_1px,transparent_1px)] bg-[length:4rem_4rem] p-3 ${compact ? "min-h-[24rem]" : "min-h-[30rem]"}`}>
-        <div className="absolute inset-x-[18%] top-1/2 h-16 -translate-y-1/2 rounded-full border border-white/14" />
-        <div className="absolute inset-x-[30%] top-3 h-16 rounded-b-[2.5rem] border-x border-b border-white/14" />
-        <div className="absolute inset-x-[30%] bottom-3 h-16 rounded-t-[2.5rem] border-x border-t border-white/14" />
-
-        <div className={`relative z-10 flex h-full flex-col justify-between gap-3 ${compact ? "min-h-[22rem]" : "min-h-[28rem]"}`}>
-          {lines.map((line) => (
-            <div key={line.key}>
-              <p className="mb-2 text-center text-[10px] font-black uppercase tracking-[0.16em] text-white/55">
-                {line.label}
-              </p>
-              <div className="flex flex-wrap items-center justify-center gap-2">
-                {line.players.map((player) => (
-                  <LineupPlayerToken key={player.id} player={player} compact={compact} />
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function LineupPlayerToken({ player, compact }: { player: FormationLineupPlayer; compact: boolean }) {
-  const content = (
-    <div className={`${compact ? "w-20" : "w-24"} rounded-[1rem] border border-white/12 bg-black/34 p-2 text-center shadow-[0_10px_24px_rgba(0,0,0,0.24)] backdrop-blur transition hover:border-wc-neon/40 hover:bg-white/[0.07]`}>
-      <LineupAvatar player={player} compact={compact} />
-      <p className="mt-2 truncate text-[11px] font-black text-wc-fg1">{player.name}</p>
-      <p className="text-[10px] font-bold text-wc-fg3">{formatPosition(player.position)}</p>
-      {player.shirt_number ? (
-        <p className="mt-1 text-[10px] font-black text-wc-neon" dir="ltr">#{player.shirt_number}</p>
-      ) : null}
-    </div>
-  );
-
-  return player.isLocal === false ? content : (
-    <PlayerLink player={player} className="block">
-      {content}
-    </PlayerLink>
-  );
-}
-
-function LineupAvatar({ player, compact }: { player: FormationLineupPlayer; compact: boolean }) {
-  const size = compact ? 42 : 48;
-
-  return (
-    <div
-      className="relative mx-auto shrink-0 overflow-hidden rounded-2xl border border-white/10 bg-[linear-gradient(135deg,rgba(95,255,123,0.16),rgba(111,60,255,0.24))]"
-      style={{ width: size, height: size }}
-    >
-      {player.photo_url ? (
-        <Image
-          src={player.photo_url}
-          alt={player.name}
-          width={size}
-          height={size}
-          style={{ width: size, height: size }}
-          className="h-full w-full object-cover"
-          unoptimized
-        />
-      ) : (
-        <span className="grid h-full w-full place-items-center font-sans text-base font-black tracking-normal text-wc-fg1">
-          {getInitials(player.name)}
-        </span>
-      )}
-    </div>
-  );
-}
-
-function buildFormation(
-  players: FormationLineupPlayer[],
-  formationName: string | null | undefined,
-  selectedStarters: FormationLineupPlayer[] = [],
-): FormationLine[] {
-  const structure = parseFormation(formationName);
-  const candidatePool = selectedStarters.length > 0 ? selectedStarters : players;
-  const grouped = {
-    goalkeeper: sortLineupCandidates(candidatePool.filter((player) => getPositionKey(player.position) === "goalkeeper"), "goalkeeper"),
-    defender: sortLineupCandidates(candidatePool.filter((player) => getPositionKey(player.position) === "defender"), "defender"),
-    midfielder: sortLineupCandidates(candidatePool.filter((player) => getPositionKey(player.position) === "midfielder"), "midfielder"),
-    forward: sortLineupCandidates(candidatePool.filter((player) => getPositionKey(player.position) === "forward"), "forward"),
-    other: sortLineupCandidates(candidatePool.filter((player) => getPositionKey(player.position) === "other"), "other"),
-  };
-  const orderedPlayers = sortLineupCandidates(players, "other");
-  const used = new Set<FormationLineupPlayer["id"]>();
-
-  const pick = (list: FormationLineupPlayer[], amount: number) => {
-    const selected = list.filter((player) => !used.has(player.id)).slice(0, amount);
-    selected.forEach((player) => used.add(player.id));
-    return selected;
-  };
-  const fill = (line: FormationLineupPlayer[], amount: number) => {
-    if (line.length >= amount) return line;
-    return [...line, ...pick([...grouped.other, ...orderedPlayers], amount - line.length)];
-  };
-
-  const forwards = fill(pick(grouped.forward, structure.forwards), structure.forwards);
-  const midfielders = fill(pick(grouped.midfielder, structure.midfielders), structure.midfielders);
-  const defenders = fill(pick(grouped.defender, structure.defenders), structure.defenders);
-  const goalkeepers = fill(pick(grouped.goalkeeper, 1), 1);
-
-  return [
-    { key: "forward", label: "התקפה", players: forwards },
-    { key: "midfielder", label: "קישור", players: midfielders },
-    { key: "defender", label: "הגנה", players: defenders },
-    { key: "goalkeeper", label: "שער", players: goalkeepers },
-  ].filter((line) => line.players.length > 0);
-}
-
 function mapApiLineupPlayer(
   player: { player_name?: string | null; player?: string | null; position?: string | null; number?: number | string | null; jersey_number?: number | string | null },
   players: MatchPagePlayer[],
@@ -836,14 +729,14 @@ function mapApiLineupPlayer(
       id: `api-lineup-${index}-${name}`,
       name,
       team_id: teamId,
-      position: normalizePosition(player.position),
+      position: normalizeFootballPosition(player.position),
       photo_url: null,
       shirt_number: shirtNumber,
       top_scorer_odds: null,
       bzzoiro_player_id: null,
     }),
     isLocal: Boolean(localPlayer),
-    position: localPlayer?.position ?? normalizePosition(player.position),
+    position: localPlayer?.position ?? normalizeFootballPosition(player.position),
     shirt_number: localPlayer?.shirt_number ?? shirtNumber,
   };
 }
@@ -862,7 +755,7 @@ function mapPredictedStarters(
         id: `api-predicted-${index}-${name}`,
         name,
         team_id: teamId,
-        position: normalizePosition(starter.position),
+        position: normalizeFootballPosition(starter.position),
         photo_url: null,
         shirt_number: starter.jersey_number ?? null,
         top_scorer_odds: null,
@@ -870,7 +763,7 @@ function mapPredictedStarters(
       }),
       ai_score: starter.ai_score,
       isLocal: Boolean(localPlayer),
-      position: localPlayer?.position ?? normalizePosition(starter.position),
+      position: localPlayer?.position ?? normalizeFootballPosition(starter.position),
       shirt_number: localPlayer?.shirt_number ?? starter.jersey_number ?? null,
     };
   });
@@ -881,66 +774,6 @@ function toFormationPlayer(player: MatchPagePlayer): FormationLineupPlayer {
     ...player,
     isLocal: true,
   };
-}
-
-function parseFormation(formationName: string | null | undefined) {
-  const parts = String(formationName ?? "")
-    .split("-")
-    .map((part) => Number(part.trim()))
-    .filter((part) => Number.isInteger(part) && part > 0);
-
-  if (parts.length < 3 || parts.reduce((sum, part) => sum + part, 0) !== 10) {
-    return { defenders: 4, midfielders: 3, forwards: 3 };
-  }
-
-  return {
-    defenders: parts[0] ?? 4,
-    midfielders: parts.slice(1, -1).reduce((sum, part) => sum + part, 0),
-    forwards: parts.at(-1) ?? 3,
-  };
-}
-
-function sortLineupCandidates(players: FormationLineupPlayer[], role: string) {
-  return players.slice().sort((left, right) => {
-    return getLineupScore(right, role) - getLineupScore(left, role) || left.name.localeCompare(right.name, "he");
-  });
-}
-
-function getLineupScore(player: FormationLineupPlayer, role: string) {
-  const shirtNumber = Number(player.shirt_number);
-  const odds = Number(player.top_scorer_odds);
-  let score = 0;
-
-  score += (player.appearances ?? 0) * 8;
-  score += Math.min(player.minutes_played ?? 0, 900) / 30;
-  score += (player.goals ?? 0) * 6;
-  score += (player.assists ?? 0) * 4;
-
-  if (Number.isFinite(odds)) {
-    score += Math.max(0, 420 - odds) / (role === "forward" ? 3 : 7);
-  }
-
-  if (Number.isFinite(shirtNumber)) {
-    if (role === "goalkeeper" && shirtNumber === 1) score += 80;
-    if (shirtNumber >= 1 && shirtNumber <= 11) score += 30;
-    if (shirtNumber >= 12 && shirtNumber <= 23) score += 8;
-  }
-
-  return score;
-}
-
-function getPositionKey(position: string | null | undefined) {
-  if (!position) return "other";
-  const normalized = position.trim().toLowerCase();
-  if (normalized === "g" || normalized === "gk") return "goalkeeper";
-  if (normalized === "d") return "defender";
-  if (normalized === "m") return "midfielder";
-  if (normalized === "f") return "forward";
-  if (normalized.includes("goal") || normalized.includes("keeper")) return "goalkeeper";
-  if (normalized.includes("def") || normalized.includes("back")) return "defender";
-  if (normalized.includes("mid")) return "midfielder";
-  if (normalized.includes("att") || normalized.includes("for") || normalized.includes("striker") || normalized.includes("wing")) return "forward";
-  return "other";
 }
 
 function LineupGroup({
@@ -1286,6 +1119,42 @@ function MiniMetric({ label, value }: { label: string; value: number | string })
   );
 }
 
+function MiniMetricPair({
+  title,
+  firstLabel,
+  firstValue,
+  secondLabel,
+  secondValue,
+  empty,
+}: {
+  title: string;
+  firstLabel: string;
+  firstValue: number | string;
+  secondLabel: string;
+  secondValue: number | string;
+  empty?: boolean;
+}) {
+  return (
+    <div className="min-w-0 rounded-lg bg-white/[0.045] px-2 py-1 text-center">
+      <p className="text-[10px] font-bold text-wc-fg3">{title}</p>
+      {empty ? (
+        <p className="mt-0.5 text-sm font-black text-wc-fg1">-</p>
+      ) : (
+        <div className="mt-1 grid grid-cols-2 divide-x divide-x-reverse divide-white/10">
+          <div className="min-w-0 px-1">
+            <p className="font-sans text-sm font-black tracking-normal text-wc-fg1" dir="ltr">{firstValue}</p>
+            <p className="text-[10px] font-bold text-wc-fg3">{firstLabel}</p>
+          </div>
+          <div className="min-w-0 px-1">
+            <p className="font-sans text-sm font-black tracking-normal text-wc-fg1" dir="ltr">{secondValue}</p>
+            <p className="text-[10px] font-bold text-wc-fg3">{secondLabel}</p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function EmptyPanel({ title, description }: { title: string; description: string }) {
   return (
     <section className="mt-5 rounded-[1.75rem] border border-dashed border-white/12 bg-white/[0.035] p-8 text-center">
@@ -1548,15 +1417,6 @@ function getSideLabel(isHome: boolean | null | undefined) {
   return "-";
 }
 
-function normalizePosition(position: string | null | undefined) {
-  const normalized = String(position ?? "").trim().toUpperCase();
-  if (normalized === "G" || normalized === "GK") return "Goalkeeper";
-  if (normalized === "D") return "Defender";
-  if (normalized === "M") return "Midfielder";
-  if (normalized === "F") return "Forward";
-  return position ?? null;
-}
-
 function formatPosition(position: string | null | undefined) {
   if (!position) return "שחקן";
   const value = position.trim().toLowerCase();
@@ -1565,16 +1425,6 @@ function formatPosition(position: string | null | undefined) {
   if (value === "m" || value.includes("mid")) return "קישור";
   if (value === "f" || value.includes("att") || value.includes("for") || value.includes("wing") || value.includes("striker")) return "התקפה";
   return position;
-}
-
-function getInitials(name: string) {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part.slice(0, 1))
-    .join("")
-    .toUpperCase();
 }
 
 function formatIncidentTitle(incident: BzzoiroIncident) {
