@@ -534,3 +534,12 @@ Brevo Free מוגבל בכמות יומית לכל החשבון, לכן ביום
 - Local simulated xG now takes precedence over stale BSD `0.00` values when BSD still reports a not-started event while the local match is already live/finished.
 - Team profile pages no longer use the wording “טבלה חיה” for the group table, and no longer show “בעד/נגד” chips. The UI now uses clearer football wording: `כבשה`, `ספגה`, `הפרש`, and `טבלת שלב הבתים`.
 - Final team status wording is clearer after elimination: the hero chip says where the team finished, such as `סיימה בבתים`, `סיימה בשמינית הגמר`, `סגנית`, `מקום 3`, etc., while the group rank is labeled as `מקום X בבית`.
+
+## Match event Hebrew and PR follow-up - 2026-04-30
+
+- Match-event badges now use natural Hebrew plural forms with the number first: `2 שערים`, `2 בישולים`, `2 צהובים`, `2 אדומים`, instead of awkward forms such as `צהוב 2` or abbreviated `ביש 2`.
+- Match timelines no longer show ambiguous `בית`/`חוץ` chips. Non-scoring events show the relevant national team name, and scoring chips are oriented for the RTL match header.
+- Dev player-stat randomization now creates local goal events even when a simulated team still has no synced squad. Those events are labeled as future-squad placeholders until BSD/local roster data is available, so score simulations still produce a visible timeline.
+- Match lineups now include an “אירועי שחקנים” summary under each side, so scorers, assistants and carded players are visible even if they were not in the projected starting XI.
+- Team player-stat leader cards now label attacking output as `שערים + בישולים` instead of the vague `תרומה`.
+- `/dashboard/stadiums/[id]` is included in protected dashboard routing, and stadium match-card scores now follow the BSD event-side mapping safely when the local home/away order is swapped.

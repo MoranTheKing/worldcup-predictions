@@ -660,6 +660,7 @@ function LineupsPanel({
           <EmptyState text="כש־BSD יחזיר predicted-lineup או lineups בפועל, יוצגו כאן פותחים, ספסל וחסרים." />
         )
       )}
+      <EventInvolvementSummary match={match} players={players} devEvents={devEvents} />
     </section>
   );
 }
@@ -680,6 +681,7 @@ function LocalLineupsPanel({
       <section className="mt-5 rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-4 md:p-5">
         <SectionHeader title="הרכבים וסגלים למשחק" eyebrow="סימולציה מקומית" />
         <EmptyState text="ברגע שיהיו שחקנים מחוברים לנבחרות המשחק, יוצג כאן הרכב משוער לסימולציה." />
+        <EventInvolvementSummary match={match} players={players} devEvents={devEvents} />
       </section>
     );
   }
@@ -701,6 +703,7 @@ function LocalLineupsPanel({
           eventSummaryByPlayerId={eventSummaryByPlayerId}
         />
       </div>
+      <EventInvolvementSummary match={match} players={players} devEvents={devEvents} />
     </section>
   );
 }
@@ -1045,21 +1048,168 @@ function InlineEventBadges({ summary }: { summary?: PlayerMatchEventSummary | nu
   if (!hasEventSummary(summary)) return null;
 
   const badges = [
-    summary.goals > 0 ? { key: "g", value: summary.goals, label: "שער", className: "bg-wc-neon text-wc-bg" } : null,
-    summary.assists > 0 ? { key: "a", value: summary.assists, label: "בישול", className: "bg-cyan-300 text-wc-bg" } : null,
-    summary.yellowCards > 0 ? { key: "y", value: summary.yellowCards, label: "צהוב", className: "bg-wc-amber text-wc-bg" } : null,
-    summary.redCards > 0 ? { key: "r", value: summary.redCards, label: "אדום", className: "bg-wc-danger text-white" } : null,
-  ].filter((badge): badge is { key: string; value: number; label: string; className: string } => Boolean(badge));
+    summary.goals > 0 ? { key: "g", value: summary.goals, singular: "שער", plural: "שערים", className: "bg-wc-neon text-wc-bg" } : null,
+    summary.assists > 0 ? { key: "a", value: summary.assists, singular: "בישול", plural: "בישולים", className: "bg-cyan-300 text-wc-bg" } : null,
+    summary.yellowCards > 0 ? { key: "y", value: summary.yellowCards, singular: "צהוב", plural: "צהובים", className: "bg-wc-amber text-wc-bg" } : null,
+    summary.redCards > 0 ? { key: "r", value: summary.redCards, singular: "אדום", plural: "אדומים", className: "bg-wc-danger text-white" } : null,
+  ].filter((badge): badge is { key: string; value: number; singular: string; plural: string; className: string } => Boolean(badge));
 
   return (
     <span className="flex shrink-0 flex-wrap justify-end gap-1">
       {badges.map((badge) => (
-        <span key={badge.key} className={`rounded-full px-1.5 py-0.5 text-[9px] font-black leading-none ${badge.className}`}>
-          {badge.value > 1 ? `${badge.label} ${badge.value}` : badge.label}
+        <span key={badge.key} className={`rounded-full px-1.5 py-0.5 text-[9px] font-black leading-none ${badge.className}`} dir="rtl">
+          {formatEventBadgeCount(badge.value, badge.singular, badge.plural)}
         </span>
       ))}
     </span>
   );
+}
+
+function EventInvolvementSummary({
+  match,
+  players,
+  devEvents,
+}: {
+  match: MatchDetailRow;
+  players: MatchPagePlayer[];
+  devEvents: MatchDetailDevEvent[];
+}) {
+  const rows = buildEventInvolvementRows(match, players, devEvents);
+  if (rows.length === 0) return null;
+
+  const homeRows = rows.filter((row) => row.side === "home");
+  const awayRows = rows.filter((row) => row.side === "away");
+
+  return (
+    <div className="mt-4 grid gap-3 xl:grid-cols-2">
+      <EventInvolvementTeam
+        title={getTeamDisplayName(match.homeTeam, match.home_placeholder)}
+        rows={homeRows}
+      />
+      <EventInvolvementTeam
+        title={getTeamDisplayName(match.awayTeam, match.away_placeholder)}
+        rows={awayRows}
+      />
+    </div>
+  );
+}
+
+type EventInvolvementRow = {
+  key: string;
+  side: "home" | "away";
+  player: MatchPagePlayer | null;
+  name: string;
+  summary: PlayerMatchEventSummary;
+};
+
+function EventInvolvementTeam({
+  title,
+  rows,
+}: {
+  title: string;
+  rows: EventInvolvementRow[];
+}) {
+  return (
+    <div className="rounded-[1.15rem] border border-white/10 bg-black/14 p-3">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm font-black text-wc-fg1">{title}</p>
+        <span className="rounded-full bg-white/8 px-2.5 py-1 text-[11px] font-black text-wc-fg3">
+          אירועי שחקנים
+        </span>
+      </div>
+      {rows.length > 0 ? (
+        <div className="mt-3 grid gap-2">
+          {rows.map((row) => (
+            <div key={row.key} className="flex items-center justify-between gap-3 rounded-2xl bg-white/[0.045] px-3 py-2">
+              <div className="min-w-0">
+                {row.player ? (
+                  <PlayerLink player={row.player} className="truncate text-sm font-black text-wc-fg1 hover:text-wc-neon">
+                    {row.player.name}
+                  </PlayerLink>
+                ) : (
+                  <p className="truncate text-sm font-black text-wc-fg1">{row.name}</p>
+                )}
+                <p className="mt-0.5 text-[11px] font-bold text-wc-fg3">
+                  {row.player ? formatPosition(row.player.position) : "יושלם כשהסגל הרשמי יסתנכרן"}
+                </p>
+              </div>
+              <InlineEventBadges summary={row.summary} />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="mt-3 rounded-2xl border border-dashed border-white/10 px-3 py-3 text-center text-xs font-bold text-wc-fg3">
+          אין אירועי שחקנים לנבחרת הזו
+        </p>
+      )}
+    </div>
+  );
+}
+
+function buildEventInvolvementRows(
+  match: MatchDetailRow,
+  players: MatchPagePlayer[],
+  events: MatchDetailDevEvent[],
+) {
+  const rows = new Map<string, EventInvolvementRow>();
+
+  for (const event of events) {
+    const side = getEventSide(event, match);
+    if (!side) continue;
+    const teamId = side === "home" ? match.home_team_id : match.away_team_id;
+
+    if (event.event_type === "goal") {
+      addEventInvolvement(rows, event, side, teamId, players, "goals");
+      if (event.related_player_id !== null && event.related_player_id !== undefined) {
+        addEventInvolvement(rows, { ...event, player_id: event.related_player_id }, side, teamId, players, "assists");
+      }
+    } else if (event.event_type === "yellow_card") {
+      addEventInvolvement(rows, event, side, teamId, players, "yellowCards");
+    } else if (event.event_type === "red_card") {
+      addEventInvolvement(rows, event, side, teamId, players, "redCards");
+    }
+  }
+
+  return [...rows.values()].sort((left, right) =>
+    eventImpactScore(right.summary) - eventImpactScore(left.summary) ||
+    left.name.localeCompare(right.name, "he"),
+  );
+}
+
+function addEventInvolvement(
+  rows: Map<string, EventInvolvementRow>,
+  event: MatchDetailDevEvent,
+  side: "home" | "away",
+  teamId: string | null,
+  players: MatchPagePlayer[],
+  field: keyof PlayerMatchEventSummary,
+) {
+  const player = findLocalPlayerById(event.player_id, players, teamId);
+  const syntheticType = field === "goals" ? "scorer" : field === "assists" ? "assist" : "card";
+  const key = player ? `player-${player.id}` : `synthetic-${side}-${syntheticType}`;
+  const row = rows.get(key) ?? {
+    key,
+    side,
+    player,
+    name: player?.name ?? getSyntheticEventPlayerName(field),
+    summary: { goals: 0, assists: 0, yellowCards: 0, redCards: 0 },
+  };
+  row.summary[field] += 1;
+  rows.set(key, row);
+}
+
+function getSyntheticEventPlayerName(field: keyof PlayerMatchEventSummary) {
+  if (field === "goals") return "מבקיע מהסגל העתידי";
+  if (field === "assists") return "מבשל מהסגל העתידי";
+  return "שחקן מהסגל העתידי";
+}
+
+function eventImpactScore(summary: PlayerMatchEventSummary) {
+  return summary.goals * 5 + summary.assists * 3 + summary.redCards * 2 + summary.yellowCards;
+}
+
+function formatEventBadgeCount(value: number, singular: string, plural: string) {
+  return value > 1 ? `${value} ${plural}` : singular;
 }
 
 function UnavailableList({ players }: { players: BzzoiroUnavailablePlayer[] }) {
@@ -1150,6 +1300,7 @@ type DevTimelineRow = MatchDetailDevEvent & {
   player: MatchPagePlayer | null;
   assistPlayer: MatchPagePlayer | null;
   score: string | null;
+  teamName: string;
 };
 
 function buildDevTimelineRows(
@@ -1171,15 +1322,21 @@ function buildDevTimelineRows(
         } else {
           awayGoals += 1;
         }
-        score = `${homeGoals}-${awayGoals}`;
+        score = formatTimelineScore(homeGoals, awayGoals);
       }
 
       const teamId = event.is_home === true ? match.home_team_id : event.is_home === false ? match.away_team_id : null;
+      const teamName = event.is_home === true
+        ? getTeamDisplayName(match.homeTeam, match.home_placeholder)
+        : event.is_home === false
+          ? getTeamDisplayName(match.awayTeam, match.away_placeholder)
+          : "-";
       return {
         ...event,
         player: findLocalPlayerById(event.player_id, players, teamId),
         assistPlayer: findLocalPlayerById(event.related_player_id, players, teamId),
         score,
+        teamName,
       };
     });
 }
@@ -1197,7 +1354,11 @@ function DevIncidentRow({ row }: { row: DevTimelineRow }) {
     <PlayerLink player={row.player} className="font-black text-wc-fg1 hover:text-wc-neon">
       {row.player.name}
     </PlayerLink>
-  ) : null;
+  ) : row.event_type === "goal" ? (
+    <span className="font-black text-wc-fg1">מבקיע מהסגל העתידי</span>
+  ) : (
+    <span className="font-black text-wc-fg1">שחקן מהסגל העתידי</span>
+  );
 
   return (
     <div className={`grid grid-cols-[3rem_1fr_auto] items-center gap-3 rounded-[1rem] border px-3 py-3 ${accentClass}`}>
@@ -1216,8 +1377,8 @@ function DevIncidentRow({ row }: { row: DevTimelineRow }) {
           </p>
         ) : null}
       </div>
-      <span className="rounded-full bg-white/8 px-2 py-1 text-xs font-black text-wc-fg2" dir="ltr">
-        {row.score ?? getSideLabel(row.is_home)}
+      <span className="rounded-full bg-white/8 px-2 py-1 text-xs font-black text-wc-fg2" dir={row.score ? "ltr" : "rtl"}>
+        {row.score ?? row.teamName}
       </span>
     </div>
   );
@@ -1237,8 +1398,13 @@ function IncidentRow({
   const playerName = incident.player_name ?? incident.player ?? incident.player_out ?? incident.player_in ?? "";
   const localPlayer = playerName ? findLocalPlayer(playerName, players, sideTeamId) : null;
   const title = formatIncidentTitle(incident);
+  const sideName = incident.is_home === true
+    ? getTeamDisplayName(match.homeTeam, match.home_placeholder)
+    : incident.is_home === false
+      ? getTeamDisplayName(match.awayTeam, match.away_placeholder)
+      : "-";
   const score = incident.home_score !== null && incident.home_score !== undefined && incident.away_score !== null && incident.away_score !== undefined
-    ? `${incident.home_score}-${incident.away_score}`
+    ? formatTimelineScore(readNumber(incident.home_score), readNumber(incident.away_score))
     : null;
 
   const playerNode = localPlayer ? (
@@ -1261,8 +1427,8 @@ function IncidentRow({
           <p className="mt-1 truncate text-xs text-wc-fg3">בישול: {incident.assist ?? incident.assist_player}</p>
         ) : null}
       </div>
-      <span className="rounded-full bg-white/8 px-2 py-1 text-xs font-black text-wc-fg2" dir="ltr">
-        {score ?? getSideLabel(incident.is_home)}
+      <span className="rounded-full bg-white/8 px-2 py-1 text-xs font-black text-wc-fg2" dir={score ? "ltr" : "rtl"}>
+        {score ?? sideName}
       </span>
     </div>
   );
@@ -1816,10 +1982,16 @@ function namesMatch(leftValue: string | null | undefined, rightValue: string | n
   return Boolean(left && right && (left === right || left.includes(right) || right.includes(left)));
 }
 
-function getSideLabel(isHome: boolean | null | undefined) {
-  if (isHome === true) return "בית";
-  if (isHome === false) return "חוץ";
-  return "-";
+function getEventSide(event: Pick<MatchDetailDevEvent, "is_home" | "team_id">, match: MatchDetailRow) {
+  if (event.is_home === true) return "home";
+  if (event.is_home === false) return "away";
+  if (event.team_id && event.team_id === match.home_team_id) return "home";
+  if (event.team_id && event.team_id === match.away_team_id) return "away";
+  return null;
+}
+
+function formatTimelineScore(homeGoals: number, awayGoals: number) {
+  return `${awayGoals}-${homeGoals}`;
 }
 
 function formatPosition(position: string | null | undefined) {

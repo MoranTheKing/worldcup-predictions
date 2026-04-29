@@ -67,6 +67,7 @@ function isProtectedPath(pathname: string) {
     pathname.startsWith("/dashboard/matches") ||
     pathname.startsWith("/dashboard/players") ||
     pathname.startsWith("/dashboard/coaches") ||
+    pathname.startsWith("/dashboard/stadiums") ||
     pathname.startsWith("/dashboard/profile") ||
     pathname.startsWith("/dashboard/leagues") ||
     pathname.startsWith("/leagues") ||

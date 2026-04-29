@@ -137,7 +137,9 @@ function StadiumMatchCard({
   const awayName =
     (awayTeam ? getTeamDisplayName(awayTeam, null) : translateTeamNameToHebrew(event.away_team)) ||
     getTeamDisplayName(localMatch?.awayTeam ?? null, localMatch?.away_placeholder ?? null);
-  const score = localMatch && isMatchScoreVisible(localMatch) ? getMatchScoreSummary(localMatch) : null;
+  const score = localMatch && isMatchScoreVisible(localMatch)
+    ? getMatchScoreSummary(getEventSideScoreMatch(event, localMatch))
+    : null;
   const centerLabel = score ? score.displayScore : "VS";
   const statusLabel = localMatch ? translateStatus(localMatch.status) : translateStatus(event.status);
   const content = (
@@ -315,6 +317,37 @@ function resolveLocalTeamForEventSide(
   }
 
   return side === "home" ? match.homeTeam : match.awayTeam;
+}
+
+function getEventSideScoreMatch(event: BzzoiroMatchEvent, match: MatchWithTeams) {
+  if (!shouldFlipScoreForEventSides(event, match)) return match;
+
+  return {
+    ...match,
+    home_score: match.away_score,
+    away_score: match.home_score,
+    home_penalty_score: match.away_penalty_score,
+    away_penalty_score: match.home_penalty_score,
+  };
+}
+
+function shouldFlipScoreForEventSides(event: BzzoiroMatchEvent, match: MatchWithTeams) {
+  return (
+    eventSideMatchesLocalSide(event, match, "home", "away") &&
+    eventSideMatchesLocalSide(event, match, "away", "home")
+  );
+}
+
+function eventSideMatchesLocalSide(
+  event: BzzoiroMatchEvent,
+  match: MatchWithTeams,
+  eventSide: "home" | "away",
+  localSide: "home" | "away",
+) {
+  const remote = getEventRemoteTeam(event, eventSide);
+  const team = localSide === "home" ? match.homeTeam : match.awayTeam;
+  const placeholder = localSide === "home" ? match.home_placeholder : match.away_placeholder;
+  return teamMatchesRemote(team, placeholder, remote.id, remote.name);
 }
 
 function getEventRemoteTeam(event: BzzoiroMatchEvent, side: "home" | "away") {

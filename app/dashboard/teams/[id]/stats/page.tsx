@@ -233,7 +233,7 @@ export default async function TeamStatsPage({ params }: { params: Promise<{ id: 
       <section className="mt-5 grid gap-5 xl:grid-cols-2">
         <CompactLeaderTable
           title="מלכי שערים ובישולים"
-          eyebrow="שחקן / נבחרת / תרומה התקפית"
+          eyebrow="שחקן / נבחרת / שערים ובישולים"
           rows={attackRows}
           emptyTitle="אין עדיין נתוני שחקנים"
           emptyDescription="הטבלה תתמלא אחרי סנכרון נתוני השחקנים."
@@ -331,7 +331,7 @@ function buildTeamPlayerRows(
     imageUrl: player.photo_url ?? null,
     imageAlt: player.name,
     team: toCompactTeam(team),
-    metricLabel: mode === "attack" ? "תרומה" : "כרטיסים",
+    metricLabel: mode === "attack" ? "שערים + בישולים" : "כרטיסים",
     metricValue:
       mode === "attack"
         ? `${(player.goals ?? 0) + (player.assists ?? 0)}`

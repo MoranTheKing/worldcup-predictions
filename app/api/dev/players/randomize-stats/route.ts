@@ -294,9 +294,22 @@ function assignGoalsForSide(
   let goalsAssigned = 0;
 
   for (let index = 0; index < goals; index += 1) {
+    const minute = pickGoalMinute(match, index, goals);
     const scorer = pickWeighted(squad, (entry) => scorerWeight(entry.player));
-    if (!scorer) continue;
     goalsAssigned += 1;
+
+    if (!scorer) {
+      events.push({
+        match_number: match.match_number,
+        team_id: isHome ? match.home_team_id : match.away_team_id,
+        player_id: null,
+        related_player_id: null,
+        event_type: "goal",
+        minute,
+        is_home: isHome,
+      });
+      continue;
+    }
 
     const scorerStats = statsByPlayerId.get(scorer.player.id);
     if (scorerStats) scorerStats.goals += 1;
@@ -320,7 +333,7 @@ function assignGoalsForSide(
       player_id: scorer.player.id,
       related_player_id: assistPlayer?.player.id ?? null,
       event_type: "goal",
-      minute: pickGoalMinute(match, index, goals),
+      minute,
       is_home: isHome,
     });
   }

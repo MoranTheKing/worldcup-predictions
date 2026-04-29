@@ -109,6 +109,7 @@ function PlayerToken({ player, compact }: { player: FormationPitchPlayer; compac
             <span
               key={badge.key}
               className={`rounded-full px-1.5 py-0.5 text-[9px] font-black leading-none ${badge.className}`}
+              dir="rtl"
               title={badge.title}
             >
               {badge.label}
@@ -136,7 +137,7 @@ function getPlayerEventBadges(player: FormationPitchPlayer) {
   if (goals > 0) {
     badges.push({
       key: "goals",
-      label: goals > 1 ? `שער ${goals}` : "שער",
+      label: goals > 1 ? `${goals} שערים` : "שער",
       title: goals > 1 ? `${goals} שערים במשחק` : "שער במשחק",
       className: "bg-wc-neon text-wc-bg",
     });
@@ -145,7 +146,7 @@ function getPlayerEventBadges(player: FormationPitchPlayer) {
   if (assists > 0) {
     badges.push({
       key: "assists",
-      label: assists > 1 ? `ביש ${assists}` : "בישול",
+      label: assists > 1 ? `${assists} בישולים` : "בישול",
       title: assists > 1 ? `${assists} בישולים במשחק` : "בישול במשחק",
       className: "bg-cyan-300 text-wc-bg",
     });
@@ -154,7 +155,7 @@ function getPlayerEventBadges(player: FormationPitchPlayer) {
   if (yellowCards > 0) {
     badges.push({
       key: "yellow",
-      label: yellowCards > 1 ? `צהוב ${yellowCards}` : "צהוב",
+      label: yellowCards > 1 ? `${yellowCards} צהובים` : "צהוב",
       title: yellowCards > 1 ? `${yellowCards} צהובים במשחק` : "כרטיס צהוב במשחק",
       className: "bg-wc-amber text-wc-bg",
     });
@@ -163,7 +164,7 @@ function getPlayerEventBadges(player: FormationPitchPlayer) {
   if (redCards > 0) {
     badges.push({
       key: "red",
-      label: redCards > 1 ? `אדום ${redCards}` : "אדום",
+      label: redCards > 1 ? `${redCards} אדומים` : "אדום",
       title: redCards > 1 ? `${redCards} אדומים במשחק` : "כרטיס אדום במשחק",
       className: "bg-wc-danger text-white",
     });
