@@ -483,3 +483,4 @@ Brevo Free מוגבל בכמות יומית לכל החשבון, לכן ביום
 - Player profile metric cards and recent-match mini metrics are centered, and recent-match score chips now show `ניצחון`, `תיקו`, or `הפסד` with color and a team-perspective score when the player team can be matched to the event.
 - Split player metric cards use constrained columns and smaller tabular numbers so paired values such as `xG`/`xA` cannot overlap in narrow cards.
 - Player age rows no longer combine Hebrew dates inside an LTR parenthesized string; they render as separate RTL-safe age and birth-date tokens.
+- Player advanced stats now label BSD `duel_won/duel_lost` as general duels, keep aerial duels separate, and only show the goalkeeper card for goalkeepers or players with real goalkeeper activity.

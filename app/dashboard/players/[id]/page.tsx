@@ -119,6 +119,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
   const detailPositions = getDetailedPositions(detail, player);
   const attributes = getAttributeEntries(detail?.attributes).slice(0, 8);
   const hasBsdData = Boolean(detail || stats.length > 0);
+  const showGoalkeeperStats = isGoalkeeperProfile(detail, player, stats) || hasGoalkeeperStatActivity(allStats);
 
   return (
     <div className="wc-shell px-4 py-4 md:px-6 md:py-6" dir="rtl">
@@ -316,7 +317,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
               ]}
             />
             <SplitMetricCard
-              title="דו-קרבים"
+              title="מאבקים כלליים"
               parts={[
                 { label: "ניצח", value: allStats.duelsWon },
                 { label: "סה״כ", value: allStats.duelsWon + allStats.duelsLost },
@@ -342,18 +343,20 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
                 { label: "אדומים", value: allStats.redCards, tone: "red" },
               ]}
             />
-            <SplitMetricCard
-              title="שוער"
-              parts={[
-                { label: "הצלות", value: allStats.saves },
-                { label: "ספיגות", value: allStats.goalsConceded, tone: "red" },
-              ]}
-            />
+            {showGoalkeeperStats ? (
+              <SplitMetricCard
+                title="נתוני שוער"
+                parts={[
+                  { label: "הצלות", value: allStats.saves },
+                  { label: "ספיגות", value: allStats.goalsConceded, tone: "red" },
+                ]}
+              />
+            ) : null}
           </div>
         ) : (
           <EmptyPanel
             title="אין עדיין נתונים מתקדמים"
-            description="כש־BSD יחזיר player-stats, יופיעו כאן מדדי מסירה, הגנה, דו-קרבים, שוער ומשמעת."
+            description="כש־BSD יחזיר player-stats, יופיעו כאן מדדי מסירה, הגנה, מאבקים, שוער ומשמעת."
           />
         )}
       </section>
@@ -722,6 +725,29 @@ function getDetailedPositions(detail: BzzoiroPlayerDetail | null, player: Player
     .filter((value): value is string => Boolean(value));
 
   return Array.from(new Set(values)).slice(0, 4);
+}
+
+function isGoalkeeperProfile(
+  detail: BzzoiroPlayerDetail | null,
+  player: PlayerRecord,
+  rows: BzzoiroPlayerStatsRow[],
+) {
+  return [
+    detail?.specific_position,
+    ...(detail?.positions_detailed ?? []),
+    detail?.position,
+    player.position,
+    ...rows.map((row) => row.player?.position),
+  ].some(isGoalkeeperPosition);
+}
+
+function isGoalkeeperPosition(position: string | null | undefined) {
+  const normalized = String(position ?? "").trim().toLowerCase();
+  return normalized === "g" || normalized === "gk" || normalized.includes("goal") || normalized.includes("keeper");
+}
+
+function hasGoalkeeperStatActivity(stats: AggregatedStats) {
+  return stats.saves > 0 || stats.goalsConceded > 0 || stats.penaltySave > 0 || stats.penaltyFaced > 0;
 }
 
 function getAttributeEntries(value: BzzoiroPlayerDetail["attributes"]) {
