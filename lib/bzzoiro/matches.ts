@@ -174,20 +174,52 @@ export type BzzoiroPredictedLineupResponse = {
   } | null;
 };
 
+export type BzzoiroBroadcast = {
+  id?: number | string | null;
+  event_id?: number | string | null;
+  country_code?: string | null;
+  channel_id?: number | string | null;
+  channel_name?: string | null;
+  channel_link?: string | null;
+  scheduled_start_time?: string | null;
+};
+
 export type BzzoiroMatchCenter = {
   source: "api" | "missing_teams" | "not_matched" | "error";
   event: BzzoiroMatchEvent | null;
   predictedLineup: BzzoiroPredictedLineupResponse | null;
   playerStats: BzzoiroPlayerStatsRow[];
+  broadcasts: BzzoiroBroadcast[];
   matchedEventId: string | null;
   errorMessage?: string;
 };
+
+const MATCH_CENTER_TTL_MS = 30_000;
+const matchCenterCache = new Map<string, { expiresAt: number; promise: Promise<BzzoiroMatchCenter> }>();
 
 export async function getBzzoiroMatchCenter(match: MatchWithTeams): Promise<BzzoiroMatchCenter> {
   if (!match.homeTeam || !match.awayTeam || !match.date_time) {
     return emptyMatchCenter("missing_teams");
   }
 
+  const cacheKey = buildMatchCenterCacheKey(match);
+  const cached = matchCenterCache.get(cacheKey);
+  const now = Date.now();
+
+  if (cached && cached.expiresAt > now) {
+    return cached.promise;
+  }
+
+  const promise = loadBzzoiroMatchCenter(match);
+  matchCenterCache.set(cacheKey, {
+    expiresAt: now + MATCH_CENTER_TTL_MS,
+    promise,
+  });
+
+  return promise;
+}
+
+async function loadBzzoiroMatchCenter(match: MatchWithTeams): Promise<BzzoiroMatchCenter> {
   try {
     const matchedEvent = await findMatchingBzzoiroEvent(match);
     const eventId = matchedEvent?.id;
@@ -196,11 +228,12 @@ export async function getBzzoiroMatchCenter(match: MatchWithTeams): Promise<Bzzo
       return emptyMatchCenter("not_matched");
     }
 
-    const [detailEvent, liveEvent, predictedLineup, playerStats] = await Promise.all([
+    const [detailEvent, liveEvent, predictedLineup, playerStats, broadcasts] = await Promise.all([
       fetchEventDetail(eventId),
       fetchLiveEvent(eventId),
       fetchPredictedLineup(eventId),
       fetchPlayerStats(eventId),
+      fetchBroadcasts(eventId),
     ]);
 
     const event = {
@@ -214,6 +247,7 @@ export async function getBzzoiroMatchCenter(match: MatchWithTeams): Promise<Bzzo
       event,
       predictedLineup,
       playerStats,
+      broadcasts,
       matchedEventId: String(eventId),
     };
   } catch (error) {
@@ -223,6 +257,18 @@ export async function getBzzoiroMatchCenter(match: MatchWithTeams): Promise<Bzzo
       errorMessage: error instanceof Error ? error.message : "Unknown BSD error",
     };
   }
+}
+
+function buildMatchCenterCacheKey(match: MatchWithTeams) {
+  return [
+    "bzzoiro-match-center",
+    match.match_number,
+    match.date_time,
+    match.home_team_id ?? "",
+    match.away_team_id ?? "",
+    match.status,
+    match.minute ?? "",
+  ].join(":");
 }
 
 async function findMatchingBzzoiroEvent(match: MatchWithTeams) {
@@ -326,12 +372,26 @@ async function fetchPlayerStats(eventId: number | string) {
   }
 }
 
+async function fetchBroadcasts(eventId: number | string) {
+  try {
+    return await bzzoiroGetPaginated<BzzoiroBroadcast>(
+      "/broadcasts/",
+      { event: eventId },
+      2,
+    );
+  } catch (error) {
+    console.error("[bzzoiro] match broadcasts fetch failed", error);
+    return [];
+  }
+}
+
 function emptyMatchCenter(source: BzzoiroMatchCenter["source"]): BzzoiroMatchCenter {
   return {
     source,
     event: null,
     predictedLineup: null,
     playerStats: [],
+    broadcasts: [],
     matchedEventId: null,
   };
 }

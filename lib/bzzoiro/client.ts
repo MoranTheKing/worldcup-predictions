@@ -22,7 +22,7 @@ export class BzzoiroRequestError extends Error {
 const DEFAULT_API_BASE_URL = "https://sports.bzzoiro.com/api";
 const DEFAULT_PUBLIC_BASE_URL = "https://sports.bzzoiro.com";
 
-export function getBzzoiroPublicImageUrl(type: "team" | "player" | "manager", id: string | number | null | undefined) {
+export function getBzzoiroPublicImageUrl(type: "team" | "player" | "manager" | "venue", id: string | number | null | undefined) {
   if (id === null || id === undefined || id === "") return null;
   return `${getPublicBaseUrl()}/img/${type}/${encodeURIComponent(String(id))}/`;
 }

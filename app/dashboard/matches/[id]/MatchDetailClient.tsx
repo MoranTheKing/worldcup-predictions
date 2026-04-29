@@ -4,6 +4,7 @@ import { useDevLiveRefresh } from "@/lib/dev/live-refresh";
 import PlayerLink from "@/components/PlayerLink";
 import TeamLink from "@/components/TeamLink";
 import type {
+  BzzoiroBroadcast,
   BzzoiroIncident,
   BzzoiroMatchCenter,
   BzzoiroMatchEvent,
@@ -116,7 +117,7 @@ export default function MatchDetailClient({
           <div className="mt-6 grid gap-3 md:grid-cols-4">
             <InfoTile label="פתיחה" value={`${formatMatchTimeLabel(match.date_time)} IDT`} />
             <InfoTile label="סטטוס API" value={getApiStatusText(event, bzzoiro.source)} />
-            <InfoTile label="אצטדיון" value={formatVenue(event)} />
+            <VenueTile event={event} />
             <InfoTile label="שופט" value={formatReferee(event)} />
           </div>
         </div>
@@ -124,6 +125,8 @@ export default function MatchDetailClient({
 
       {bzzoiro.source === "api" && event ? (
         <>
+          <MatchContextPanel event={event} match={match} />
+          <BroadcastPanel broadcasts={bzzoiro.broadcasts} />
           <LiveStatsPanel event={event} match={match} />
           <LineupsPanel
             event={event}
@@ -248,14 +251,39 @@ function InfoTile({ label, value }: { label: string; value: string }) {
   );
 }
 
+function VenueTile({ event }: { event: BzzoiroMatchEvent | null }) {
+  const venue = event?.venue;
+  const content = (
+    <div className="min-w-0 rounded-[1.15rem] border border-white/10 bg-black/18 p-3 text-center transition hover:border-wc-neon/35 hover:bg-white/[0.055]">
+      <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-wc-fg3">אצטדיון</p>
+      <p className="mt-2 truncate text-sm font-black text-wc-fg1">{formatVenue(event)}</p>
+      {venue?.capacity ? (
+        <p className="mt-1 text-[10px] font-bold text-wc-fg3">{venue.capacity.toLocaleString("he-IL")} מקומות</p>
+      ) : null}
+    </div>
+  );
+
+  return venue?.id ? (
+    <Link href={`/dashboard/stadiums/${encodeURIComponent(String(venue.id))}`} className="block min-w-0">
+      {content}
+    </Link>
+  ) : (
+    content
+  );
+}
+
 function LiveStatsPanel({ event, match }: { event: BzzoiroMatchEvent; match: MatchDetailRow }) {
   const pairs = getLiveStatPairs(event, match);
+  const statGridClass =
+    pairs.length <= 2
+      ? "mt-4 grid gap-3 md:grid-cols-2"
+      : "mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4";
 
   return (
     <section className="mt-5 rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-4 md:p-5">
       <SectionHeader title="מצב משחק" eyebrow="BSD live/full" />
       {pairs.length > 0 ? (
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className={statGridClass}>
           {pairs.map((pair) => (
             <StatCompareCard key={pair.label} pair={pair} />
           ))}
@@ -265,6 +293,122 @@ function LiveStatsPanel({ event, match }: { event: BzzoiroMatchEvent; match: Mat
       )}
       <OddsStrip event={event} match={match} />
     </section>
+  );
+}
+
+function MatchContextPanel({ event, match }: { event: BzzoiroMatchEvent; match: MatchDetailRow }) {
+  const homeForm = event.home_form ?? null;
+  const awayForm = event.away_form ?? null;
+  const headToHead = event.head_to_head ?? null;
+  const hasContext = Boolean(homeForm || awayForm || headToHead || event.home_coach || event.away_coach);
+
+  if (!hasContext) return null;
+
+  return (
+    <section className="mt-5 rounded-[1.75rem] border border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.045),rgba(95,255,123,0.035))] p-4 md:p-5">
+      <SectionHeader title="רקע לפני משחק" eyebrow="Form, H2H, coaches" />
+      <div className="mt-4 grid gap-3 xl:grid-cols-3">
+        <FormCard
+          title={getTeamDisplayName(match.homeTeam, match.home_placeholder)}
+          form={homeForm}
+          coach={event.home_coach?.name}
+        />
+        <HeadToHeadCard headToHead={headToHead} />
+        <FormCard
+          title={getTeamDisplayName(match.awayTeam, match.away_placeholder)}
+          form={awayForm}
+          coach={event.away_coach?.name}
+        />
+      </div>
+    </section>
+  );
+}
+
+function FormCard({
+  title,
+  form,
+  coach,
+}: {
+  title: string;
+  form: Record<string, unknown> | null;
+  coach?: string | null;
+}) {
+  return (
+    <div className="rounded-[1.25rem] border border-white/10 bg-black/14 p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-black text-wc-fg1">{title}</p>
+          <p className="mt-1 truncate text-xs font-bold text-wc-fg3">{coach ? `מאמן: ${coach}` : "מאמן לא זמין"}</p>
+        </div>
+        <span className="rounded-full bg-white/8 px-2.5 py-1 text-xs font-black text-wc-fg2" dir="ltr">
+          {readRecordString(form, "form_string") || "-"}
+        </span>
+      </div>
+      <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+        <MiniMetric label="נק׳" value={readRecordNumber(form, "points_last_n")} />
+        <MiniMetric label="שערים" value={readRecordNumber(form, "goals_scored_last_n")} />
+        <MiniMetric label="xG ממוצע" value={formatDecimal(readRecordOptionalNumber(form, "avg_xg"))} />
+      </div>
+    </div>
+  );
+}
+
+function HeadToHeadCard({ headToHead }: { headToHead: Record<string, unknown> | null }) {
+  return (
+    <div className="rounded-[1.25rem] border border-white/10 bg-black/14 p-4 text-center">
+      <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-wc-fg3">ראש בראש</p>
+      <div className="mt-4 grid grid-cols-3 gap-2">
+        <MiniMetric label="בית" value={readRecordNumber(headToHead, "home_wins")} />
+        <MiniMetric label="תיקו" value={readRecordNumber(headToHead, "draws")} />
+        <MiniMetric label="חוץ" value={readRecordNumber(headToHead, "away_wins")} />
+      </div>
+      <p className="mt-3 text-xs font-bold text-wc-fg3">
+        {readRecordNumber(headToHead, "total_matches")} משחקים · {formatDecimal(readRecordOptionalNumber(headToHead, "avg_total_goals"))} שערים בממוצע
+      </p>
+    </div>
+  );
+}
+
+function BroadcastPanel({ broadcasts }: { broadcasts: BzzoiroBroadcast[] }) {
+  const visible = broadcasts
+    .filter((broadcast) => broadcast.channel_name)
+    .slice(0, 6);
+
+  if (visible.length === 0) return null;
+
+  return (
+    <section className="mt-5 rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-4 md:p-5">
+      <SectionHeader title="שידורים רשמיים" eyebrow="BSD broadcasts" />
+      <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+        {visible.map((broadcast, index) => (
+          <BroadcastCard key={`${broadcast.channel_id ?? broadcast.channel_name}-${index}`} broadcast={broadcast} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function BroadcastCard({ broadcast }: { broadcast: BzzoiroBroadcast }) {
+  const content = (
+    <div className="rounded-[1rem] border border-white/10 bg-black/14 p-3 transition hover:border-wc-neon/35 hover:bg-white/[0.055]">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-black text-wc-fg1">{broadcast.channel_name}</p>
+          <p className="mt-1 text-xs font-bold text-wc-fg3">{broadcast.country_code ?? "Global"}</p>
+        </div>
+        <span className="rounded-full bg-white/8 px-2 py-1 text-[11px] font-black text-wc-fg2">
+          {formatShortTime(broadcast.scheduled_start_time)}
+        </span>
+      </div>
+    </div>
+  );
+
+  return broadcast.channel_link ? (
+    <a href={broadcast.channel_link} target="_blank" rel="noreferrer" className="block">
+      {content}
+    </a>
+  ) : (
+    content
   );
 }
 
@@ -363,9 +507,54 @@ function LineupsPanel({
           />
         </div>
       ) : (
-        <EmptyState text="כש־BSD יחזיר predicted-lineup או lineups בפועל, יוצגו כאן פותחים, ספסל וחסרים." />
+        players.length > 0 ? (
+          <LocalSquadPreview match={match} players={players} />
+        ) : (
+          <EmptyState text="כש־BSD יחזיר predicted-lineup או lineups בפועל, יוצגו כאן פותחים, ספסל וחסרים." />
+        )
       )}
     </section>
+  );
+}
+
+function LocalSquadPreview({ match, players }: { match: MatchDetailRow; players: MatchPagePlayer[] }) {
+  const homePlayers = getPreviewPlayers(players, match.home_team_id);
+  const awayPlayers = getPreviewPlayers(players, match.away_team_id);
+
+  return (
+    <div className="mt-4 grid gap-4 xl:grid-cols-2">
+      <SquadPreviewSide title={getTeamDisplayName(match.homeTeam, match.home_placeholder)} players={homePlayers} />
+      <SquadPreviewSide title={getTeamDisplayName(match.awayTeam, match.away_placeholder)} players={awayPlayers} />
+    </div>
+  );
+}
+
+function SquadPreviewSide({ title, players }: { title: string; players: MatchPagePlayer[] }) {
+  return (
+    <div className="rounded-[1.35rem] border border-white/10 bg-black/14 p-4">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="font-sans text-lg font-black tracking-normal text-wc-fg1">{title}</h3>
+        <span className="rounded-full bg-white/8 px-3 py-1 text-xs font-black text-wc-fg3">סגל מקומי</span>
+      </div>
+      <p className="mt-2 text-xs leading-6 text-wc-fg3">
+        עד ש־BSD יחזיר הרכב למשחק, מוצגים שחקני מפתח לפי יחסי מלך השערים ומידע הסגל המקומי.
+      </p>
+      <div className="mt-3 grid gap-2">
+        {players.map((player) => (
+          <PlayerLink key={player.id} player={player} className="block">
+            <div className="flex items-center justify-between gap-3 rounded-xl bg-white/[0.045] px-3 py-2 transition hover:bg-white/[0.075]">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-black text-wc-fg1">{player.name}</p>
+                <p className="text-[11px] font-bold text-wc-fg3">{formatPosition(player.position)}</p>
+              </div>
+              <span className="rounded-full bg-white/8 px-2 py-1 text-xs font-black text-wc-neon" dir="ltr">
+                {formatDecimal(player.top_scorer_odds)}
+              </span>
+            </div>
+          </PlayerLink>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -953,6 +1142,23 @@ function readStat(block: Record<string, number | string | null | undefined> | nu
   return null;
 }
 
+function readRecordNumber(record: Record<string, unknown> | null, key: string) {
+  return readRecordOptionalNumber(record, key) ?? 0;
+}
+
+function readRecordOptionalNumber(record: Record<string, unknown> | null, key: string) {
+  if (!record) return null;
+  const value = record[key];
+  if (typeof value !== "number" && typeof value !== "string") return null;
+  return readOptionalNumber(value);
+}
+
+function readRecordString(record: Record<string, unknown> | null, key: string) {
+  if (!record) return "";
+  const value = record[key];
+  return typeof value === "string" ? value : "";
+}
+
 function readNumber(value: number | string | null | undefined) {
   const number = Number(value);
   return Number.isFinite(number) ? number : 0;
@@ -963,6 +1169,19 @@ function readOptionalNumber(value: number | string | null | undefined) {
   return Number.isFinite(number) ? number : null;
 }
 
+function formatShortTime(iso: string | null | undefined) {
+  if (!iso) return "-";
+  try {
+    return new Date(iso).toLocaleTimeString("he-IL", {
+      timeZone: "Asia/Jerusalem",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return "-";
+  }
+}
+
 function formatDecimal(value: number | string | null | undefined) {
   const number = readOptionalNumber(value);
   if (number === null) return "-";
@@ -971,6 +1190,23 @@ function formatDecimal(value: number | string | null | undefined) {
 
 function formatPercent(value: number) {
   return `${Math.round(value)}%`;
+}
+
+function getPreviewPlayers(players: MatchPagePlayer[], teamId: string | null) {
+  return players
+    .filter((player) => !teamId || player.team_id === teamId)
+    .slice()
+    .sort((left, right) => compareOdds(left.top_scorer_odds, right.top_scorer_odds) || left.name.localeCompare(right.name, "he"))
+    .slice(0, 6);
+}
+
+function compareOdds(left: number | string | null | undefined, right: number | string | null | undefined) {
+  const leftNumber = readOptionalNumber(left);
+  const rightNumber = readOptionalNumber(right);
+  if (leftNumber !== null && rightNumber !== null) return leftNumber - rightNumber;
+  if (leftNumber !== null) return -1;
+  if (rightNumber !== null) return 1;
+  return 0;
 }
 
 function normalizeOdds(value: number | string | null | undefined) {

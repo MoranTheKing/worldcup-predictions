@@ -491,3 +491,12 @@ Brevo Free מוגבל בכמות יומית לכל החשבון, לכן ביום
 - Added `lib/bzzoiro/matches.ts` for server-side event matching, `events/{id}?full=true`, `/live/?full=true`, `/predicted-lineup/{event_id}/`, and `/player-stats/?event=...` reads. API failures return quiet fallbacks instead of breaking the page.
 - Match pages now show API status, venue/referee, odds, live/full stat comparisons, actual or predicted lineups, substitutes, unavailable players, incidents, player-stat leaders, momentum, and recent shots when BSD provides those fields.
 - Live BSD pages refresh the server payload every 30 seconds while the tab is visible. Local dev match edits still use the existing dev refresh channel.
+
+## Match center UX, stadiums, and PR audit - 2026-04-29
+
+- Match pages now use a process-local 30-second BSD match-center TTL/de-dupe cache, reducing repeated `events/live/predicted-lineup/player-stats/broadcasts` fan-out during visible auto-refresh.
+- `/dashboard/matches/[id]` now adds richer context panels: pre-match form/head-to-head/coaches, official broadcasts, safer stat grid sizing, local squad fallback before BSD lineups exist, and clickable venue cards.
+- Added `/dashboard/stadiums/[id]` for BSD venue detail pages with venue image, capacity, city/country, home team metadata, and World Cup events played at that venue when BSD assigns them.
+- Ran the local BSD team sync again: 112 remote teams checked, 48 matched, 47 coaches synced, 1087 player rows synced, and 96 recent-form rows refreshed.
+- Added `SECURITY_SCAN_PROMPT.md` with future scan context, especially the intended dev-clear behavior and why fixed email allowlists should not be reintroduced.
+- PR `#33` was addressed on `master` with a local 30-second TTL/de-dupe cache. PR `#34` remains intentionally rejected because it reintroduces the fixed-email dev-clear restriction that breaks the intended localhost developer workflow.
