@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import CoachLink from "@/components/CoachLink";
 import PlayerLink from "@/components/PlayerLink";
 import { createClient } from "@/lib/supabase/server";
 import type { TournamentTeamRecord } from "@/lib/tournament/matches";
@@ -202,12 +203,15 @@ function HeroStat({ label, value }: { label: string; value: string }) {
   );
 }
 
-function CoachSummary({ team }: { team: Pick<TournamentTeamRecord, "coach_name" | "coach_photo_url" | "logo_url" | "name" | "name_he"> }) {
+function CoachSummary({ team }: { team: Pick<TournamentTeamRecord, "id" | "coach_name" | "coach_photo_url" | "logo_url" | "name" | "name_he"> }) {
   const displayName = team.name_he ?? team.name;
   const coachName = team.coach_name ?? "טרם סונכרן";
 
   return (
-    <div className="mt-4 flex items-center gap-4 rounded-[1.4rem] border border-white/10 bg-black/18 p-4">
+    <CoachLink
+      team={team}
+      className="mt-4 flex items-center gap-4 rounded-[1.4rem] border border-white/10 bg-black/18 p-4 transition hover:border-wc-neon/35 hover:bg-white/[0.055]"
+    >
       <div className="grid h-20 w-20 shrink-0 place-items-center overflow-hidden rounded-[1.15rem] border border-white/10 bg-white/8">
         {team.coach_photo_url ? (
           <Image
@@ -236,8 +240,9 @@ function CoachSummary({ team }: { team: Pick<TournamentTeamRecord, "coach_name" 
       <div className="min-w-0">
         <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-wc-fg3">מאמן ראשי</p>
         <p className="mt-1 truncate text-2xl font-black text-wc-fg1">{coachName}</p>
+        <p className="mt-1 text-xs font-bold text-wc-fg3">פרופיל טקטי וסטטיסטיקות</p>
       </div>
-    </div>
+    </CoachLink>
   );
 }
 

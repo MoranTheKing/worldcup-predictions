@@ -637,3 +637,10 @@ Not tied to a specific open PR, but implemented as a direct follow-up:
 - League leaderboards now expose member predictions only for matches that are already `live`, where prediction edits are locked by kickoff rules.
 - Scheduled-match predictions remain hidden from other users; the live leaderboard caps display to two concurrent live matches and queries only those match IDs.
 - Joker and score-hit colors in live views are presentation-only and do not expose odds, hidden scheduled picks, or unlocked private data.
+
+## PR audit closure follow-up from 2026-04-29
+
+- PRs `#21`, `#22`, `#23`, `#25`, `#28`, `#29`, `#30`, `#31`, and `#32` were fixed or superseded on `master`, then commented and closed with the vulnerability, fix, and rationale.
+- PR `#24` was closed as not accepted as-is because the representative-scenario optimization can make group qualification labels wrong when high goal-difference outcomes are still possible.
+- PRs `#26` and `#27` were closed as not accepted as-is because shared-league-only global filtering would remove the intended signed-in global leaderboard; the deeper cross-user opponent page exposure was addressed through the safer `#30` fix instead.
+- The active residual operational item is still SQL migration `20260429000036_stop_oauth_name_prefill_on_signup.sql`, which must be applied in Supabase before first-time Google signup can be fully verified in that environment.

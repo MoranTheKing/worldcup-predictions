@@ -865,3 +865,12 @@ raw_error
 - Tournament-winner and top-scorer pickers display their current possible reward inline as `+N`; missing odds intentionally render as `+0`.
 - Player-based top-scorer lists and Dev randomization endpoints must paginate `players` in batches so synced rosters above 1000 rows are not silently truncated.
 - Picker UI reads player photos from `players.photo_url`; the browser still reads Supabase data only and does not call BSD JSON APIs directly.
+
+## Implemented coach profile pages - 2026-04-29
+
+- Added `/dashboard/coaches/[id]` as a national-team coach page keyed by the local team id.
+- The page reads the local team from Supabase and then calls BSD server-side through `lib/bzzoiro/managers.ts`: first `/api/managers/?team_id=...`, then `/api/managers/{id}/` when a manager id is available.
+- The coach page displays manager identity, country, preferred formation, formation usage, tactical profile, team style, pressing intensity, defensive line, top tactical styles, record, win percentage, goals, xG, possession, shots, cards, fouls, clean sheets and goals-market percentages when BSD returns them.
+- Existing coach cards/rows on `/dashboard/teams/[id]`, `/dashboard/teams/[id]/squad`, and `/dashboard/teams/[id]/stats` now link to the coach page through `components/CoachLink.tsx`.
+- No new SQL was needed for this slice. The existing `teams.bzzoiro_team_id`, `teams.coach_bzzoiro_id`, `teams.coach_name`, and `teams.coach_photo_url` columns are enough for routing and fallback display; the richer coach profile is live server-side API data.
+- Manual sync after this change refreshed 48 matched teams, 47 coaches, 1087 player roster rows, 16 legacy player enrichments, and 96 recent-form rows across 35 teams.

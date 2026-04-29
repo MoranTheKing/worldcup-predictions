@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
+import CoachLink from "@/components/CoachLink";
 import { GoalsForAgainst, SignedNumber } from "@/components/StatNumbers";
 import CompactLeaderTable, {
   type CompactLeaderRow,
@@ -202,7 +203,14 @@ export default async function TeamStatsPage({ params }: { params: Promise<{ id: 
             <MetricRow label="הפרש שערים" valueNode={<SignedNumber value={stats.goalDifference} />} />
             <MetricRow label="משחקים בלייב" value={String(stats.liveCount)} />
             <MetricRow label="משחקים עתידיים" value={String(stats.scheduledCount)} />
-            <MetricRow label="מאמן" value={team.coach_name ?? "טרם סונכרן"} />
+            <MetricRow
+              label="מאמן"
+              valueNode={
+                <CoachLink team={team} className="transition hover:text-wc-neon">
+                  {team.coach_name ?? "טרם סונכרן"}
+                </CoachLink>
+              }
+            />
             <MetricRow label="דירוג פיפ״א" value={String(team.fifa_ranking ?? "-")} />
           </div>
         </section>

@@ -25,6 +25,7 @@
 - דפי `/dashboard/tournament` ו-`/dashboard/matches` נטענו מחדש בדפדפן אחרי תיקוני 2026-04-24: טבלת הטורניר הציבורית מציגה את כל 48 הנבחרות וה-Match Center מציג את כל 104 המשחקים.
 - נוסף דף נבחרת ציבורי `/dashboard/teams/[id]`, וכל אזכור מרכזי של נבחרת במסכי משחקים, ניחושים, טורניר, בראקט, ליגות ובחירת זוכה טורניר מוביל אליו. הדף כולל משחקים לחיצים, סטטיסטיקות מורחבות, כושר אחרון, מאמן וסגל.
 - נוסף עמוד סגל `/dashboard/teams/[id]/squad`, שמציג שחקנים קיימים לפי עמדות ומקום מוכן למאמן עד סנכרון API.
+- נוסף עמוד מאמן `/dashboard/coaches/[id]` לכל נבחרת מסונכרנת. העמוד מושך בצד השרת את BSD `/api/managers/?team_id=...` ומציג מערך, סגנון טקטי, לחץ, קו הגנה וסטטיסטיקות מצטברות; כרטיסי/שורות מאמן קיימים מובילים אליו.
 - רענון Dev Live במסכי `/dashboard/tournament` ו-`/dashboard/matches` בודק גרסת משחקים קטנה דרך `/api/dev/matches/version`, ומרענן את הדף רק כשבאמת היה שינוי ב-Dev Tools.
 - דף הטורניר הציבורי קורא רק מ-views ציבוריים מצומצמים לנתוני `teams` ו-`matches`, ולא משתמש יותר ב-service-role key.
 - בראש דף הטורניר מופיע אזור הכרעה: אחרי משחק המקום השלישי מוצג מקום 3 לצד "2 נבחרות שנותרו", ואחרי הגמר מוצג פודיום מלא למקומות 1-2-3.
@@ -81,8 +82,11 @@ npm.cmd run build
 - `app/dashboard/tournament/TournamentClient.tsx` - UI הטורניר, כולל טבלאות, בראקט ופודיום הסיום.
 - `app/dashboard/teams/[id]/page.tsx` - דף נבחרת ציבורי עם משחקים לחיצים, המשחק הבא, טבלת בית קטנה, סטטוס, סטטיסטיקות מורחבות, כושר אחרון ותצוגת סגל מקוצרת.
 - `app/dashboard/teams/[id]/squad/page.tsx` - עמוד סגל ומאמן לנבחרת, מוכן לסנכרון API עתידי.
+- `app/dashboard/coaches/[id]/page.tsx` - עמוד מאמן לנבחרת, עם פרופיל BSD חי, סגנונות טקטיים וסטטיסטיקות מאמן.
 - `app/dashboard/matches/MatchesClient.tsx` - מרכז המשחקים, כולל התאמות Next 16 למידות דגלים כדי למנוע אזהרות aspect-ratio.
 - `components/TeamLink.tsx` - קישור אחיד לנבחרות, כדי שכל דגל/שם/תג זוכה יוביל לדף הנבחרת בלי לשבור RTL או שורות לחיצות.
+- `components/CoachLink.tsx` - קישור אחיד למאמן הנבחרת, כדי שכל הופעת שם/כרטיס מאמן תוביל לעמוד המאמן.
+- `lib/bzzoiro/managers.ts` - helper שרת למשיכת פרופיל מאמן מ-BSD managers API בלי לחשוף את token ל-client.
 - `components/profile/ProfileEditorModal.tsx` - עריכת פרופיל אחרי כניסה.
 - `components/profile/ProfileAvatarField.tsx` - בחירה, העלאה, תצוגה מקדימה וחיתוך תמונת פרופיל.
 - `app/api/profile/avatar/[userId]/route.ts` - הגשת תמונות פרופיל פרטיות.

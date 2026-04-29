@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
+import CoachLink from "@/components/CoachLink";
 import PlayerLink from "@/components/PlayerLink";
 import TeamLink from "@/components/TeamLink";
 import { GoalsForAgainst } from "@/components/StatNumbers";
@@ -111,12 +112,12 @@ export default async function TeamPage({ params }: { params: Promise<{ id: strin
   ] = await Promise.all([
     supabase
       .from("teams")
-      .select("id, name, name_he, logo_url, group_letter, fair_play_score, fifa_ranking, is_eliminated, outright_odds, outright_odds_updated_at, coach_name, coach_updated_at")
+      .select("id, name, name_he, logo_url, group_letter, fair_play_score, fifa_ranking, is_eliminated, outright_odds, outright_odds_updated_at, coach_name, coach_bzzoiro_id, coach_photo_url, coach_updated_at")
       .eq("id", id)
       .maybeSingle(),
     supabase
       .from("teams")
-      .select("id, name, name_he, logo_url, group_letter, fair_play_score, fifa_ranking, is_eliminated, outright_odds, outright_odds_updated_at, coach_name, coach_updated_at")
+      .select("id, name, name_he, logo_url, group_letter, fair_play_score, fifa_ranking, is_eliminated, outright_odds, outright_odds_updated_at, coach_name, coach_bzzoiro_id, coach_photo_url, coach_updated_at")
       .order("group_letter")
       .order("name_he", { ascending: true }),
     supabase
@@ -374,7 +375,7 @@ export default async function TeamPage({ params }: { params: Promise<{ id: strin
               actionHref={`/dashboard/teams/${encodeURIComponent(id)}/squad`}
               actionLabel="לעמוד הסגל"
             />
-            <CoachCard coachName={team.coach_name ?? null} />
+            <CoachCard team={team} />
             <SquadPreview players={previewPlayers} total={players.length} />
           </section>
         </div>
@@ -656,15 +657,33 @@ function GroupMiniRow({ entry, activeTeamId }: { entry: TeamStanding; activeTeam
   );
 }
 
-function CoachCard({ coachName }: { coachName: string | null }) {
+function CoachCard({ team }: { team: Pick<TournamentTeamRecord, "id" | "name" | "name_he" | "coach_name" | "coach_photo_url"> }) {
+  const coachName = team.coach_name ?? "טרם סונכרן";
+
   return (
-    <div className="mt-4 rounded-2xl border border-white/10 bg-black/14 p-4">
+    <CoachLink
+      team={team}
+      className="mt-4 block rounded-2xl border border-white/10 bg-black/14 p-4 transition hover:border-wc-neon/35 hover:bg-white/[0.055]"
+    >
       <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-wc-fg3">מאמן ראשי</p>
-      <p className="mt-2 text-lg font-black text-wc-fg1">{coachName ?? "טרם סונכרן"}</p>
+      <div className="mt-2 flex items-center justify-between gap-3">
+        <p className="truncate text-lg font-black text-wc-fg1">{coachName}</p>
+        {team.coach_photo_url ? (
+          <Image
+            src={team.coach_photo_url}
+            alt={coachName}
+            width={42}
+            height={42}
+            style={{ width: 42, height: 42 }}
+            className="h-10 w-10 shrink-0 rounded-xl object-cover"
+            unoptimized
+          />
+        ) : null}
+      </div>
       <p className="mt-1 text-xs leading-6 text-wc-fg3">
-        שם המאמן יתעדכן כאן ברגע שנתוני ה-API ייכנסו למערכת.
+        לחיצה פותחת פרופיל מאמן עם מערך, סגנון וסטטיסטיקות BSD.
       </p>
-    </div>
+    </CoachLink>
   );
 }
 

@@ -664,6 +664,7 @@ function revalidateSyncPaths() {
   revalidatePath("/dashboard", "layout");
   revalidatePath("/dashboard/teams", "layout");
   revalidatePath("/dashboard/teams");
+  revalidatePath("/dashboard/coaches", "layout");
   revalidatePath("/dashboard/stats");
   revalidatePath("/dashboard/players", "layout");
   revalidatePath("/dev-tools");
