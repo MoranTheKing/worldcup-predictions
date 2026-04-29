@@ -1,6 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getSafeRedirectPath } from "@/lib/security/safe-redirect";
+import {
+  getPostOnboardingRedirectPath,
+  getSafeRedirectPath,
+} from "@/lib/security/safe-redirect";
 import { fetchOnboardingStatus } from "@/lib/supabase/onboarding";
 import { NextResponse } from "next/server";
 import type { User } from "@supabase/supabase-js";
@@ -11,7 +14,10 @@ export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
   const flow = searchParams.get("flow");
-  const redirectPath = getSafeRedirectPath(searchParams.get("next"));
+  const redirectPath =
+    flow === "signup"
+      ? getSafeRedirectPath(searchParams.get("next"))
+      : getPostOnboardingRedirectPath(searchParams.get("next"));
 
   if (code) {
     const supabase = await createClient();

@@ -6,7 +6,7 @@ import {
   evaluatePasswordPolicy,
   getPasswordPolicyError,
 } from "@/lib/security/password-policy";
-import { getSafeRedirectPath } from "@/lib/security/safe-redirect";
+import { getPostOnboardingRedirectPath } from "@/lib/security/safe-redirect";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -38,7 +38,7 @@ type SignupAuthData = {
 export default function SignupPage() {
   const searchParams = useSearchParams();
   const supabase = createClient();
-  const nextPath = getSafeRedirectPath(searchParams.get("next"));
+  const nextPath = getPostOnboardingRedirectPath(searchParams.get("next"));
   const signupNotice = getSignupNotice(searchParams.get("notice"));
   const loginHref =
     nextPath === "/game" ? "/login" : `/login?next=${encodeURIComponent(nextPath)}`;

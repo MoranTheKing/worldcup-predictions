@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import OnboardingForm from "./OnboardingForm";
-import { getSafeRedirectPath } from "@/lib/security/safe-redirect";
+import { getPostOnboardingRedirectPath } from "@/lib/security/safe-redirect";
 import { fetchOnboardingStatus } from "@/lib/supabase/onboarding";
 import { createClient } from "@/lib/supabase/server";
 
@@ -12,7 +12,7 @@ export default async function OnboardingPage({
   searchParams: Promise<{ next?: string }>;
 }) {
   const { next } = await searchParams;
-  const nextPath = getSafeRedirectPath(next, "/game");
+  const nextPath = getPostOnboardingRedirectPath(next, "/game");
   const supabase = await createClient();
   const {
     data: { user },

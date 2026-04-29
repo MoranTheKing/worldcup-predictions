@@ -568,6 +568,8 @@ Security-relevant follow-up:
 - signup redirects now preserve the intended flow as `/mfa/setup?next=/onboarding?...`, preventing MFA setup from skipping the required profile onboarding step
 - Google OAuth started from `/login` is marked as a login flow; if the account has not yet started app registration, the session is signed out and the user is redirected to `/signup` with a clear registration message
 - existing Google users who already completed app registration continue through login normally, while first-time Google users do not silently land inside the app
+- 2026-04-29 follow-up: added `20260429000036_stop_oauth_name_prefill_on_signup.sql` so the Auth signup trigger no longer copies Google `full_name` into the unique public `profiles.display_name` field. This prevents first-time Google signup from failing with `Database error saving new user` when the returned Google name collides with an existing nickname; onboarding remains the place where a unique public nickname is chosen.
+- 2026-04-29 follow-up: auth redirect normalization now collapses stale `/onboarding?next=/onboarding?...` chains and maps legacy `/dashboard` defaults back to `/game`, so failed/retried signup flows do not keep wrapping old destinations.
 - `/mfa/setup` now removes stale unverified TOTP factors before creating a new QR, so refreshes during setup do not leave users blocked by an unfinished enrollment
 - onboarding checks for an unfinished TOTP enrollment and redirects back to `/mfa/setup` before profile completion, preserving the user's explicit MFA choice
 - the global MFA assurance check is now visually silent while it is still checking; the challenge screen is shown only after Supabase reports that `aal2` is required

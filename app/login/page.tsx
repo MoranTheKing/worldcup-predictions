@@ -1,7 +1,7 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
-import { getSafeRedirectPath } from "@/lib/security/safe-redirect";
+import { getPostOnboardingRedirectPath } from "@/lib/security/safe-redirect";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
@@ -15,7 +15,7 @@ export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = createClient();
-  const nextPath = getSafeRedirectPath(searchParams.get("next"));
+  const nextPath = getPostOnboardingRedirectPath(searchParams.get("next"));
   const signupHref =
     nextPath === "/game" ? "/signup" : `/signup?next=${encodeURIComponent(nextPath)}`;
 
