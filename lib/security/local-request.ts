@@ -56,11 +56,7 @@ function resolveHostname(candidates: Array<string | null>) {
 }
 
 export function isLocalRequest(request: Request) {
-  const hostname = resolveHostname([
-    request.headers.get("host"),
-    request.headers.get("origin"),
-    request.url,
-  ]);
+  const hostname = resolveHostname([request.url, request.headers.get("origin")]);
 
   return isLocalHostname(hostname);
 }
@@ -77,18 +73,11 @@ export function isSameOriginRequest(request: Request) {
 }
 
 export function getRequestHostname(request: Request) {
-  return resolveHostname([
-    request.headers.get("host"),
-    request.headers.get("origin"),
-    request.url,
-  ]);
+  return resolveHostname([request.url, request.headers.get("origin")]);
 }
 
 export async function isLocalServerRequest() {
   const requestHeaders = await headers();
-  const hostname = resolveHostname([
-    requestHeaders.get("host"),
-    requestHeaders.get("origin"),
-  ]);
+  const hostname = resolveHostname([requestHeaders.get("origin")]);
   return isLocalHostname(hostname);
 }
