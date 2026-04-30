@@ -53,6 +53,9 @@ export async function POST(request: Request) {
   }
 
   const supabase = createAdminClient();
+  const url = new URL(request.url);
+  const dateFrom = normalizeDateKey(url.searchParams.get("date_from"));
+  const dateTo = normalizeDateKey(url.searchParams.get("date_to"));
   const [{ data: matchesData, error: matchesError }, { data: teamsData, error: teamsError }] =
     await Promise.all([
       supabase
@@ -73,7 +76,11 @@ export async function POST(request: Request) {
   }
 
   const teamsById = new Map(((teamsData ?? []) as LocalTeamRow[]).map((team) => [team.id, team]));
-  const matches = ((matchesData ?? []) as LocalMatchRow[]).filter((match) => match.date_time);
+  const matches = ((matchesData ?? []) as LocalMatchRow[]).filter((match) => {
+    if (!match.date_time) return false;
+    const matchDateKey = getDateKey(match.date_time);
+    return (!dateFrom || matchDateKey >= dateFrom) && (!dateTo || matchDateKey <= dateTo);
+  });
   const eventsByWindow = await fetchEventsByDateWindow(matches, leagueId);
   let updated = 0;
   let skippedNoOdds = 0;
@@ -120,6 +127,8 @@ export async function POST(request: Request) {
   revalidatePath("/dev-tools");
 
   return NextResponse.json({
+    dateFrom,
+    dateTo,
     checked: matches.length,
     updated,
     skippedNoEvent,
@@ -210,6 +219,12 @@ function normalizeOdds(value: number | string | null | undefined) {
 
 function getDateKey(iso: string) {
   return new Date(iso).toISOString().slice(0, 10);
+}
+
+function normalizeDateKey(value: string | null) {
+  if (!value) return null;
+  const time = new Date(`${value}T00:00:00.000Z`).getTime();
+  return Number.isFinite(time) ? new Date(time).toISOString().slice(0, 10) : null;
 }
 
 function shiftDate(dateKey: string, days: number) {

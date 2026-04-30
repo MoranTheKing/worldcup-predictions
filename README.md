@@ -573,3 +573,13 @@ Brevo Free מוגבל בכמות יומית לכל החשבון, לכן ביום
 
 - Restored clickable rows on `/game/leaderboard` for every global leaderboard member, not only the current user.
 - `/game/users/[id]?league=global` now allows authenticated users to open the global opponent view even when they do not share a private league with that player. Future predictions remain locked by the existing opponent-view rules.
+
+## BSD live cron and model predictions - 2026-04-30
+
+- Match odds stay intentionally focused on 1X2 only: `home_odds`, `draw_odds`, and `away_odds`. BSD markets such as over/under, BTTS, double chance and bookmaker snapshots are not synced into the game-scoring path.
+- Added protected `POST /api/admin/bzzoiro/sync-live` for cron/server-side live sync. It pulls BSD `/events/` for the active date window plus `/live/`, updates local match status, score, minute, 1X2 odds and penalties, then runs tournament progression and finished-match scoring.
+- Added protected `POST /api/admin/bzzoiro/sync-predictions` for BSD model predictions. These are stored separately on `matches` as BSD probabilities/expected goals/model metadata and raw JSON, without touching user `predictions`.
+- `POST /api/admin/bzzoiro/sync-odds` still syncs only match 1X2. It now accepts optional `date_from` / `date_to` query params for active-window cron runs; no query still means a full 104-match 1X2 refresh.
+- Added `supabase/migrations/20260430000038_add_bsd_match_prediction_fields.sql` for the BSD model-prediction columns.
+- Added `cloudflare/bzzoiro-cron-worker.js` as a Cloudflare Worker cron runner. It calls live sync every scheduled run, active-window 1X2 odds every 5 minutes, full 1X2 odds every 30 minutes, and BSD model predictions every 15 minutes using the existing bearer admin/cron secret.
+- Added `cloudflare/wrangler.bzzoiro-cron.example.toml` with a one-minute cron trigger example.

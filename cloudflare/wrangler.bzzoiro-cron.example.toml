@@ -1,0 +1,10 @@
+name = "worldcup-bzzoiro-cron"
+main = "./bzzoiro-cron-worker.js"
+compatibility_date = "2026-04-30"
+
+[triggers]
+crons = ["* * * * *"]
+
+# Configure these with `wrangler secret put`, not in this file:
+# - CRON_SECRET: same value as the app's CRON_SECRET / TOURNAMENT_ADMIN_SECRET.
+# - APP_BASE_URL: production app origin, for example https://your-domain.example.

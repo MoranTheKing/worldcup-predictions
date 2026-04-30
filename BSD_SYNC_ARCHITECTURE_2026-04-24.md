@@ -857,8 +857,18 @@ raw_error
 - Added `POST /api/admin/bzzoiro/sync-odds`, protected by localhost in dev or a bearer admin/cron secret in production. It fetches BSD `/api/events/` server-side, matches events to local teams by BSD IDs or normalized names, and writes `matches.home_odds`, `matches.draw_odds`, and `matches.away_odds` when all three odds are present.
 - A manual run checked 104 local matches and updated 24 match-odds rows; 48 matched events had no odds yet and 32 had no event match, which is expected while the provider feed is incomplete.
 - The browser never calls BSD for odds. Dev Tools triggers the local route, and public pages continue to consume Supabase.
+- Product decision as of 2026-04-30: match odds remain 1X2-only for the prediction game. Do not sync over/under, BTTS, double chance, draw-no-bet, bookmaker snapshots or Polymarket markets into the scoring path unless the product explicitly changes.
+- The odds route can now receive `date_from` and `date_to` for active-window cron runs. Calling it without dates intentionally remains a full 104-match 1X2 refresh.
 - Outright prediction odds are locked at save time from Supabase (`teams.outright_odds`, `players.top_scorer_odds`) and finalized by `POST /api/admin/finalize-tournament`.
 - The recent-form sync now translates opponent names before writing `team_recent_matches`; verified sample: Jordan's recent-form row stores `ניגריה` instead of `Nigeria`.
+
+## Implemented live cron and BSD model predictions - 2026-04-30
+
+- Added protected `POST /api/admin/bzzoiro/sync-live` for the production cron path. It merges BSD `/events/` for the requested date window with BSD `/live/`, then updates local match status, score, minute, penalties and 1X2 odds while keeping Supabase as the UI source of truth.
+- `sync-live` calls `syncTournamentState` after updates, runs `scoreFinishedMatchPredictions` for matches that are now finished, and calls `clearUnfinishedMatchScoring` if an API correction moves a match away from finished.
+- Added protected `POST /api/admin/bzzoiro/sync-predictions` for BSD's model predictions feed. These fields are stored on `matches` as BSD model data only and do not touch user `predictions`, `bets`, private leagues or locked odds.
+- Added `supabase/migrations/20260430000038_add_bsd_match_prediction_fields.sql` for BSD model probabilities, expected goals, confidence, most-likely score, model version, raw JSON and sync timestamp.
+- Added `cloudflare/bzzoiro-cron-worker.js` plus `cloudflare/wrangler.bzzoiro-cron.example.toml`. With the sample one-minute trigger, live sync runs every minute, active-window 1X2 odds every 5 minutes, full 1X2 odds every 30 minutes, and BSD model predictions every 15 minutes.
 
 ## Outright picker and player-feed pagination - 2026-04-27
 
