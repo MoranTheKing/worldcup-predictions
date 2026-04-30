@@ -25,10 +25,9 @@ export type BzzoiroLivePreview = {
 };
 
 export async function getBzzoiroLivePreview(eventId: number): Promise<BzzoiroLivePreview | null> {
-  const [eventDetail, liveEvent, predictedLineup, playerStats, broadcasts] = await Promise.all([
+  const [eventDetail, liveEvent, playerStats, broadcasts] = await Promise.all([
     fetchEventDetail(eventId),
     fetchLiveEvent(eventId),
-    fetchPredictedLineup(eventId),
     fetchPlayerStats(eventId),
     fetchBroadcasts(eventId),
   ]);
@@ -39,6 +38,9 @@ export async function getBzzoiroLivePreview(eventId: number): Promise<BzzoiroLiv
     ...(eventDetail ?? {}),
     ...(liveEvent ?? {}),
   } as BzzoiroMatchEvent;
+  const predictedLineup = shouldFetchPredictedLineup(event)
+    ? await fetchPredictedLineup(eventId)
+    : null;
 
   return {
     eventId,
@@ -83,9 +85,44 @@ async function fetchPredictedLineup(eventId: number) {
       `/predicted-lineup/${encodeURIComponent(String(eventId))}/`,
     );
   } catch (error) {
-    if (error instanceof BzzoiroRequestError && error.status === 404) return null;
+    if (
+      error instanceof BzzoiroRequestError &&
+      (error.status === 400 || error.status === 404)
+    ) {
+      return null;
+    }
     throw error;
   }
+}
+
+function shouldFetchPredictedLineup(event: BzzoiroMatchEvent) {
+  if (hasActualLineups(event)) return false;
+  const status = String(event.status ?? "").toLowerCase();
+  if (
+    status.includes("finish") ||
+    status === "ft" ||
+    status.includes("ended") ||
+    status.includes("final")
+  ) {
+    return false;
+  }
+  return true;
+}
+
+function hasActualLineups(event: BzzoiroMatchEvent) {
+  const lineups = event.lineups;
+  if (Array.isArray(lineups)) return lineups.length > 0;
+  if (!lineups || typeof lineups !== "object") return false;
+  const payload = lineups as {
+    home?: { players?: unknown[] | null; substitutes?: unknown[] | null } | null;
+    away?: { players?: unknown[] | null; substitutes?: unknown[] | null } | null;
+  };
+  return Boolean(
+    (payload.home?.players?.length ?? 0) > 0 ||
+    (payload.away?.players?.length ?? 0) > 0 ||
+    (payload.home?.substitutes?.length ?? 0) > 0 ||
+    (payload.away?.substitutes?.length ?? 0) > 0,
+  );
 }
 
 async function fetchPlayerStats(eventId: number) {

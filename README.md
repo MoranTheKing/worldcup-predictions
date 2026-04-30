@@ -608,3 +608,12 @@ Brevo Free מוגבל בכמות יומית לכל החשבון, לכן ביום
 - Global opponent profile access is still available from `/game/leaderboard`, but `?league=global` is now restricted to users actually visible in the global leaderboard instead of acting as a broad authorization bypass for arbitrary user IDs.
 - Local/dev request checks now prefer `request.url` and `Origin` over spoofable `Host`, while server-rendered local pages require development mode and allow normal same-origin navigations without an `Origin` header.
 - Added `supabase/migrations/20260430000039_restrict_bsd_prediction_columns.sql`, which revokes table-level `SELECT` on `public.matches` from `anon`/`authenticated` and grants back only non-`bsd_*` columns. This keeps BSD model/raw prediction data server-only instead of relying on ineffective column-only revokes.
+
+## Live match timeline polish - 2026-04-30
+
+- Match events now render latest-first, so the newest event is at the top and early-match events move down the list.
+- A halftime marker is synthesized from BSD halftime scores when available, showing `HT`, minute 45 and the halftime score inside the same event timeline.
+- BSD live preview no longer calls `predicted-lineup` after a match is finished or after official `lineups` are already present, and 400/404 predicted-lineup responses are treated as unavailable data instead of crashing the page.
+- Substitution badges no longer show `נכנס 0'`. Zero/empty substitution minutes are ignored, while real substitutions render as compact `נכנס` / `יצא` markers with related player/minute details when BSD provides them.
+- Pitch-token event symbols now sit as small overlays outside the player card, so goals, assists, cards and substitutions do not stretch the player tile.
+- Shotmap icons now use visual symbols instead of short Hebrew abbreviations such as `חס` or `בע`, while the detailed shot result text stays in Hebrew.

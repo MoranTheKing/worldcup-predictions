@@ -14,6 +14,8 @@ export type FormationPitchPlayer = {
   match_assists?: number | null;
   match_yellow_cards?: number | null;
   match_red_cards?: number | null;
+  match_sub_in?: number | null;
+  match_sub_out?: number | null;
 };
 
 export function FormationBadge({ value, label = "מערך" }: { value: string | null | undefined; label?: string }) {
@@ -76,33 +78,35 @@ export default function FormationPitch({
 function PlayerToken({ player, compact }: { player: FormationPitchPlayer; compact: boolean }) {
   const eventBadges = getPlayerEventBadges(player);
   const content = (
-    <div className={`${compact ? "w-[5.15rem]" : "w-[5.85rem]"} rounded-[1rem] border border-white/12 bg-black/36 px-2 py-2 text-center shadow-[0_10px_24px_rgba(0,0,0,0.24)] backdrop-blur transition hover:border-wc-neon/40 hover:bg-white/[0.07]`}>
-      <PlayerAvatar player={player} compact={compact} />
-      <p
-        className="mx-auto mt-2 min-h-[2rem] max-w-full overflow-hidden text-[11px] font-black leading-4 text-wc-fg1"
-        dir="auto"
-        style={{
-          display: "-webkit-box",
-          WebkitBoxOrient: "vertical",
-          WebkitLineClamp: 2,
-          unicodeBidi: "plaintext",
-        }}
-        title={player.name}
-      >
-        {player.name}
-      </p>
-      <p className="mt-0.5 text-[10px] font-bold text-wc-fg3">{formatPosition(player.position)}</p>
-      {player.shirt_number ? (
-        <p className="mt-1 font-sans text-[10px] font-black tracking-normal text-wc-neon" dir="ltr">
-          #{player.shirt_number}
+    <div className="relative inline-block pb-2">
+      <div className={`${compact ? "w-[5.15rem]" : "w-[5.85rem]"} rounded-[1rem] border border-white/12 bg-black/36 px-2 py-2 text-center shadow-[0_10px_24px_rgba(0,0,0,0.24)] backdrop-blur transition hover:border-wc-neon/40 hover:bg-white/[0.07]`}>
+        <PlayerAvatar player={player} compact={compact} />
+        <p
+          className="mx-auto mt-2 min-h-[2rem] max-w-full overflow-hidden text-[11px] font-black leading-4 text-wc-fg1"
+          dir="auto"
+          style={{
+            display: "-webkit-box",
+            WebkitBoxOrient: "vertical",
+            WebkitLineClamp: 2,
+            unicodeBidi: "plaintext",
+          }}
+          title={player.name}
+        >
+          {player.name}
         </p>
-      ) : null}
+        <p className="mt-0.5 text-[10px] font-bold text-wc-fg3">{formatPosition(player.position)}</p>
+        {player.shirt_number ? (
+          <p className="mt-1 font-sans text-[10px] font-black tracking-normal text-wc-neon" dir="ltr">
+            #{player.shirt_number}
+          </p>
+        ) : null}
+      </div>
       {eventBadges.length > 0 ? (
-        <div className="mt-2 flex flex-wrap items-center justify-center gap-1.5">
+        <div className="pointer-events-none absolute inset-x-0 -bottom-1 z-20 flex flex-wrap items-center justify-center gap-1">
           {eventBadges.map((badge) => (
             <span
               key={badge.key}
-              className={`inline-flex h-7 min-w-7 items-center justify-center gap-1 rounded-full border px-2 text-[10px] font-black leading-none ${badge.className}`}
+              className={`inline-flex h-6 min-w-6 items-center justify-center gap-1 rounded-full border px-1.5 text-[10px] font-black leading-none shadow-[0_8px_18px_rgba(0,0,0,0.26)] ${badge.className}`}
               title={badge.title}
               aria-label={badge.title}
               dir="ltr"
@@ -129,8 +133,30 @@ function getPlayerEventBadges(player: FormationPitchPlayer) {
   const assists = readPositiveCount(player.match_assists);
   const rawYellowCards = readPositiveCount(player.match_yellow_cards);
   const rawRedCards = readPositiveCount(player.match_red_cards);
+  const subInMinute = readSubstitutionMinute(player.match_sub_in);
+  const subOutMinute = readSubstitutionMinute(player.match_sub_out);
   const redCards = rawRedCards > 0 || rawYellowCards >= 2 ? Math.max(1, rawRedCards) : 0;
   const yellowCards = redCards > 0 ? 0 : rawYellowCards;
+
+  if (subInMinute !== null) {
+    badges.push({
+      key: "sub-in",
+      kind: "subIn",
+      count: 1,
+      title: `נכנס כמחליף בדקה ${subInMinute}`,
+      className: "border-cyan-300/35 bg-cyan-300/13 text-cyan-100",
+    });
+  }
+
+  if (subOutMinute !== null) {
+    badges.push({
+      key: "sub-out",
+      kind: "subOut",
+      count: 1,
+      title: `הוחלף בדקה ${subOutMinute}`,
+      className: "border-wc-amber/38 bg-wc-amber/13 text-wc-amber",
+    });
+  }
 
   if (goals > 0) {
     badges.push({
@@ -175,7 +201,7 @@ function getPlayerEventBadges(player: FormationPitchPlayer) {
   return badges;
 }
 
-type EventBadgeKind = "goal" | "assist" | "yellow" | "red";
+type EventBadgeKind = "goal" | "assist" | "yellow" | "red" | "subIn" | "subOut";
 
 function EventBadgeSymbol({ kind }: { kind: EventBadgeKind }) {
   if (kind === "goal") {
@@ -184,6 +210,14 @@ function EventBadgeSymbol({ kind }: { kind: EventBadgeKind }) {
 
   if (kind === "assist") {
     return <span aria-hidden="true">👟</span>;
+  }
+
+  if (kind === "subIn") {
+    return <span aria-hidden="true" className="font-sans text-[11px] font-black" dir="ltr">↗</span>;
+  }
+
+  if (kind === "subOut") {
+    return <span aria-hidden="true" className="font-sans text-[11px] font-black" dir="ltr">↘</span>;
   }
 
   if (kind === "yellow") {
@@ -196,6 +230,11 @@ function EventBadgeSymbol({ kind }: { kind: EventBadgeKind }) {
 function readPositiveCount(value: number | null | undefined) {
   const count = Number(value ?? 0);
   return Number.isFinite(count) && count > 0 ? Math.round(count) : 0;
+}
+
+function readSubstitutionMinute(value: number | null | undefined) {
+  const minute = Number(value ?? 0);
+  return Number.isFinite(minute) && minute > 0 ? Math.round(minute) : null;
 }
 
 function PlayerAvatar({ player, compact }: { player: FormationPitchPlayer; compact: boolean }) {

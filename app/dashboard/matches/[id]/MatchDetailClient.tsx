@@ -71,6 +71,12 @@ type PlayerMatchEventSummary = {
   redCards: number;
 };
 
+type LineupSubstitutionDisplay = {
+  kind: "in" | "out";
+  minute: number | null;
+  relatedName?: string | null;
+};
+
 type FormationLineupPlayer = MatchPagePlayer & FormationPitchPlayer & {
   id: MatchPagePlayer["id"] | string;
   ai_score?: number | null;
@@ -984,7 +990,8 @@ function ActualLineupSide({
   fallbackFormationName?: string | null;
   eventSummaryByPlayerId: Map<string, PlayerMatchEventSummary>;
 }) {
-  const starters = lineup.players.map((player, index) => mapApiLineupPlayer(player, players, teamId, index, eventSummaryByPlayerId));
+  const allLineupPlayers = [...lineup.players, ...lineup.substitutes];
+  const starters = lineup.players.map((player, index) => mapApiLineupPlayer(player, players, teamId, index, eventSummaryByPlayerId, allLineupPlayers));
   const substitutes = lineup.substitutes.filter((player) => readApiPlayerName(player) !== "-");
   const formationName = lineup.formation ?? fallbackFormationName ?? "4-3-3";
   const lines = buildFootballFormation(starters, formationName, starters);
@@ -1017,7 +1024,7 @@ function ActualLineupSide({
                 teamId={teamId}
                 players={players}
                 photoUrl={getBzzoiroPlayerImageUrl(player.api_id)}
-                statusNote={formatLineupPlayerStatus(player)}
+                substitution={getLineupSubstitutionDisplay(player, allLineupPlayers)}
                 eventSummary={getActualLineupPlayerEventSummary(player, players, teamId, eventSummaryByPlayerId)}
               />
             );
@@ -1099,11 +1106,13 @@ function mapApiLineupPlayer(
   teamId: string | null,
   index: number,
   eventSummaryByPlayerId: Map<string, PlayerMatchEventSummary>,
+  lineupPlayers: BzzoiroActualLineupPlayer[] = [],
 ): FormationLineupPlayer {
   const name = readApiPlayerName(player);
   const apiPlayerId = player.api_id ?? player.player_id ?? null;
   const localPlayer = findLocalPlayerByBzzoiroId(apiPlayerId, players) ?? findLocalPlayer(name, players, teamId);
   const shirtNumber = readOptionalNumber(player.number ?? player.jersey_number);
+  const substitution = getLineupSubstitutionDisplay(player, lineupPlayers);
 
   return applyEventSummary({
     ...toFormationPlayer(localPlayer ?? {
@@ -1122,6 +1131,8 @@ function mapApiLineupPlayer(
     match_goals: readNumber(player.goals),
     match_yellow_cards: player.yellow_card ? 1 : 0,
     match_red_cards: player.red_card ? 1 : 0,
+    match_sub_in: substitution?.kind === "in" ? substitution.minute ?? 1 : null,
+    match_sub_out: substitution?.kind === "out" ? substitution.minute ?? 1 : null,
   }, eventSummaryByPlayerId);
 }
 
@@ -1188,7 +1199,7 @@ function buildPlayerEventSummaryMap(events: MatchDetailDevEvent[], apiEvent?: Bz
 
     if (playerSummary && type.includes("goal")) {
       playerSummary.goals += 1;
-    } else if (playerSummary && type.includes("card") && cardType.includes("red")) {
+    } else if (playerSummary && type.includes("card") && (cardType.includes("red") || cardType.includes("second"))) {
       playerSummary.redCards += 1;
     } else if (playerSummary && type.includes("card")) {
       playerSummary.yellowCards += 1;
@@ -1370,7 +1381,7 @@ function LineupPlayerRow({
   players,
   eventSummary,
   photoUrl,
-  statusNote,
+  substitution,
 }: {
   name: string;
   position?: string | null;
@@ -1379,7 +1390,7 @@ function LineupPlayerRow({
   players: MatchPagePlayer[];
   eventSummary?: PlayerMatchEventSummary | null;
   photoUrl?: string | null;
-  statusNote?: string | null;
+  substitution?: LineupSubstitutionDisplay | null;
 }) {
   const localPlayer = findLocalPlayer(name, players, teamId);
   const content = (
@@ -1391,12 +1402,19 @@ function LineupPlayerRow({
       />
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-black text-wc-fg1">{localPlayer?.name ?? name}</p>
-        <p className="mt-0.5 text-[11px] font-bold text-wc-fg3">
-          {formatPosition(position ?? localPlayer?.position)}
-          {statusNote ? <span className="ms-2 text-wc-neon">{statusNote}</span> : null}
-        </p>
+        <div className="mt-0.5 flex min-w-0 flex-wrap items-center gap-1.5 text-[11px] font-bold text-wc-fg3">
+          <span>{formatPosition(position ?? localPlayer?.position)}</span>
+          {substitution ? <LineupSubstitutionPill substitution={substitution} /> : null}
+        </div>
+        {substitution?.relatedName ? (
+          <p className="mt-0.5 truncate text-[10px] font-bold text-wc-fg3">
+            {substitution.kind === "in" ? "במקום " : "הוחלף על ידי "}
+            <span className="text-wc-fg2">{substitution.relatedName}</span>
+            {substitution.minute ? <span dir="ltr">{` · ${substitution.minute}'`}</span> : null}
+          </p>
+        ) : null}
       </div>
-      <InlineEventBadges summary={eventSummary} />
+      <InlineEventBadges summary={eventSummary} substitution={substitution} />
     </div>
   );
 
@@ -1406,6 +1424,23 @@ function LineupPlayerRow({
     </PlayerLink>
   ) : (
     content
+  );
+}
+
+function LineupSubstitutionPill({ substitution }: { substitution: LineupSubstitutionDisplay }) {
+  const isIn = substitution.kind === "in";
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-black ${
+        isIn
+          ? "border-cyan-300/30 bg-cyan-300/10 text-cyan-100"
+          : "border-wc-amber/30 bg-wc-amber/10 text-wc-amber"
+      }`}
+      title={formatSubstitutionTitle(substitution)}
+    >
+      <span className="font-sans" dir="ltr">{isIn ? "↗" : "↘"}</span>
+      {isIn ? "נכנס" : "יצא"}
+    </span>
   );
 }
 
@@ -1438,11 +1473,27 @@ function LineupPlayerAvatar({
   );
 }
 
-function InlineEventBadges({ summary }: { summary?: PlayerMatchEventSummary | null }) {
-  if (!hasEventSummary(summary)) return null;
-  const displaySummary = normalizeEventSummaryForDisplay(summary);
+function InlineEventBadges({
+  summary,
+  substitution,
+}: {
+  summary?: PlayerMatchEventSummary | null;
+  substitution?: LineupSubstitutionDisplay | null;
+}) {
+  if (!hasEventSummary(summary) && !substitution) return null;
+  const displaySummary = normalizeEventSummaryForDisplay(summary ?? { goals: 0, assists: 0, yellowCards: 0, redCards: 0 });
 
   const badges = [
+    substitution ? {
+      key: `sub-${substitution.kind}`,
+      value: 1,
+      kind: substitution.kind === "in" ? "subIn" as const : "subOut" as const,
+      label: substitution.kind === "in" ? "נכנס כמחליף" : "הוחלף",
+      plural: substitution.kind === "in" ? "חילופים נכנסים" : "חילופים יוצאים",
+      className: substitution.kind === "in"
+        ? "border-cyan-300/35 bg-cyan-300/13 text-cyan-100"
+        : "border-wc-amber/38 bg-wc-amber/13 text-wc-amber",
+    } : null,
     displaySummary.goals > 0 ? { key: "g", value: displaySummary.goals, kind: "goal" as const, label: "שער", plural: "שערים", className: "border-wc-neon/45 bg-wc-neon/16 text-wc-neon shadow-[0_0_18px_rgba(95,255,123,0.18)]" } : null,
     displaySummary.assists > 0 ? { key: "a", value: displaySummary.assists, kind: "assist" as const, label: "בישול", plural: "בישולים", className: "border-cyan-300/35 bg-cyan-300/13 text-cyan-100 shadow-[0_0_14px_rgba(103,232,249,0.12)]" } : null,
     displaySummary.yellowCards > 0 ? { key: "y", value: displaySummary.yellowCards, kind: "yellow" as const, label: "צהוב", plural: "צהובים", className: "border-wc-amber/38 bg-wc-amber/13 text-wc-amber" } : null,
@@ -1467,7 +1518,7 @@ function InlineEventBadges({ summary }: { summary?: PlayerMatchEventSummary | nu
   );
 }
 
-type EventBadgeKind = "goal" | "assist" | "yellow" | "red";
+type EventBadgeKind = "goal" | "assist" | "yellow" | "red" | "subIn" | "subOut";
 
 function EventBadgeSymbol({ kind }: { kind: EventBadgeKind }) {
   if (kind === "goal") {
@@ -1476,6 +1527,14 @@ function EventBadgeSymbol({ kind }: { kind: EventBadgeKind }) {
 
   if (kind === "assist") {
     return <span aria-hidden="true">👟</span>;
+  }
+
+  if (kind === "subIn") {
+    return <span aria-hidden="true" className="font-sans text-[11px] font-black" dir="ltr">↗</span>;
+  }
+
+  if (kind === "subOut") {
+    return <span aria-hidden="true" className="font-sans text-[11px] font-black" dir="ltr">↘</span>;
   }
 
   if (kind === "yellow") {
@@ -1558,20 +1617,21 @@ function TimelinePanel({
   players: MatchPagePlayer[];
   devEvents: MatchDetailDevEvent[];
 }) {
-  const incidents = asArray(event.incidents)
-    .filter(isDisplayableIncident)
-    .slice()
-    .sort((left, right) => readNumber(left.minute) - readNumber(right.minute));
+  const timelineItems = buildApiTimelineItems(event);
   const devRows = buildDevTimelineRows(devEvents, match, players);
-  const hasApiTimeline = incidents.length > 0;
+  const hasApiTimeline = timelineItems.length > 0;
 
   return (
     <section className="mt-5 rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-4 md:p-5">
       <SectionHeader title="אירועי משחק" eyebrow={hasApiTimeline ? "שערים, כרטיסים, חילופים, VAR" : "Dev Tools timeline"} />
       {hasApiTimeline ? (
         <div className="mt-4 grid gap-3">
-          {incidents.map((incident, index) => (
-            <IncidentRow key={`${incident.minute}-${incident.type}-${index}`} incident={incident} match={match} players={players} />
+          {timelineItems.map((item, index) => (
+            item.kind === "halftime" ? (
+              <HalftimeRow key={`halftime-${index}`} item={item} />
+            ) : (
+              <IncidentRow key={`${item.incident.minute}-${item.incident.type}-${index}`} incident={item.incident} match={match} players={players} />
+            )
           ))}
         </div>
       ) : devRows.length > 0 ? (
@@ -1585,6 +1645,99 @@ function TimelinePanel({
       )}
     </section>
   );
+}
+
+type ApiTimelineItem =
+  | { kind: "incident"; incident: BzzoiroIncident; minute: number; order: number }
+  | { kind: "halftime"; minute: number; order: number; homeScore: number; awayScore: number };
+
+function buildApiTimelineItems(event: BzzoiroMatchEvent): ApiTimelineItem[] {
+  const incidents = asArray(event.incidents)
+    .filter(isDisplayableIncident)
+    .map((incident, index) => ({
+      kind: "incident" as const,
+      incident,
+      minute: readNumber(incident.minute),
+      order: index,
+    }));
+  const halftimeScore = getHalftimeScore(event);
+  const items: ApiTimelineItem[] = halftimeScore
+    ? [
+        ...incidents,
+        {
+          kind: "halftime",
+          minute: 45,
+          order: Number.MAX_SAFE_INTEGER,
+          homeScore: halftimeScore.home,
+          awayScore: halftimeScore.away,
+        },
+      ]
+    : incidents;
+
+  return items.sort((left, right) => right.minute - left.minute || right.order - left.order);
+}
+
+function getHalftimeScore(event: BzzoiroMatchEvent) {
+  const directHome = readProvidedNumber(event.home_score_ht);
+  const directAway = readProvidedNumber(event.away_score_ht);
+  if (
+    directHome !== null &&
+    directAway !== null &&
+    (directHome > 0 || directAway > 0 || isAfterFirstHalf(event))
+  ) {
+    return { home: directHome, away: directAway };
+  }
+
+  const scoredIncidents = asArray(event.incidents)
+    .filter((incident) => {
+      const minute = readNumber(incident.minute);
+      return minute <= 45 &&
+        isGoalIncident(incident) &&
+        readProvidedNumber(incident.home_score) !== null &&
+        readProvidedNumber(incident.away_score) !== null;
+    })
+    .sort((left, right) => readNumber(right.minute) - readNumber(left.minute));
+
+  const latestScoredIncident = scoredIncidents[0];
+  if (latestScoredIncident) {
+    return {
+      home: readProvidedNumber(latestScoredIncident.home_score) ?? 0,
+      away: readProvidedNumber(latestScoredIncident.away_score) ?? 0,
+    };
+  }
+
+  if (!isAfterFirstHalf(event)) return null;
+
+  let home = 0;
+  let away = 0;
+  for (const incident of asArray(event.incidents)) {
+    if (!isGoalIncident(incident) || readNumber(incident.minute) > 45) continue;
+    if (incident.is_home === true) home += 1;
+    if (incident.is_home === false) away += 1;
+  }
+
+  return { home, away };
+}
+
+function isAfterFirstHalf(event: BzzoiroMatchEvent) {
+  const status = `${event.status ?? ""} ${event.period ?? ""}`.toLowerCase();
+  return (
+    status.includes("half_time") ||
+    status.includes("halftime") ||
+    status.includes("half-time") ||
+    status.includes("break") ||
+    status.includes("ht") ||
+    status.includes("2nd") ||
+    status.includes("2h") ||
+    status.includes("finish") ||
+    status.includes("final") ||
+    status.includes("ended") ||
+    status === "ft"
+  );
+}
+
+function isGoalIncident(incident: BzzoiroIncident) {
+  return String(incident.type ?? "").toLowerCase().includes("goal");
 }
 
 type DevTimelineRow = MatchDetailDevEvent & {
@@ -1629,7 +1782,8 @@ function buildDevTimelineRows(
         score,
         teamName,
       };
-    });
+    })
+    .reverse();
 }
 
 function DevIncidentRow({ row }: { row: DevTimelineRow }) {
@@ -1670,6 +1824,26 @@ function DevIncidentRow({ row }: { row: DevTimelineRow }) {
       </div>
       <span className="rounded-full bg-white/8 px-2 py-1 text-xs font-black text-wc-fg2" dir={row.score ? "ltr" : "rtl"}>
         {row.score ?? row.teamName}
+      </span>
+    </div>
+  );
+}
+
+function HalftimeRow({ item }: { item: Extract<ApiTimelineItem, { kind: "halftime" }> }) {
+  return (
+    <div className="grid grid-cols-[3.7rem_1fr_auto] items-center gap-3 rounded-[1.1rem] border border-white/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.075),rgba(111,60,255,0.08))] px-3 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+      <div className="grid place-items-center gap-1">
+        <span className="grid h-8 w-8 place-items-center rounded-full border border-white/18 bg-white/10 font-sans text-[10px] font-black text-wc-fg1" dir="ltr">
+          HT
+        </span>
+        <span className="font-sans text-xs font-black text-wc-fg2" dir="ltr">{"45'"}</span>
+      </div>
+      <div className="min-w-0">
+        <p className="text-sm font-black text-wc-fg1">מחצית</p>
+        <p className="mt-1 truncate text-xs font-bold text-wc-fg3">תוצאת המחצית</p>
+      </div>
+      <span className="rounded-full border border-white/14 bg-white/8 px-3 py-1 text-xs font-black text-wc-fg1" dir="ltr">
+        {formatTimelineScore(item.homeScore, item.awayScore)}
       </span>
     </div>
   );
@@ -2216,6 +2390,11 @@ function readOptionalNumber(value: number | string | null | undefined) {
   return Number.isFinite(number) ? number : null;
 }
 
+function readProvidedNumber(value: number | string | null | undefined) {
+  if (value === null || value === undefined || value === "") return null;
+  return readOptionalNumber(value);
+}
+
 function formatShortTime(iso: string | null | undefined) {
   if (!iso) return "-";
   try {
@@ -2269,12 +2448,59 @@ function getBzzoiroPlayerImageUrl(id: number | string | null | undefined) {
   return `https://sports.bzzoiro.com/img/player/${encodeURIComponent(String(id))}/`;
 }
 
-function formatLineupPlayerStatus(player: BzzoiroActualLineupPlayer) {
-  const subIn = readOptionalNumber(player.sub_in);
-  const subOut = readOptionalNumber(player.sub_out);
-  if (subIn !== null) return `נכנס ${subIn}'`;
-  if (subOut !== null) return `יצא ${subOut}'`;
+function getLineupSubstitutionDisplay(
+  player: BzzoiroActualLineupPlayer,
+  lineupPlayers: BzzoiroActualLineupPlayer[] = [],
+): LineupSubstitutionDisplay | null {
+  const subIn = readSubstitutionMinute(player.sub_in);
+  const subOut = readSubstitutionMinute(player.sub_out);
+
+  if (subIn !== null) {
+    return {
+      kind: "in",
+      minute: subIn,
+      relatedName: findApiLineupPlayerName(player.replaces_player_id, lineupPlayers),
+    };
+  }
+
+  if (subOut !== null) {
+    return {
+      kind: "out",
+      minute: subOut,
+      relatedName: findApiLineupPlayerName(player.replaced_by_player_id, lineupPlayers),
+    };
+  }
+
   return null;
+}
+
+function findApiLineupPlayerName(
+  id: number | string | null | undefined,
+  players: BzzoiroActualLineupPlayer[],
+) {
+  if (id === null || id === undefined || id === "") return null;
+  const player = players.find((candidate) => {
+    const candidateId = candidate.api_id ?? candidate.player_id;
+    return candidateId !== null && candidateId !== undefined && String(candidateId) === String(id);
+  });
+  return player ? readApiPlayerName(player) : null;
+}
+
+function readSubstitutionMinute(value: number | string | null | undefined) {
+  const minute = readOptionalNumber(value);
+  if (minute === null || minute <= 0) return null;
+  return minute;
+}
+
+function formatSubstitutionTitle(substitution: LineupSubstitutionDisplay) {
+  const action = substitution.kind === "in" ? "נכנס כמחליף" : "הוחלף";
+  const minute = substitution.minute ? ` בדקה ${substitution.minute}` : "";
+  const related = substitution.relatedName
+    ? substitution.kind === "in"
+      ? ` במקום ${substitution.relatedName}`
+      : ` על ידי ${substitution.relatedName}`
+    : "";
+  return `${action}${minute}${related}`;
 }
 
 function findLocalPlayer(name: string | null | undefined, players: MatchPagePlayer[], teamId: string | null) {
@@ -2483,10 +2709,10 @@ function getShotChipClass(kind: ShotResultKind) {
 
 function getShotIcon(kind: ShotResultKind) {
   if (kind === "goal") return "⚽";
-  if (kind === "save") return "הצ";
-  if (kind === "block") return "חס";
-  if (kind === "post") return "קו";
-  return "בע";
+  if (kind === "save") return "▣";
+  if (kind === "block") return "◆";
+  if (kind === "post") return "▏";
+  return "↗";
 }
 
 function formatShotMinute(minute: number | string | null | undefined) {
