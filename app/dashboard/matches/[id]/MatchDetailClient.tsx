@@ -2451,12 +2451,21 @@ function getBestScoreSummary(match: MatchDetailRow, event: BzzoiroMatchEvent | n
 
 function shouldPreferLocalScore(match: MatchDetailRow, event: BzzoiroMatchEvent | null) {
   if (!isMatchScoreVisible(match)) return false;
-  const apiStatus = String(event?.status ?? "").toLowerCase();
+  const apiStatus = String(event?.status ?? "").trim().toLowerCase();
+  const normalizedApiStatus = apiStatus.replace(/[\s_-]+/g, "");
   const apiIsLiveOrFinished =
+    normalizedApiStatus.includes("finish") ||
+    normalizedApiStatus.includes("ended") ||
+    normalizedApiStatus.includes("final") ||
     apiStatus.includes("progress") ||
     apiStatus.includes("half") ||
+    apiStatus.includes("extra") ||
+    apiStatus.includes("penalt") ||
     apiStatus === "live" ||
-    apiStatus === "finished";
+    apiStatus === "finished" ||
+    apiStatus === "ft" ||
+    apiStatus === "1h" ||
+    apiStatus === "2h";
 
   return !apiIsLiveOrFinished;
 }
