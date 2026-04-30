@@ -1,13 +1,11 @@
 "use client";
 
 import { useActionState, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
-import { useRouter } from "next/navigation";
 import {
   checkNicknameAvailability,
   completeOnboarding,
   type OnboardingActionState,
 } from "@/app/actions/onboarding";
-import { useAuth } from "@/components/auth/AuthProvider";
 import PlayerPicker from "@/components/pickers/PlayerPicker";
 import TeamPicker from "@/components/pickers/TeamPicker";
 import ProfileAvatarField from "@/components/profile/ProfileAvatarField";
@@ -78,8 +76,6 @@ export default function OnboardingForm({
   tournamentPrediction,
   tournamentStarted,
 }: OnboardingFormProps) {
-  const router = useRouter();
-  const { refreshProfile } = useAuth();
   const [state, formAction, isPending] = useActionState<OnboardingActionState, FormData>(
     completeOnboarding,
     null,
@@ -206,28 +202,6 @@ export default function OnboardingForm({
       window.cancelAnimationFrame(frameId);
     };
   }, [step]);
-
-  useEffect(() => {
-    if (!state?.success) {
-      return;
-    }
-
-    let cancelled = false;
-
-    void (async () => {
-      await refreshProfile();
-      if (cancelled) {
-        return;
-      }
-
-      router.push(nextPath);
-      router.refresh();
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [nextPath, refreshProfile, router, state?.success]);
 
   function handleNicknameChange(nextValue: string) {
     setNickname(nextValue);
@@ -422,6 +396,7 @@ export default function OnboardingForm({
         <input type="hidden" name="avatar_url" value={selectedAvatarUrl ?? ""} />
         <input type="hidden" name="avatar_transform" value={serializeAvatarTransform(avatarTransform)} />
         <input type="hidden" name="avatar_upload_requested" value={uploadedAvatarName ? "1" : "0"} />
+        <input type="hidden" name="next_path" value={nextPath} />
         <input type="hidden" name="winner_team_id" value={winnerId} />
         <input type="hidden" name="top_scorer" value={topScorerName} />
         <input type="hidden" name="top_scorer_player_id" value={selectedPlayer?.id ?? ""} />

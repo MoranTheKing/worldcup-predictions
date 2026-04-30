@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect, RedirectType } from "next/navigation";
 import { normalizeAvatarUrl } from "@/lib/profile/avatar-options";
 import { parseAvatarTransformField } from "@/lib/profile/avatar-transform";
 import {
@@ -14,6 +15,7 @@ import {
   getNicknameTakenError,
   normalizeNicknameInput,
 } from "@/lib/profile/nickname";
+import { getPostOnboardingRedirectPath } from "@/lib/security/safe-redirect";
 import { fetchOnboardingStatus } from "@/lib/supabase/onboarding";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -88,6 +90,7 @@ export async function completeOnboarding(
   _prev: OnboardingActionState,
   formData: FormData,
 ): Promise<OnboardingActionState> {
+  const nextPath = getPostOnboardingRedirectPath(formData.get("next_path")?.toString(), "/game");
   const supabase = await createClient();
   const admin = createAdminClient();
   const {
@@ -169,8 +172,8 @@ export async function completeOnboarding(
     }
   }
 
-  revalidateProfileViews();
-  return { success: true };
+  revalidateProfileViews(nextPath);
+  redirect(nextPath, RedirectType.replace);
 }
 
 export async function updateProfileSettings(
@@ -493,11 +496,31 @@ function normalizeOddsValue(value: number | string | null | undefined) {
     : null;
 }
 
-function revalidateProfileViews() {
-  revalidatePath("/", "layout");
-  revalidatePath("/dashboard", "layout");
-  revalidatePath("/game", "layout");
-  revalidatePath("/onboarding");
+function revalidateProfileViews(primaryPath?: string) {
+  const paths = new Set([
+    "/onboarding",
+    "/dashboard/profile",
+    "/game",
+    "/game/leaderboard",
+  ]);
+  const normalizedPrimaryPath = normalizeRevalidationPath(primaryPath);
+
+  if (normalizedPrimaryPath) {
+    paths.add(normalizedPrimaryPath);
+  }
+
+  for (const path of paths) {
+    revalidatePath(path);
+  }
+}
+
+function normalizeRevalidationPath(value: string | undefined) {
+  if (!value || !value.startsWith("/") || value.startsWith("//") || value.includes("\\")) {
+    return null;
+  }
+
+  const [pathname] = value.split("?");
+  return pathname && pathname !== "/" ? pathname : null;
 }
 
 function asNullableString(value: unknown) {
