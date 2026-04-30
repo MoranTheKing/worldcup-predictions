@@ -1629,6 +1629,8 @@ function TimelinePanel({
           {timelineItems.map((item, index) => (
             item.kind === "halftime" ? (
               <HalftimeRow key={`halftime-${index}`} item={item} />
+            ) : item.kind === "fulltime" ? (
+              <FulltimeRow key={`fulltime-${index}`} item={item} />
             ) : (
               <IncidentRow key={`${item.incident.minute}-${item.incident.type}-${index}`} incident={item.incident} match={match} players={players} />
             )
@@ -1649,7 +1651,8 @@ function TimelinePanel({
 
 type ApiTimelineItem =
   | { kind: "incident"; incident: BzzoiroIncident; minute: number; order: number }
-  | { kind: "halftime"; minute: number; order: number; homeScore: number; awayScore: number };
+  | { kind: "halftime"; minute: number; order: number; homeScore: number; awayScore: number }
+  | { kind: "fulltime"; minute: number; order: number; homeScore: number; awayScore: number };
 
 function buildApiTimelineItems(event: BzzoiroMatchEvent): ApiTimelineItem[] {
   const incidents = asArray(event.incidents)
@@ -1661,18 +1664,32 @@ function buildApiTimelineItems(event: BzzoiroMatchEvent): ApiTimelineItem[] {
       order: index,
     }));
   const halftimeScore = getHalftimeScore(event);
-  const items: ApiTimelineItem[] = halftimeScore
-    ? [
-        ...incidents,
-        {
-          kind: "halftime",
-          minute: 45,
-          order: Number.MAX_SAFE_INTEGER,
-          homeScore: halftimeScore.home,
-          awayScore: halftimeScore.away,
-        },
-      ]
-    : incidents;
+  const fulltimeScore = getFulltimeScore(event);
+  const items: ApiTimelineItem[] = [
+    ...incidents,
+    ...(halftimeScore
+      ? [
+          {
+            kind: "halftime" as const,
+            minute: 45,
+            order: Number.MAX_SAFE_INTEGER - 1,
+            homeScore: halftimeScore.home,
+            awayScore: halftimeScore.away,
+          },
+        ]
+      : []),
+    ...(fulltimeScore
+      ? [
+          {
+            kind: "fulltime" as const,
+            minute: fulltimeScore.minute,
+            order: Number.MAX_SAFE_INTEGER,
+            homeScore: fulltimeScore.home,
+            awayScore: fulltimeScore.away,
+          },
+        ]
+      : []),
+  ];
 
   return items.sort((left, right) => right.minute - left.minute || right.order - left.order);
 }
@@ -1733,6 +1750,29 @@ function isAfterFirstHalf(event: BzzoiroMatchEvent) {
     status.includes("final") ||
     status.includes("ended") ||
     status === "ft"
+  );
+}
+
+function getFulltimeScore(event: BzzoiroMatchEvent) {
+  if (!isFullTimeEvent(event)) return null;
+  const home = readProvidedNumber(event.home_score);
+  const away = readProvidedNumber(event.away_score);
+  if (home === null || away === null) return null;
+  return {
+    home,
+    away,
+    minute: Math.max(90, readOptionalNumber(event.current_minute) ?? 90),
+  };
+}
+
+function isFullTimeEvent(event: BzzoiroMatchEvent) {
+  const status = `${event.status ?? ""} ${event.period ?? ""}`.toLowerCase();
+  return (
+    status.includes("finish") ||
+    status.includes("ended") ||
+    status.includes("final") ||
+    status === "ft" ||
+    status.includes(" ft")
   );
 }
 
@@ -1849,6 +1889,26 @@ function HalftimeRow({ item }: { item: Extract<ApiTimelineItem, { kind: "halftim
   );
 }
 
+function FulltimeRow({ item }: { item: Extract<ApiTimelineItem, { kind: "fulltime" }> }) {
+  return (
+    <div className="grid grid-cols-[3.7rem_1fr_auto] items-center gap-3 rounded-[1.1rem] border border-wc-neon/24 bg-[linear-gradient(135deg,rgba(95,255,123,0.1),rgba(111,60,255,0.1))] px-3 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+      <div className="grid place-items-center gap-1">
+        <span className="grid h-8 w-8 place-items-center rounded-full border border-wc-neon/30 bg-wc-neon/12 font-sans text-[10px] font-black text-wc-neon" dir="ltr">
+          FT
+        </span>
+        <span className="font-sans text-xs font-black text-wc-fg2" dir="ltr">{`${item.minute}'`}</span>
+      </div>
+      <div className="min-w-0">
+        <p className="text-sm font-black text-wc-fg1">סיום</p>
+        <p className="mt-1 truncate text-xs font-bold text-wc-fg3">תוצאת הסיום</p>
+      </div>
+      <span className="rounded-full border border-wc-neon/28 bg-wc-neon/12 px-3 py-1 text-xs font-black text-wc-neon" dir="ltr">
+        {formatTimelineScore(item.homeScore, item.awayScore)}
+      </span>
+    </div>
+  );
+}
+
 function IncidentRow({
   incident,
   match,
@@ -1864,11 +1924,13 @@ function IncidentRow({
   const playerName = incident.player_name ?? incident.player ?? "";
   const localPlayer = playerName ? findLocalPlayer(playerName, players, sideTeamId) : null;
   const title = formatIncidentTitle(incident);
+  const sideTeam = incident.is_home === true ? match.homeTeam : incident.is_home === false ? match.awayTeam : null;
   const sideName = incident.is_home === true
     ? getTeamDisplayName(match.homeTeam, match.home_placeholder)
     : incident.is_home === false
       ? getTeamDisplayName(match.awayTeam, match.away_placeholder)
       : "-";
+  const sideLogo = getTeamDisplayLogo(sideTeam);
   const score = incident.home_score !== null && incident.home_score !== undefined && incident.away_score !== null && incident.away_score !== undefined
     ? formatTimelineScore(readNumber(incident.home_score), readNumber(incident.away_score))
     : null;
@@ -1909,10 +1971,57 @@ function IncidentRow({
           </>
         )}
       </div>
-      <span className={`rounded-full px-2.5 py-1 text-xs font-black ${getIncidentChipClass(kind, Boolean(score))}`} dir={score ? "ltr" : "rtl"}>
-        {score ?? sideName}
-      </span>
+      <IncidentSideMark score={score} logo={sideLogo} name={sideName} kind={kind} />
     </div>
+  );
+}
+
+function IncidentSideMark({
+  score,
+  logo,
+  name,
+  kind,
+}: {
+  score: string | null;
+  logo: string | null;
+  name: string;
+  kind: IncidentKind;
+}) {
+  if (score) {
+    return (
+      <span className={`rounded-full px-2.5 py-1 text-xs font-black ${getIncidentChipClass(kind, true)}`} dir="ltr">
+        {score}
+      </span>
+    );
+  }
+
+  if (!logo) {
+    return (
+      <span
+        className={`grid h-9 w-9 place-items-center rounded-full px-2 text-[10px] font-black ${getIncidentChipClass(kind, false)}`}
+        title={name}
+        aria-label={name}
+      >
+        {name.slice(0, 2)}
+      </span>
+    );
+  }
+
+  return (
+    <span
+      className={`grid h-9 w-9 place-items-center overflow-hidden rounded-full border ${getIncidentLogoClass(kind)}`}
+      title={name}
+      aria-label={name}
+    >
+      <Image
+        src={logo}
+        alt={name}
+        width={36}
+        height={36}
+        className="h-full w-full object-cover"
+        unoptimized
+      />
+    </span>
   );
 }
 
@@ -2040,7 +2149,10 @@ function ShotList({
   match: MatchDetailRow;
   players: MatchPagePlayer[];
 }) {
-  const visible = shots.slice(-8).reverse();
+  const visible = shots
+    .slice()
+    .sort((left, right) => readNumber(right.min) - readNumber(left.min))
+    .slice(0, 8);
   if (visible.length === 0) return <EmptyState text="בעיטות יופיעו כאן כשה־API יחזיר shotmap." />;
 
   return (
@@ -2596,6 +2708,15 @@ function getIncidentChipClass(kind: IncidentKind, isScore: boolean) {
   if (kind === "yellow") return "border border-wc-amber/35 bg-wc-amber/12 text-wc-amber";
   if (kind === "sub") return "border border-cyan-300/25 bg-cyan-300/10 text-cyan-100";
   return "bg-white/8 text-wc-fg2";
+}
+
+function getIncidentLogoClass(kind: IncidentKind) {
+  if (kind === "goal") return "border-wc-neon/35 bg-wc-neon/10 shadow-[0_0_16px_rgba(95,255,123,0.16)]";
+  if (kind === "red") return "border-wc-danger/35 bg-wc-danger/10";
+  if (kind === "yellow") return "border-wc-amber/35 bg-wc-amber/10";
+  if (kind === "sub") return "border-cyan-300/30 bg-cyan-300/10";
+  if (kind === "var") return "border-[#C9B2FF]/30 bg-[#6F3CFF]/10";
+  return "border-white/14 bg-white/8";
 }
 
 function IncidentIcon({ kind }: { kind: IncidentKind }) {
