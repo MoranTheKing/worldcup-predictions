@@ -606,3 +606,5 @@ Brevo Free מוגבל בכמות יומית לכל החשבון, לכן ביום
 - Match-event rows now have stronger event-specific UI for goals, cards, substitutions, VAR and penalties. Substitutions show `נכנס` / `יוצא` explicitly.
 - The local BSD live-preview page is now strictly development-only (`NODE_ENV === "development"`), so non-development deployments cannot be used to trigger BSD server-side preview calls.
 - Global opponent profile access is still available from `/game/leaderboard`, but `?league=global` is now restricted to users actually visible in the global leaderboard instead of acting as a broad authorization bypass for arbitrary user IDs.
+- Local/dev request checks now prefer `request.url` and `Origin` over spoofable `Host`, while server-rendered local pages require development mode and allow normal same-origin navigations without an `Origin` header.
+- Added `supabase/migrations/20260430000039_restrict_bsd_prediction_columns.sql`, which revokes table-level `SELECT` on `public.matches` from `anon`/`authenticated` and grants back only non-`bsd_*` columns. This keeps BSD model/raw prediction data server-only instead of relying on ineffective column-only revokes.
