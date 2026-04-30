@@ -874,9 +874,9 @@ raw_error
 - Added local-only `/dashboard/matches/bsd-live/[id]` as a visual match-page preview for a real BSD event. It renders through the normal match detail UI without writing to Supabase.
 - Live UX priority is now event-first: the event timeline renders immediately below the hero, period-only API rows are filtered out, timeline score chips use the same visual RTL order as the hero, and momentum/shotmap stays lower on the page.
 - During live matches, predicted-lineup data is labeled as a temporary BSD model until actual lineups arrive. API incidents are mapped back onto lineup/bench players by id, full name, and last-name fallback so goals, assists and cards appear on the squad UI as the feed updates.
-- If BSD `/player-stats/?event=...` is empty, the match page now derives featured-player fallback metrics from the full event payload: official lineup ratings/minutes, incidents, cards, shotmap shots/xG and goalkeeper goals conceded.
 - Formation pitches now use fixed per-line grids instead of card wrapping, so mobile keeps formations such as `4-2-3-1` visually faithful across match and squad pages.
 - Lineup rating badges now use a performance color scale, while each team's top-rated player keeps a distinct star treatment instead of sharing the same dark badge style.
+- The separate featured-player panel was removed from the match page to reduce visual duplication; per-player ratings and events remain available on the lineup, timeline and shot panels.
 
 ## Outright picker and player-feed pagination - 2026-04-27
 

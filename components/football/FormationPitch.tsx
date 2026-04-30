@@ -147,7 +147,7 @@ function RatingBadge({
 
   return (
     <span
-      className={`absolute -top-1 end-0 z-20 inline-flex h-6 items-center gap-1 rounded-full border px-2 font-sans text-[10px] font-black tracking-normal shadow-[0_10px_18px_rgba(0,0,0,0.32)] ${getRatingBadgeClass(ratingNumber, isTopRated)}`}
+      className={`absolute -top-2 end-1 z-30 inline-flex h-7 items-center gap-1 rounded-full border px-2.5 font-sans text-[11px] font-black tracking-normal shadow-[0_12px_24px_rgba(0,0,0,0.38)] ring-1 ring-black/30 ${getRatingBadgeClass(ratingNumber, isTopRated)}`}
       title={isTopRated ? `מצטיין הקבוצה - ציון ${ratingText}` : `ציון ${ratingText}`}
       dir="ltr"
     >
@@ -159,14 +159,14 @@ function RatingBadge({
 
 function getRatingBadgeClass(rating: number, isTopRated: boolean) {
   if (isTopRated) {
-    return "border-wc-amber/65 bg-[linear-gradient(135deg,rgba(255,199,77,0.28),rgba(111,60,255,0.24))] text-wc-amber shadow-[0_0_20px_rgba(255,199,77,0.22)]";
+    return "border-fuchsia-300/70 bg-[linear-gradient(135deg,rgba(217,70,239,0.28),rgba(79,70,229,0.28))] text-fuchsia-100 shadow-[0_0_22px_rgba(217,70,239,0.24)]";
   }
 
-  if (rating >= 8) return "border-wc-neon/45 bg-wc-neon/16 text-wc-neon";
-  if (rating >= 7.2) return "border-cyan-300/38 bg-cyan-300/13 text-cyan-100";
-  if (rating >= 6.5) return "border-[#C9B2FF]/28 bg-[#6F3CFF]/16 text-[#E7DDFF]";
-  if (rating >= 6) return "border-wc-amber/42 bg-wc-amber/14 text-wc-amber";
-  return "border-wc-danger/42 bg-wc-danger/14 text-wc-danger";
+  if (rating >= 8) return "border-wc-neon/58 bg-wc-neon/20 text-wc-neon shadow-[0_0_16px_rgba(95,255,123,0.16)]";
+  if (rating >= 7.2) return "border-cyan-300/50 bg-cyan-300/18 text-cyan-100 shadow-[0_0_16px_rgba(103,232,249,0.12)]";
+  if (rating >= 6.5) return "border-[#C9B2FF]/42 bg-[#6F3CFF]/22 text-[#F1EBFF]";
+  if (rating >= 6) return "border-wc-amber/52 bg-wc-amber/18 text-wc-amber";
+  return "border-wc-danger/52 bg-wc-danger/18 text-wc-danger";
 }
 
 function getPlayerEventBadges(player: FormationPitchPlayer) {
