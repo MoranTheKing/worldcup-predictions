@@ -80,7 +80,7 @@ export default function FormationPitch({
 function PlayerToken({ player, compact }: { player: FormationPitchPlayer; compact: boolean }) {
   const eventBadges = getPlayerEventBadges(player);
   const content = (
-    <div className="relative inline-block pb-2">
+    <div className="relative inline-block pb-2 pt-2">
       <div className={`${compact ? "w-[5.15rem]" : "w-[5.85rem]"} rounded-[1rem] border border-white/12 bg-black/36 px-2 py-2 text-center shadow-[0_10px_24px_rgba(0,0,0,0.24)] backdrop-blur transition hover:border-wc-neon/40 hover:bg-white/[0.07]`}>
         <RatingBadge rating={player.match_rating} isTopRated={player.is_team_top_rated === true} />
         <PlayerAvatar player={player} compact={compact} />
@@ -142,10 +142,10 @@ function RatingBadge({
 
   return (
     <span
-      className={`absolute end-1.5 top-1.5 z-20 inline-flex h-6 items-center gap-1 rounded-full border px-1.5 font-sans text-[10px] font-black tracking-normal ${
+      className={`absolute -top-0.5 end-0 z-20 inline-flex h-6 items-center gap-1 rounded-full border px-2 font-sans text-[10px] font-black tracking-normal shadow-[0_10px_18px_rgba(0,0,0,0.32)] ${
         isTopRated
-          ? "border-wc-neon/45 bg-wc-neon/16 text-wc-neon shadow-[0_0_18px_rgba(95,255,123,0.2)]"
-          : "border-white/12 bg-black/42 text-wc-fg2"
+          ? "border-wc-neon/55 bg-[rgba(18,38,28,0.96)] text-wc-neon shadow-[0_0_18px_rgba(95,255,123,0.22)]"
+          : "border-white/16 bg-[rgba(8,10,20,0.94)] text-wc-fg1"
       }`}
       title={isTopRated ? `מצטיין הקבוצה - ציון ${ratingText}` : `ציון ${ratingText}`}
       dir="ltr"
