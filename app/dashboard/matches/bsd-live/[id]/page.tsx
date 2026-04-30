@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import { isLocalServerRequest } from "@/lib/security/local-request";
 import { getBzzoiroLivePreview } from "@/lib/bzzoiro/live-preview";
 import MatchDetailClient, {
   type MatchDetailDevEvent,
@@ -9,7 +8,7 @@ import MatchDetailClient, {
 export const dynamic = "force-dynamic";
 
 export default async function BzzoiroLivePreviewPage({ params }: { params: Promise<{ id: string }> }) {
-  if (process.env.NODE_ENV === "production" || !(await isLocalServerRequest())) {
+  if (process.env.NODE_ENV !== "development") {
     notFound();
   }
 
