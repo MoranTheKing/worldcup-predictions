@@ -870,8 +870,8 @@ raw_error
 - Added `supabase/migrations/20260430000038_add_bsd_match_prediction_fields.sql` for BSD model probabilities, expected goals, confidence, most-likely score, model version, raw JSON and sync timestamp.
 - Added `cloudflare/bzzoiro-cron-worker.js` plus `cloudflare/wrangler.bzzoiro-cron.example.toml`. With the sample one-minute trigger, live sync runs immediately and then again after `LIVE_SECOND_PULSE_SECONDS` seconds, active-window 1X2 odds every 5 minutes, full 1X2 odds every 30 minutes, and BSD model predictions every 15 minutes.
 - Match pages now treat pre-match preview as pre-match only. Once a match is live or finished, form/H2H/coaches preview, broadcasts and 1X2 odds are hidden so the screen is focused on live score, stats, incidents, lineups, player stats, shots and momentum.
-- Added local-only `GET /api/dev/bzzoiro/live-match/[id]` for inspecting a live BSD event such as `9291` without writing to Supabase.
-- Added local-only `/dashboard/matches/bsd-live/[id]` as a temporary visual match-page preview for a real BSD event. It renders through the normal match detail UI and should be removed once live UX has been approved.
+- Added local-only `GET /api/dev/bzzoiro/live-match/[id]` for inspecting a live BSD event without writing to Supabase.
+- Added local-only `/dashboard/matches/bsd-live/[id]` as a visual match-page preview for a real BSD event. It renders through the normal match detail UI without writing to Supabase.
 - Live UX priority is now event-first: the event timeline renders immediately below the hero, period-only API rows are filtered out, timeline score chips use the same visual RTL order as the hero, and momentum/shotmap stays lower on the page.
 - During live matches, predicted-lineup data is labeled as a temporary BSD model until actual lineups arrive. API incidents are mapped back onto lineup/bench players by id, full name, and last-name fallback so goals, assists and cards appear on the squad UI as the feed updates.
 

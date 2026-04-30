@@ -585,7 +585,7 @@ Brevo Free מוגבל בכמות יומית לכל החשבון, לכן ביום
 - Added `cloudflare/wrangler.bzzoiro-cron.example.toml` with a one-minute cron trigger example.
 - Match pages now hide pre-match context, broadcasts and 1X2 odds once a match is live/finished, keeping the live page focused on score, live stats, events, lineups, player stats and spatial data.
 - Added local-only `GET /api/dev/bzzoiro/live-match/[id]` for quickly checking a real BSD event payload, counts and samples without writing to Supabase.
-- Added local-only `/dashboard/matches/bsd-live/[id]` as a temporary visual preview page that renders a real BSD live event through the same match-center UI without writing to Supabase. Example: `/dashboard/matches/bsd-live/9291`.
+- Added local-only `/dashboard/matches/bsd-live/[id]` as a visual preview page that renders a real BSD live event through the same match-center UI without writing to Supabase.
 - Live match pages now promote match events directly under the hero, hide period-only API rows from the event list, render timeline scores in the same RTL visual order as the hero, and push momentum/shotmap lower.
 - Lineup labels now distinguish official BSD lineups from temporary BSD lineup models during live matches, and API goals/assists/cards decorate matching lineup and bench players by local id, full name, or last-name fallback.
 
@@ -622,3 +622,4 @@ Brevo Free מוגבל בכמות יומית לכל החשבון, לכן ביום
 - If `/player-stats/` returns no rows for a BSD event, the `שחקנים בולטים` panel falls back to ratings and goals from the official BSD lineup payload instead of rendering an empty state.
 - Full-time detection now trims BSD status/period strings, so `status: "ft"` without a period still creates the `FT` timeline marker.
 - Official BSD lineup players now show their API rating directly on the formation token, and the top-rated player for each team gets a highlighted `★` marker on the pitch and bench row.
+- Featured-player cards now choose metrics by role when BSD `player-stats` is available: attackers get goals/assists/shots/xG, midfielders get creation and passing stats, defenders get defensive actions, and goalkeepers get saves/conceded/penalty-save stats. Unavailable metrics are omitted instead of showing empty filler.

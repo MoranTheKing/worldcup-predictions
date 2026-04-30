@@ -75,13 +75,20 @@ type PlayerStatDisplayRow = {
   key: string;
   name: string;
   teamName: string;
+  position?: string | null;
+  role: PlayerStatRole;
   localPlayer: MatchPagePlayer | null;
   photoUrl?: string | null;
   rating: number | string | null | undefined;
-  minutes: number | string | null | undefined;
-  goals: number | string | null | undefined;
-  assists: number | string | null | undefined;
-  shots: number | string | null | undefined;
+  metrics: PlayerStatMetric[];
+};
+
+type PlayerStatRole = "goalkeeper" | "defender" | "midfielder" | "attacker" | "outfield";
+
+type PlayerStatMetric = {
+  label: string;
+  value: string;
+  tone?: "goal" | "assist" | "defense" | "keeper" | "neutral";
 };
 
 type LineupSubstitutionDisplay = {
@@ -2181,13 +2188,12 @@ function toApiPlayerStatDisplayRow(
     key: `api-${row.player?.id ?? playerName}-${index}`,
     name: localPlayer?.name ?? playerName,
     teamName: translateTeamNameToHebrew(row.player?.team),
+    position: localPlayer?.position ?? row.player?.position ?? null,
+    role: getPlayerStatRole(localPlayer?.position ?? row.player?.position),
     localPlayer,
     photoUrl: localPlayer?.photo_url ?? getBzzoiroPlayerImageUrl(row.player?.id),
     rating: row.rating,
-    minutes: row.minutes_played,
-    goals: row.goals,
-    assists: row.goal_assist,
-    shots: row.total_shots,
+    metrics: buildApiPlayerStatMetrics(row, localPlayer?.position ?? row.player?.position),
   };
 }
 
@@ -2221,41 +2227,46 @@ function buildLineupPlayerStatRows(
           key: `lineup-${apiId ?? name}-${index}`,
           name: localPlayer?.name ?? name,
           teamName: side.teamName,
+          position: localPlayer?.position ?? normalizeFootballPosition(player.specific_position ?? player.position),
+          role: getPlayerStatRole(localPlayer?.position ?? player.specific_position ?? player.position),
           localPlayer,
           photoUrl: localPlayer?.photo_url ?? getBzzoiroPlayerImageUrl(apiId),
           rating: player.rating,
-          minutes: readProvidedNumber(player.sub_out) ?? (readProvidedNumber(player.sub_in) !== null ? null : 90),
-          goals: player.goals,
-          assists: null,
-          shots: null,
+          metrics: buildLineupPlayerStatMetrics(player),
         } satisfies PlayerStatDisplayRow;
       }),
     )
-    .filter((row) => readNumber(row.rating) > 0 || readNumber(row.goals) > 0)
-    .sort((left, right) => readNumber(right.rating) - readNumber(left.rating) || readNumber(right.goals) - readNumber(left.goals));
+    .filter((row) => readNumber(row.rating) > 0 || row.metrics.length > 0)
+    .sort((left, right) => readNumber(right.rating) - readNumber(left.rating));
 }
 
 function PlayerStatRow({ row }: { row: PlayerStatDisplayRow }) {
   const content = (
-    <div className="rounded-[1.1rem] border border-white/10 bg-black/14 p-3 transition hover:bg-white/[0.055]">
+    <div className={`overflow-hidden rounded-[1.2rem] border bg-[linear-gradient(135deg,rgba(255,255,255,0.06),rgba(255,255,255,0.018))] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition hover:bg-white/[0.055] ${getPlayerStatRoleFrame(row.role)}`}>
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
           <PlayerStatAvatar name={row.name} photoUrl={row.photoUrl ?? null} />
           <div className="min-w-0">
             <p className="truncate text-sm font-black text-wc-fg1">{row.name}</p>
-            <p className="mt-1 truncate text-xs font-bold text-wc-fg3">{row.teamName}</p>
+            <div className="mt-1 flex min-w-0 flex-wrap items-center gap-1.5">
+              <span className="truncate text-xs font-bold text-wc-fg3">{row.teamName}</span>
+              <span className={`rounded-full px-2 py-0.5 text-[10px] font-black ${getPlayerStatRolePill(row.role)}`}>
+                {getPlayerStatRoleLabel(row.role)}
+              </span>
+            </div>
           </div>
         </div>
-        <span className="rounded-full bg-white/8 px-2.5 py-1 text-xs font-black text-wc-fg2" dir="ltr">
+        <span className="rounded-full border border-white/12 bg-black/22 px-2.5 py-1 font-sans text-xs font-black tracking-normal text-wc-fg1" dir="ltr">
           {formatDecimal(row.rating)}
         </span>
       </div>
-      <div className="mt-3 grid grid-cols-4 gap-1 text-center">
-        <MiniMetric label="דקות" value={formatOptionalStat(row.minutes)} />
-        <MiniMetric label="שערים" value={formatOptionalStat(row.goals)} />
-        <MiniMetric label="בישולים" value={formatOptionalStat(row.assists)} />
-        <MiniMetric label="בעיטות" value={formatOptionalStat(row.shots)} />
-      </div>
+      {row.metrics.length > 0 ? (
+        <div className="mt-3 grid grid-cols-2 gap-1.5 sm:grid-cols-3 xl:grid-cols-4">
+          {row.metrics.map((metric) => (
+            <PlayerStatMetricChip key={`${metric.label}-${metric.value}`} metric={metric} />
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 
@@ -2265,6 +2276,15 @@ function PlayerStatRow({ row }: { row: PlayerStatDisplayRow }) {
     </PlayerLink>
   ) : (
     content
+  );
+}
+
+function PlayerStatMetricChip({ metric }: { metric: PlayerStatMetric }) {
+  return (
+    <div className={`min-w-0 rounded-xl border px-2 py-1.5 text-center ${getPlayerStatMetricClass(metric.tone)}`}>
+      <p className="truncate text-[10px] font-black text-wc-fg3">{metric.label}</p>
+      <p className="mt-0.5 truncate font-sans text-sm font-black tracking-normal text-wc-fg1" dir="ltr">{metric.value}</p>
+    </div>
   );
 }
 
@@ -2287,6 +2307,134 @@ function PlayerStatAvatar({ name, photoUrl }: { name: string; photoUrl: string |
       )}
     </span>
   );
+}
+
+function buildApiPlayerStatMetrics(row: BzzoiroPlayerStatsRow, position: string | null | undefined): PlayerStatMetric[] {
+  const role = getPlayerStatRole(position);
+  const metrics: Array<PlayerStatMetric | null> = [];
+
+  if (role === "goalkeeper") {
+    metrics.push(
+      statMetric("הצלות", row.saves, "keeper"),
+      statMetric("ספג", row.goals_conceded, "keeper", true),
+      statMetric("הצלות פנדל", row.penalty_save, "keeper"),
+      statPairMetric("מסירות", row.accurate_pass, row.total_pass, "neutral"),
+    );
+  } else if (role === "defender") {
+    metrics.push(
+      statPairMetric("תיקולים", row.won_tackle, row.total_tackle, "defense"),
+      statMetric("חילוצים", row.interception, "defense"),
+      statMetric("הרחקות", row.total_clearance, "defense"),
+      statPairMetric("אוויר", row.aerial_won, addStatValues(row.aerial_won, row.aerial_lost), "defense"),
+    );
+  } else if (role === "midfielder") {
+    metrics.push(
+      statMetric("מסירות מפתח", row.key_pass, "assist"),
+      statPairMetric("מסירות", row.accurate_pass, row.total_pass, "neutral"),
+      statPairMetric("דריבלים", row.dribble_won, row.dribble_attempted, "assist"),
+      statMetric("חילוצי כדור", row.ball_recovery, "defense"),
+    );
+  } else {
+    metrics.push(
+      statMetric("שערים", row.goals, "goal"),
+      statMetric("בישולים", row.goal_assist, "assist"),
+      statMetric("בעיטות", row.total_shots, "goal"),
+      statMetric("xG", row.expected_goals, "goal"),
+    );
+  }
+
+  metrics.push(statMetric("דקות", row.minutes_played, "neutral", true));
+  return metrics.filter((metric): metric is PlayerStatMetric => Boolean(metric)).slice(0, 4);
+}
+
+function buildLineupPlayerStatMetrics(player: BzzoiroActualLineupPlayer): PlayerStatMetric[] {
+  const metrics = [
+    statMetric("שערים", player.goals, "goal"),
+    statMetric("יצא", player.sub_out, "neutral"),
+    statMetric("נכנס", player.sub_in, "neutral"),
+  ].filter((metric): metric is PlayerStatMetric => Boolean(metric));
+
+  return metrics.slice(0, 3);
+}
+
+function statMetric(
+  label: string,
+  value: number | string | null | undefined,
+  tone: PlayerStatMetric["tone"] = "neutral",
+  includeZero = false,
+): PlayerStatMetric | null {
+  const number = readProvidedNumber(value);
+  if (number === null) return null;
+  if (!includeZero && number <= 0) return null;
+  return {
+    label,
+    value: Number.isInteger(number) ? String(number) : number.toFixed(2),
+    tone,
+  };
+}
+
+function statPairMetric(
+  label: string,
+  value: number | string | null | undefined,
+  total: number | string | null | undefined,
+  tone: PlayerStatMetric["tone"] = "neutral",
+): PlayerStatMetric | null {
+  const number = readProvidedNumber(value);
+  const totalNumber = readProvidedNumber(total);
+  if (number === null || totalNumber === null || totalNumber <= 0) return null;
+  return {
+    label,
+    value: `${Math.round(number)}/${Math.round(totalNumber)}`,
+    tone,
+  };
+}
+
+function addStatValues(left: number | string | null | undefined, right: number | string | null | undefined) {
+  const leftNumber = readProvidedNumber(left);
+  const rightNumber = readProvidedNumber(right);
+  if (leftNumber === null && rightNumber === null) return null;
+  return (leftNumber ?? 0) + (rightNumber ?? 0);
+}
+
+function getPlayerStatRole(position: string | null | undefined): PlayerStatRole {
+  const value = String(position ?? "").trim().toLowerCase();
+  if (value === "g" || value === "gk" || value.includes("goal") || value.includes("keeper")) return "goalkeeper";
+  if (value === "d" || value.includes("def") || value.includes("back") || value.includes("cb") || value.includes("lb") || value.includes("rb")) return "defender";
+  if (value === "m" || value.includes("mid") || value.includes("dm") || value.includes("cm") || value.includes("am")) return "midfielder";
+  if (value === "f" || value.includes("att") || value.includes("for") || value.includes("wing") || value.includes("striker") || value.includes("st") || value.includes("lw") || value.includes("rw")) return "attacker";
+  return "outfield";
+}
+
+function getPlayerStatRoleLabel(role: PlayerStatRole) {
+  if (role === "goalkeeper") return "שוער";
+  if (role === "defender") return "הגנה";
+  if (role === "midfielder") return "קישור";
+  if (role === "attacker") return "התקפה";
+  return "שחקן שדה";
+}
+
+function getPlayerStatRoleFrame(role: PlayerStatRole) {
+  if (role === "goalkeeper") return "border-cyan-300/18";
+  if (role === "defender") return "border-wc-neon/18";
+  if (role === "midfielder") return "border-[#C9B2FF]/18";
+  if (role === "attacker") return "border-wc-amber/18";
+  return "border-white/10";
+}
+
+function getPlayerStatRolePill(role: PlayerStatRole) {
+  if (role === "goalkeeper") return "bg-cyan-300/10 text-cyan-100";
+  if (role === "defender") return "bg-wc-neon/10 text-wc-neon";
+  if (role === "midfielder") return "bg-[#6F3CFF]/16 text-[#E7DDFF]";
+  if (role === "attacker") return "bg-wc-amber/12 text-wc-amber";
+  return "bg-white/8 text-wc-fg2";
+}
+
+function getPlayerStatMetricClass(tone: PlayerStatMetric["tone"] = "neutral") {
+  if (tone === "goal") return "border-wc-amber/18 bg-wc-amber/8";
+  if (tone === "assist") return "border-[#C9B2FF]/18 bg-[#6F3CFF]/10";
+  if (tone === "defense") return "border-wc-neon/18 bg-wc-neon/8";
+  if (tone === "keeper") return "border-cyan-300/18 bg-cyan-300/8";
+  return "border-white/10 bg-white/[0.045]";
 }
 
 function MomentumAndShotsPanel({
@@ -2720,12 +2868,6 @@ function formatRating(value: number | string | null | undefined) {
   const number = readProvidedNumber(value);
   if (number === null || number <= 0) return null;
   return number.toFixed(1);
-}
-
-function formatOptionalStat(value: number | string | null | undefined) {
-  if (value === null || value === undefined || value === "") return "-";
-  if (typeof value === "string" && Number.isNaN(Number(value))) return value;
-  return String(readNumber(value));
 }
 
 function formatPercent(value: number) {
