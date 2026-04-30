@@ -10,7 +10,6 @@ import type {
   BzzoiroIncident,
   BzzoiroMatchCenter,
   BzzoiroMatchEvent,
-  BzzoiroMomentumPoint,
   BzzoiroPredictedLineupPlayer,
   BzzoiroPredictedTeamLineup,
   BzzoiroShot,
@@ -113,6 +112,7 @@ export default function MatchDetailClient({
   const homeLogo = getTeamDisplayLogo(match.homeTeam);
   const awayLogo = getTeamDisplayLogo(match.awayTeam);
   const isPreMatch = isPreMatchView(match, event);
+  const isBsdPreview = isBsdPreviewMatch(match);
 
   return (
     <div className="wc-shell px-4 py-4 md:px-6 md:py-6" dir="rtl">
@@ -144,7 +144,7 @@ export default function MatchDetailClient({
               ) : (
                 <p className="wc-display text-4xl text-wc-fg3">VS</p>
               )}
-              <p className="mt-2 text-xs font-bold text-wc-fg3">
+              <p className="mt-3 inline-flex items-center justify-center rounded-full border border-wc-neon/25 bg-wc-neon/10 px-4 py-1.5 text-sm font-black text-wc-neon shadow-[0_0_24px_rgba(95,255,123,0.12)]">
                 {getStatusLabel(match, event)}
               </p>
               {shouldPreferLocalScore(match, event) ? (
@@ -159,7 +159,7 @@ export default function MatchDetailClient({
           <div className="mt-6 grid gap-3 md:grid-cols-4">
             <InfoTile label="פתיחה" value={`${formatMatchTimeLabel(match.date_time)} IDT`} />
             <InfoTile label="סטטוס API" value={getApiStatusText(event, bzzoiro.source)} />
-            <VenueTile event={event} />
+            <VenueTile event={event} disableLink={isBsdPreview} />
             <InfoTile label="שופט" value={formatReferee(event)} />
           </div>
         </div>
@@ -295,7 +295,13 @@ function InfoTile({ label, value }: { label: string; value: string }) {
   );
 }
 
-function VenueTile({ event }: { event: BzzoiroMatchEvent | null }) {
+function VenueTile({
+  event,
+  disableLink = false,
+}: {
+  event: BzzoiroMatchEvent | null;
+  disableLink?: boolean;
+}) {
   const venue = event?.venue;
   const content = (
     <div className="min-w-0 rounded-[1.15rem] border border-white/10 bg-black/18 p-3 text-center transition hover:border-wc-neon/35 hover:bg-white/[0.055]">
@@ -307,7 +313,7 @@ function VenueTile({ event }: { event: BzzoiroMatchEvent | null }) {
     </div>
   );
 
-  return venue?.id ? (
+  return venue?.id && !disableLink ? (
     <Link href={`/dashboard/stadiums/${encodeURIComponent(String(venue.id))}`} className="block min-w-0">
       {content}
     </Link>
@@ -630,7 +636,7 @@ function LineupsPanel({
     <section className="mt-5 rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-4 md:p-5">
       <SectionHeader title="הרכבים וסגלים למשחק" eyebrow={lineupEyebrow} />
       {hasActualLineups ? (
-        <div className="mt-4 grid gap-4 xl:grid-cols-2">
+        <div className="mt-4 grid items-stretch gap-4 xl:grid-cols-2">
           <ActualLineupSide
             title={getTeamDisplayName(match.homeTeam, match.home_placeholder)}
             teamId={match.home_team_id}
@@ -649,7 +655,7 @@ function LineupsPanel({
           />
         </div>
       ) : hasPredicted ? (
-        <div className="mt-4 grid gap-4 2xl:grid-cols-2">
+        <div className="mt-4 grid items-stretch gap-4 2xl:grid-cols-2">
           <PredictedLineupSide
             title={getTeamDisplayName(match.homeTeam, match.home_placeholder)}
             teamId={match.home_team_id}
@@ -659,6 +665,7 @@ function LineupsPanel({
             coachFormation={event.home_coach?.preferred_formation}
             eventSummaryByPlayerId={eventSummaryByPlayerId}
             sourceLabel={lineupSourceLabel}
+            hasStarted={hasStarted}
           />
           <PredictedLineupSide
             title={getTeamDisplayName(match.awayTeam, match.away_placeholder)}
@@ -669,6 +676,7 @@ function LineupsPanel({
             coachFormation={event.away_coach?.preferred_formation}
             eventSummaryByPlayerId={eventSummaryByPlayerId}
             sourceLabel={lineupSourceLabel}
+            hasStarted={hasStarted}
           />
         </div>
       ) : (
@@ -911,7 +919,7 @@ function ActualLineupSide({
   const lines = buildFootballFormation(lineup, formationName ?? "4-3-3", lineup);
 
   return (
-    <div className="rounded-[1.35rem] border border-white/10 bg-black/14 p-4">
+    <div className="flex h-full flex-col rounded-[1.35rem] border border-white/10 bg-black/14 p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h3 className="font-sans text-lg font-black tracking-normal text-wc-fg1">{title}</h3>
         <span className="rounded-full bg-white/8 px-3 py-1 text-xs font-black text-wc-fg3">
@@ -932,6 +940,7 @@ function PredictedLineupSide({
   coachFormation,
   eventSummaryByPlayerId,
   sourceLabel,
+  hasStarted,
 }: {
   title: string;
   teamId: string | null;
@@ -941,6 +950,7 @@ function PredictedLineupSide({
   coachFormation?: string | null;
   eventSummaryByPlayerId: Map<string, PlayerMatchEventSummary>;
   sourceLabel: string;
+  hasStarted: boolean;
 }) {
   const starters = (lineup?.starters ?? []).filter((player) => player.name);
   const substitutes = (lineup?.substitutes ?? []).filter((player) => player.name);
@@ -948,16 +958,18 @@ function PredictedLineupSide({
   const formationName = lineup?.predicted_formation ?? coachFormation ?? "4-3-3";
   const pitchPlayers = mapPredictedStarters(starters, players, teamId, eventSummaryByPlayerId);
   const lines = buildFootballFormation(pitchPlayers, formationName, pitchPlayers);
+  const substitutesTitle = hasStarted ? "שחקנים נוספים מהמודל" : "ספסל משוער";
+  const substitutesEmpty = hasStarted ? "אין עדיין שחקנים נוספים מהמודל" : "אין עדיין ספסל משוער";
 
   return (
-    <div className="rounded-[1.35rem] border border-white/10 bg-black/14 p-4">
+    <div className="flex h-full flex-col rounded-[1.35rem] border border-white/10 bg-black/14 p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h3 className="font-sans text-lg font-black tracking-normal text-wc-fg1">{title}</h3>
         <span className="rounded-full bg-white/8 px-3 py-1 text-xs font-black text-wc-fg3" dir="ltr">
           {formationName}
         </span>
       </div>
-      <div className="mt-4 grid gap-4">
+      <div className="mt-4 grid flex-1 content-start gap-4">
         {pitchPlayers.length > 0 ? (
           <FormationPitch lines={lines} formationName={formationName} source={sourceLabel} />
         ) : (
@@ -965,7 +977,7 @@ function PredictedLineupSide({
             <EmptyMini text="אין עדיין פותחים" />
           </div>
         )}
-        <LineupGroup className="" title="ספסל" empty="אין עדיין ספסל" count={substitutes.length}>
+        <LineupGroup className="" title={substitutesTitle} empty={substitutesEmpty} count={substitutes.length}>
           {substitutes.slice(0, 12).map((player, index) => (
             <LineupPlayerRow
               key={`${player.name}-${index}`}
@@ -1284,23 +1296,24 @@ function InlineEventBadges({ summary }: { summary?: PlayerMatchEventSummary | nu
   if (!hasEventSummary(summary)) return null;
 
   const badges = [
-    summary.goals > 0 ? { key: "g", value: summary.goals, kind: "goal" as const, label: "שער", plural: "שערים", className: "border-wc-neon/35 bg-wc-neon/14 text-wc-neon" } : null,
-    summary.assists > 0 ? { key: "a", value: summary.assists, kind: "assist" as const, label: "בישול", plural: "בישולים", className: "border-cyan-300/30 bg-cyan-300/12 text-cyan-200" } : null,
-    summary.yellowCards > 0 ? { key: "y", value: summary.yellowCards, kind: "yellow" as const, label: "צהוב", plural: "צהובים", className: "border-wc-amber/35 bg-wc-amber/12 text-wc-amber" } : null,
-    summary.redCards > 0 ? { key: "r", value: summary.redCards, kind: "red" as const, label: "אדום", plural: "אדומים", className: "border-wc-danger/35 bg-wc-danger/12 text-wc-danger" } : null,
+    summary.goals > 0 ? { key: "g", value: summary.goals, kind: "goal" as const, label: "שער", plural: "שערים", className: "border-wc-neon/45 bg-wc-neon/16 text-wc-neon shadow-[0_0_18px_rgba(95,255,123,0.18)]" } : null,
+    summary.assists > 0 ? { key: "a", value: summary.assists, kind: "assist" as const, label: "בישול", plural: "בישולים", className: "border-cyan-300/35 bg-cyan-300/13 text-cyan-100 shadow-[0_0_14px_rgba(103,232,249,0.12)]" } : null,
+    summary.yellowCards > 0 ? { key: "y", value: summary.yellowCards, kind: "yellow" as const, label: "צהוב", plural: "צהובים", className: "border-wc-amber/38 bg-wc-amber/13 text-wc-amber" } : null,
+    summary.redCards > 0 ? { key: "r", value: summary.redCards, kind: "red" as const, label: "אדום", plural: "אדומים", className: "border-wc-danger/38 bg-wc-danger/13 text-wc-danger" } : null,
   ].filter((badge): badge is { key: string; value: number; kind: EventBadgeKind; label: string; plural: string; className: string } => Boolean(badge));
 
   return (
-    <span className="flex shrink-0 flex-wrap justify-end gap-1">
+    <span className="flex shrink-0 flex-wrap justify-end gap-1.5">
       {badges.map((badge) => (
         <span
           key={badge.key}
-          className={`inline-flex h-6 min-w-6 items-center justify-center gap-1 rounded-full border px-1.5 text-[10px] font-black leading-none ${badge.className}`}
+          className={`inline-flex h-7 min-w-7 items-center justify-center gap-1 rounded-full border px-2 text-[10px] font-black leading-none ${badge.className}`}
           title={formatEventBadgeCount(badge.value, badge.label, badge.plural)}
           aria-label={formatEventBadgeCount(badge.value, badge.label, badge.plural)}
+          dir="ltr"
         >
           <EventBadgeSymbol kind={badge.kind} />
-          {badge.value > 1 ? <span dir="ltr">{badge.value}</span> : null}
+          {badge.value > 1 ? <span className="font-sans tracking-normal">×{badge.value}</span> : null}
         </span>
       ))}
     </span>
@@ -1646,48 +1659,16 @@ function MomentumAndShotsPanel({
   match: MatchDetailRow;
   players: MatchPagePlayer[];
 }) {
-  const momentum = asArray(event.momentum);
   const shots = asArray(event.shotmap);
-  if (momentum.length === 0 && shots.length === 0) return null;
+  if (shots.length === 0) return null;
 
   return (
     <section className="mt-5 rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-4 md:p-5">
-      <SectionHeader title="מומנטום ובעיטות" eyebrow="spatial data" />
-      <div className="mt-4 grid gap-4 xl:grid-cols-2">
-        <MomentumBars points={momentum} />
+      <SectionHeader title="בעיטות אחרונות" eyebrow="מפת בעיטות מה-API" />
+      <div className="mt-4">
         <ShotList shots={shots} match={match} players={players} />
       </div>
     </section>
-  );
-}
-
-function MomentumBars({ points }: { points: BzzoiroMomentumPoint[] }) {
-  const visible = points.slice(-36);
-  if (visible.length === 0) return <EmptyState text="מומנטום יופיע כאן כשה־API יחזיר momentum." />;
-
-  return (
-    <div className="rounded-[1.25rem] border border-white/10 bg-black/14 p-4">
-      <p className="text-xs font-black text-wc-fg2">מומנטום</p>
-      <div className="mt-4 flex h-24 items-center gap-1">
-        {visible.map((point, index) => {
-          const value = Math.max(-100, Math.min(100, readNumber(point.v)));
-          const height = `${Math.max(8, Math.abs(value))}%`;
-          return (
-            <div key={`${point.m ?? index}-${index}`} className="flex h-full flex-1 items-center justify-center">
-              <span
-                className={`w-full rounded-full ${value >= 0 ? "bg-wc-neon/75" : "bg-wc-danger/75"}`}
-                style={{ height }}
-                title={`${point.m ?? "-"}': ${value}`}
-              />
-            </div>
-          );
-        })}
-      </div>
-      <div className="mt-2 flex justify-between text-[10px] font-bold text-wc-fg3">
-        <span>בית</span>
-        <span>חוץ</span>
-      </div>
-    </div>
   );
 }
 
@@ -1709,15 +1690,14 @@ function ShotList({
       <div className="mt-3 grid gap-2">
         {visible.map((shot, index) => {
           const localPlayer = findLocalPlayerByBzzoiroId(shot.pid, players);
-          const side = shot.home === true ? match.home_team_id : shot.home === false ? match.away_team_id : null;
           const teamName = shot.home === true
             ? getTeamDisplayName(match.homeTeam, match.home_placeholder)
             : shot.home === false
               ? getTeamDisplayName(match.awayTeam, match.away_placeholder)
               : "-";
           return (
-            <div key={`${shot.min ?? index}-${index}`} className="grid grid-cols-[3rem_1fr_auto] items-center gap-3 rounded-xl bg-white/[0.045] px-3 py-2">
-              <span className="font-mono text-xs font-black text-wc-fg3" dir="ltr">{shot.min ?? "-"}</span>
+            <div key={`${shot.min ?? index}-${index}`} className="grid grid-cols-[3.25rem_1fr_auto] items-center gap-3 rounded-xl bg-white/[0.045] px-3 py-2">
+              <span className="text-center font-sans text-xs font-black text-wc-fg3" dir="rtl">{formatShotMinute(shot.min)}</span>
               <div className="min-w-0">
                 <p className="truncate text-sm font-black text-wc-fg1">
                   {localPlayer ? (
@@ -1729,10 +1709,10 @@ function ShotList({
                   )}
                 </p>
                 <p className="mt-0.5 truncate text-[11px] font-bold text-wc-fg3">
-                  {formatShotType(shot.type)} · {side ? "" : ""}xG {formatDecimal(shot.xg)}
+                  {formatShotType(shot.body ?? shot.sit ?? shot.type)} · {formatShotSituation(shot.sit)} · שערים צפויים {formatDecimal(shot.xg)}
                 </p>
               </div>
-              <span className="rounded-full bg-white/8 px-2 py-1 text-xs font-black text-wc-fg2">{formatShotResult(shot.sit)}</span>
+              <span className="rounded-full bg-white/8 px-2 py-1 text-xs font-black text-wc-fg2">{formatShotResult(shot.type)}</span>
             </div>
           );
         })}
@@ -1940,6 +1920,13 @@ function shouldPreferLocalScore(match: MatchDetailRow, event: BzzoiroMatchEvent 
     apiStatus === "finished";
 
   return !apiIsLiveOrFinished;
+}
+
+function isBsdPreviewMatch(match: MatchDetailRow) {
+  return (
+    String(match.home_team_id ?? "").startsWith("bsd-preview-") ||
+    String(match.away_team_id ?? "").startsWith("bsd-preview-")
+  );
 }
 
 function isPreMatchView(match: MatchDetailRow, event: BzzoiroMatchEvent | null) {
@@ -2170,18 +2157,45 @@ function formatDevEventTitle(type: MatchDetailDevEvent["event_type"]) {
 
 function formatShotType(type: string | null | undefined) {
   const value = String(type ?? "").toLowerCase();
-  if (value.includes("header")) return "נגיחה";
+  if (!value) return "בעיטה";
+  if (value.includes("pen")) return "פנדל";
+  if (value.includes("free")) return "כדור חופשי";
+  if (value.includes("set")) return "מצב נייח";
+  if (value.includes("counter") || value.includes("fast")) return "מתפרצת";
+  if (value.includes("header") || value.includes("head")) return "נגיחה";
   if (value.includes("left")) return "רגל שמאל";
   if (value.includes("right")) return "רגל ימין";
-  return type ?? "בעיטה";
+  if (value.includes("foot")) return "בעיטה";
+  if (value.includes("regular") || value.includes("normal") || value.includes("shot")) return "בעיטה";
+  return "בעיטה";
+}
+
+function formatShotSituation(value: string | null | undefined) {
+  const situation = String(value ?? "").toLowerCase();
+  if (!situation) return "מהלך פתוח";
+  if (situation.includes("assist")) return "אחרי מסירה";
+  if (situation.includes("regular")) return "מהלך פתוח";
+  if (situation.includes("corner")) return "קרן";
+  if (situation.includes("free")) return "כדור חופשי";
+  if (situation.includes("pen")) return "פנדל";
+  if (situation.includes("fast") || situation.includes("counter")) return "מתפרצת";
+  return "מהלך פתוח";
 }
 
 function formatShotResult(value: string | null | undefined) {
   const result = String(value ?? "").toLowerCase();
+  if (!result) return "-";
   if (result.includes("goal")) return "שער";
   if (result.includes("save")) return "הצלה";
   if (result.includes("block")) return "חסימה";
-  if (result.includes("post") || result.includes("wood")) return "קורה";
-  if (result.includes("miss")) return "החטאה";
-  return value ?? "-";
+  if (result.includes("post") || result.includes("wood") || result.includes("bar")) return "קורה/משקוף";
+  if (result.includes("wide") || result.includes("off") || result.includes("miss")) return "מחוץ למסגרת";
+  if (result.includes("assist") || result.includes("regular")) return "בעיטה";
+  if (result.includes("on")) return "למסגרת";
+  return "-";
+}
+
+function formatShotMinute(minute: number | string | null | undefined) {
+  if (minute === null || minute === undefined || minute === "") return "-";
+  return `${minute}'`;
 }

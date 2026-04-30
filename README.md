@@ -588,3 +588,12 @@ Brevo Free מוגבל בכמות יומית לכל החשבון, לכן ביום
 - Added local-only `/dashboard/matches/bsd-live/[id]` as a temporary visual preview page that renders a real BSD live event through the same match-center UI without writing to Supabase. Example: `/dashboard/matches/bsd-live/9291`.
 - Live match pages now promote match events directly under the hero, hide period-only API rows from the event list, render timeline scores in the same RTL visual order as the hero, and push momentum/shotmap lower.
 - Lineup labels now distinguish official BSD lineups from temporary BSD lineup models during live matches, and API goals/assists/cards decorate matching lineup and bench players by local id, full name, or last-name fallback.
+
+## Live match detail cleanup - 2026-04-30
+
+- Live match pages now remove the momentum block and keep a focused Hebrew “בעיטות אחרונות” panel with translated shot situation/result text and `שערים צפויים` labels.
+- The central match status under the score is now a stronger live pill, so minute/half-time/finished state is visible while watching a match.
+- Temporary BSD live-preview matches no longer link their venue tile into the World Cup stadium pages, because those external test events are only for validating the live UI.
+- Predicted/model lineups shown after kickoff now say `מבנה זמני מ-BSD` and `שחקנים נוספים מהמודל` instead of implying an official bench. Once BSD returns official `lineups`, the page switches back to `הרכב רשמי`.
+- Formation pitches now use one stable height across common shapes, reducing uneven cards between formations such as `4-4-2` and `4-2-3-1`.
+- Goal/assist/card indicators on pitch tokens and squad rows were polished into compact icon badges with count support for multiple goals, assists or cards.

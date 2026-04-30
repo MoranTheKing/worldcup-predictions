@@ -38,13 +38,8 @@ export default function FormationPitch({
   source?: string | null;
   compact?: boolean;
 }) {
-  const tall = lines.length > 4;
-  const pitchHeight = compact
-    ? tall ? "min-h-[31rem]" : "min-h-[27rem]"
-    : tall ? "min-h-[38rem]" : "min-h-[33rem]";
-  const innerHeight = compact
-    ? tall ? "min-h-[29rem]" : "min-h-[25rem]"
-    : tall ? "min-h-[36rem]" : "min-h-[31rem]";
+  const pitchHeight = compact ? "min-h-[31rem]" : "min-h-[38rem]";
+  const innerHeight = compact ? "min-h-[29rem]" : "min-h-[36rem]";
 
   return (
     <div className="mt-4 overflow-hidden rounded-[1.45rem] border border-[rgba(95,255,123,0.18)] bg-[radial-gradient(circle_at_50%_0%,rgba(95,255,123,0.13),transparent_34%),linear-gradient(180deg,rgba(16,83,54,0.34),rgba(5,8,18,0.96))] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
@@ -103,16 +98,17 @@ function PlayerToken({ player, compact }: { player: FormationPitchPlayer; compac
         </p>
       ) : null}
       {eventBadges.length > 0 ? (
-        <div className="mt-2 flex flex-wrap items-center justify-center gap-1">
+        <div className="mt-2 flex flex-wrap items-center justify-center gap-1.5">
           {eventBadges.map((badge) => (
             <span
               key={badge.key}
-              className={`inline-flex h-6 min-w-6 items-center justify-center gap-1 rounded-full border px-1.5 text-[10px] font-black leading-none ${badge.className}`}
+              className={`inline-flex h-7 min-w-7 items-center justify-center gap-1 rounded-full border px-2 text-[10px] font-black leading-none ${badge.className}`}
               title={badge.title}
               aria-label={badge.title}
+              dir="ltr"
             >
               <EventBadgeSymbol kind={badge.kind} />
-              {badge.count > 1 ? <span dir="ltr">{badge.count}</span> : null}
+              {badge.count > 1 ? <span className="font-sans tracking-normal">×{badge.count}</span> : null}
             </span>
           ))}
         </div>
@@ -140,7 +136,7 @@ function getPlayerEventBadges(player: FormationPitchPlayer) {
       kind: "goal",
       count: goals,
       title: goals > 1 ? `${goals} שערים במשחק` : "שער במשחק",
-      className: "border-wc-neon/35 bg-wc-neon/14 text-wc-neon",
+      className: "border-wc-neon/45 bg-wc-neon/16 text-wc-neon shadow-[0_0_18px_rgba(95,255,123,0.18)]",
     });
   }
 
@@ -150,7 +146,7 @@ function getPlayerEventBadges(player: FormationPitchPlayer) {
       kind: "assist",
       count: assists,
       title: assists > 1 ? `${assists} בישולים במשחק` : "בישול במשחק",
-      className: "border-cyan-300/30 bg-cyan-300/12 text-cyan-200",
+      className: "border-cyan-300/35 bg-cyan-300/13 text-cyan-100 shadow-[0_0_14px_rgba(103,232,249,0.12)]",
     });
   }
 
@@ -160,7 +156,7 @@ function getPlayerEventBadges(player: FormationPitchPlayer) {
       kind: "yellow",
       count: yellowCards,
       title: yellowCards > 1 ? `${yellowCards} צהובים במשחק` : "כרטיס צהוב במשחק",
-      className: "border-wc-amber/35 bg-wc-amber/12 text-wc-amber",
+      className: "border-wc-amber/38 bg-wc-amber/13 text-wc-amber",
     });
   }
 
@@ -170,7 +166,7 @@ function getPlayerEventBadges(player: FormationPitchPlayer) {
       kind: "red",
       count: redCards,
       title: redCards > 1 ? `${redCards} אדומים במשחק` : "כרטיס אדום במשחק",
-      className: "border-wc-danger/35 bg-wc-danger/12 text-wc-danger",
+      className: "border-wc-danger/38 bg-wc-danger/13 text-wc-danger",
     });
   }
 
