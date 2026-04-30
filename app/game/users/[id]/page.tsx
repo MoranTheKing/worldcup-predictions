@@ -39,12 +39,13 @@ export default async function OpponentPredictionsPage({
 
   const admin = createAdminClient();
 
-  const [{ data: currentMemberships }, { data: targetMemberships }, profile, gameStats] =
+  const [{ data: currentMemberships }, { data: targetMemberships }, isTargetInGlobalLeaderboard] =
     await Promise.all([
       admin.from("league_members").select("league_id").eq("user_id", user.id),
       admin.from("league_members").select("league_id").eq("user_id", targetUserId),
-      fetchAuthProfile(admin, targetUserId),
-      getUserGameStats(admin, targetUserId),
+      requestedLeagueId === "global"
+        ? isGlobalLeaderboardProfile(admin, targetUserId, user.id)
+        : Promise.resolve(false),
     ]);
 
   const currentLeagueIds = new Set(
@@ -56,8 +57,9 @@ export default async function OpponentPredictionsPage({
     .map((row) => row.league_id)
     .filter((value): value is string => typeof value === "string" && currentLeagueIds.has(value));
   const isGlobalLeagueView = requestedLeagueId === "global";
+  const canUseGlobalLeagueView = isGlobalLeagueView && isTargetInGlobalLeaderboard;
 
-  if (user.id !== targetUserId && sharedLeagueIds.length === 0 && !isGlobalLeagueView) {
+  if (user.id !== targetUserId && sharedLeagueIds.length === 0 && !canUseGlobalLeagueView) {
     redirect("/game/leagues");
   }
 
@@ -65,7 +67,7 @@ export default async function OpponentPredictionsPage({
     requestedLeagueId && sharedLeagueIds.includes(requestedLeagueId)
       ? requestedLeagueId
       : sharedLeagueIds[0] ?? null;
-  const backHref = isGlobalLeagueView
+  const backHref = canUseGlobalLeagueView
     ? "/game/leaderboard"
     : backLeagueId
       ? `/game/leagues/${backLeagueId}`
@@ -101,6 +103,11 @@ export default async function OpponentPredictionsPage({
       </div>
     );
   }
+
+  const [profile, gameStats] = await Promise.all([
+    fetchAuthProfile(admin, targetUserId),
+    getUserGameStats(admin, targetUserId),
+  ]);
 
   const [
     { data: matchesData },
@@ -208,7 +215,7 @@ export default async function OpponentPredictionsPage({
           <span className="text-xs text-wc-fg3">
             שיתוף ליגה: {sharedLeagueNames.get(backLeagueId) ?? "League"}
           </span>
-        ) : isGlobalLeagueView ? (
+        ) : canUseGlobalLeagueView ? (
           <span className="text-xs text-wc-fg3">הליגה הכללית</span>
         ) : null}
       </div>
@@ -316,4 +323,26 @@ function OpponentStatCard({
       <p className={`wc-display mt-2 text-4xl ${accentClassName}`}>{value}</p>
     </div>
   );
+}
+
+async function isGlobalLeaderboardProfile(
+  admin: ReturnType<typeof createAdminClient>,
+  targetUserId: string,
+  currentUserId: string,
+) {
+  if (targetUserId === currentUserId) return true;
+
+  const { data, error } = await admin
+    .from("profiles")
+    .select("id")
+    .order("total_score", { ascending: false })
+    .order("created_at", { ascending: true })
+    .limit(500);
+
+  if (error) {
+    console.error("[OpponentPredictionsPage] global profile guard error:", error);
+    return false;
+  }
+
+  return ((data ?? []) as Array<{ id?: string | null }>).some((profile) => profile.id === targetUserId);
 }

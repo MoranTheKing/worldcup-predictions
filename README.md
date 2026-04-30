@@ -597,3 +597,12 @@ Brevo Free מוגבל בכמות יומית לכל החשבון, לכן ביום
 - Predicted/model lineups shown after kickoff now say `מבנה זמני מ-BSD` and `שחקנים נוספים מהמודל` instead of implying an official bench. Once BSD returns official `lineups`, the page switches back to `הרכב רשמי`.
 - Formation pitches now use one stable height across common shapes, reducing uneven cards between formations such as `4-4-2` and `4-2-3-1`.
 - Goal/assist/card indicators on pitch tokens and squad rows were polished into compact icon badges with count support for multiple goals, assists or cards.
+
+## Official BSD lineups and live events - 2026-04-30
+
+- BSD official lineups are now parsed from the real `lineups.home/away.players` and `lineups.home/away.substitutes` object returned by `GET /api/events/{id}/?full=true`. Confirmed lineups take priority over `predicted-lineup`, so live match pages show `הרכב רשמי מ-BSD` and `ספסל רשמי` whenever the API provides them.
+- Official lineup players use BSD `api_id` for photos and local player matching, while retaining jersey number, formation, substitutions and card/goal state from the match payload.
+- If a player has a red card or reaches two yellows, the UI suppresses the yellow badge and shows only red.
+- Match-event rows now have stronger event-specific UI for goals, cards, substitutions, VAR and penalties. Substitutions show `נכנס` / `יוצא` explicitly.
+- The local BSD live-preview page is now strictly development-only (`NODE_ENV === "development"`), so non-development deployments cannot be used to trigger BSD server-side preview calls.
+- Global opponent profile access is still available from `/game/leaderboard`, but `?league=global` is now restricted to users actually visible in the global leaderboard instead of acting as a broad authorization bypass for arbitrary user IDs.

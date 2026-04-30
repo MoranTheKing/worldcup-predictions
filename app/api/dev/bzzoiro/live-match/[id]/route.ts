@@ -37,7 +37,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const playerStats = matchCenter.playerStats;
   const broadcasts = matchCenter.broadcasts;
   const liveStats = event.live_stats ?? null;
-  const lineups = asArray(event.lineups);
+  const lineups = summarizeLineups(event.lineups);
   const incidents = asArray(event.incidents);
   const shotmap = asArray(event.shotmap);
   const momentum = asArray(event.momentum);
@@ -76,7 +76,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         awayKeys: liveStats?.away ? Object.keys(liveStats.away) : [],
       },
       incidents: incidents.length,
-      lineups: lineups.length,
+      lineups: lineups.totalStarters,
+      lineupSubstitutes: lineups.totalSubstitutes,
+      lineupConfirmed: lineups.confirmed,
       predictedHomeStarters: predictedLineup?.lineups?.home?.starters?.length ?? 0,
       predictedAwayStarters: predictedLineup?.lineups?.away?.starters?.length ?? 0,
       playerStats: playerStats.length,
@@ -87,10 +89,52 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     samples: {
       incidents: incidents.slice(0, 12),
       playerStats: playerStats.slice(0, 8),
-      lineups: lineups.slice(0, 22),
+      lineups,
       broadcasts: broadcasts.slice(0, 6),
       shots: shotmap.slice(-10),
       momentum: momentum.slice(-10),
     },
   });
+}
+
+function summarizeLineups(lineups: NonNullable<Awaited<ReturnType<typeof getBzzoiroLivePreview>>>["event"]["lineups"]) {
+  if (Array.isArray(lineups)) {
+    const home = lineups.filter((player) => player.is_home === true);
+    const away = lineups.filter((player) => player.is_home === false);
+    return {
+      confirmed: true,
+      totalStarters: home.length + away.length,
+      totalSubstitutes: 0,
+      home: { starters: home.slice(0, 11), substitutes: [] },
+      away: { starters: away.slice(0, 11), substitutes: [] },
+    };
+  }
+
+  if (!lineups || typeof lineups !== "object") {
+    return {
+      confirmed: false,
+      totalStarters: 0,
+      totalSubstitutes: 0,
+      home: { starters: [], substitutes: [] },
+      away: { starters: [], substitutes: [] },
+    };
+  }
+
+  const payload = lineups as {
+    confirmed?: boolean | null;
+    home?: { players?: unknown[] | null; substitutes?: unknown[] | null } | null;
+    away?: { players?: unknown[] | null; substitutes?: unknown[] | null } | null;
+  };
+  const homeStarters = asArray(payload.home?.players);
+  const awayStarters = asArray(payload.away?.players);
+  const homeSubstitutes = asArray(payload.home?.substitutes);
+  const awaySubstitutes = asArray(payload.away?.substitutes);
+
+  return {
+    confirmed: payload.confirmed === true,
+    totalStarters: homeStarters.length + awayStarters.length,
+    totalSubstitutes: homeSubstitutes.length + awaySubstitutes.length,
+    home: { starters: homeStarters.slice(0, 11), substitutes: homeSubstitutes.slice(0, 12) },
+    away: { starters: awayStarters.slice(0, 11), substitutes: awaySubstitutes.slice(0, 12) },
+  };
 }

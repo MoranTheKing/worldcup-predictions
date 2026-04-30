@@ -127,8 +127,10 @@ function getPlayerEventBadges(player: FormationPitchPlayer) {
   const badges: Array<{ key: string; kind: EventBadgeKind; count: number; title: string; className: string }> = [];
   const goals = readPositiveCount(player.match_goals);
   const assists = readPositiveCount(player.match_assists);
-  const yellowCards = readPositiveCount(player.match_yellow_cards);
-  const redCards = readPositiveCount(player.match_red_cards);
+  const rawYellowCards = readPositiveCount(player.match_yellow_cards);
+  const rawRedCards = readPositiveCount(player.match_red_cards);
+  const redCards = rawRedCards > 0 || rawYellowCards >= 2 ? Math.max(1, rawRedCards) : 0;
+  const yellowCards = redCards > 0 ? 0 : rawYellowCards;
 
   if (goals > 0) {
     badges.push({

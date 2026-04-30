@@ -73,15 +73,42 @@ export type BzzoiroXgMinute = {
 };
 
 export type BzzoiroActualLineupPlayer = {
+  name?: string | null;
   player_name?: string | null;
   player?: string | null;
+  api_id?: number | string | null;
+  player_id?: number | string | null;
   position?: string | null;
+  specific_position?: string | null;
+  positions_detailed?: string[] | null;
   x?: number | string | null;
   y?: number | string | null;
   is_home?: boolean | null;
   number?: number | string | null;
   jersey_number?: number | string | null;
+  goals?: number | string | null;
+  rating?: number | string | null;
+  yellow_card?: boolean | null;
+  red_card?: boolean | null;
+  sub_in?: number | string | null;
+  sub_out?: number | string | null;
+  replaces_player_id?: number | string | null;
+  replaced_by_player_id?: number | string | null;
 };
+
+export type BzzoiroActualTeamLineup = {
+  players?: BzzoiroActualLineupPlayer[] | null;
+  substitutes?: BzzoiroActualLineupPlayer[] | null;
+  formation?: string | null;
+};
+
+export type BzzoiroActualLineupsPayload =
+  | BzzoiroActualLineupPlayer[]
+  | {
+      home?: BzzoiroActualTeamLineup | null;
+      away?: BzzoiroActualTeamLineup | null;
+      confirmed?: boolean | null;
+    };
 
 export type BzzoiroUnavailablePlayer = {
   name?: string | null;
@@ -131,7 +158,7 @@ export type BzzoiroMatchEvent = {
     home?: BzzoiroLiveStatBlock | null;
     away?: BzzoiroLiveStatBlock | null;
   } | null;
-  lineups?: BzzoiroActualLineupPlayer[] | null;
+  lineups?: BzzoiroActualLineupsPayload | null;
   shotmap?: BzzoiroShot[] | null;
   momentum?: BzzoiroMomentumPoint[] | null;
   xg_per_minute?: BzzoiroXgMinute[] | null;
