@@ -868,7 +868,9 @@ raw_error
 - `sync-live` calls `syncTournamentState` after updates, runs `scoreFinishedMatchPredictions` for matches that are now finished, and calls `clearUnfinishedMatchScoring` if an API correction moves a match away from finished.
 - Added protected `POST /api/admin/bzzoiro/sync-predictions` for BSD's model predictions feed. These fields are stored on `matches` as BSD model data only and do not touch user `predictions`, `bets`, private leagues or locked odds.
 - Added `supabase/migrations/20260430000038_add_bsd_match_prediction_fields.sql` for BSD model probabilities, expected goals, confidence, most-likely score, model version, raw JSON and sync timestamp.
-- Added `cloudflare/bzzoiro-cron-worker.js` plus `cloudflare/wrangler.bzzoiro-cron.example.toml`. With the sample one-minute trigger, live sync runs every minute, active-window 1X2 odds every 5 minutes, full 1X2 odds every 30 minutes, and BSD model predictions every 15 minutes.
+- Added `cloudflare/bzzoiro-cron-worker.js` plus `cloudflare/wrangler.bzzoiro-cron.example.toml`. With the sample one-minute trigger, live sync runs immediately and then again after `LIVE_SECOND_PULSE_SECONDS` seconds, active-window 1X2 odds every 5 minutes, full 1X2 odds every 30 minutes, and BSD model predictions every 15 minutes.
+- Match pages now treat pre-match preview as pre-match only. Once a match is live or finished, form/H2H/coaches preview, broadcasts and 1X2 odds are hidden so the screen is focused on live score, stats, incidents, lineups, player stats, shots and momentum.
+- Added local-only `GET /api/dev/bzzoiro/live-match/[id]` for inspecting a live BSD event such as `9291` without writing to Supabase.
 
 ## Outright picker and player-feed pagination - 2026-04-27
 

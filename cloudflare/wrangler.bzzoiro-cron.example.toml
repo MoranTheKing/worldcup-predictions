@@ -8,3 +8,5 @@ crons = ["* * * * *"]
 # Configure these with `wrangler secret put`, not in this file:
 # - CRON_SECRET: same value as the app's CRON_SECRET / TOURNAMENT_ADMIN_SECRET.
 # - APP_BASE_URL: production app origin, for example https://your-domain.example.
+# Optional non-secret variable:
+# - LIVE_SECOND_PULSE_SECONDS=30 keeps live sync at roughly twice per minute. Set 0 to disable.

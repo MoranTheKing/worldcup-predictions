@@ -581,5 +581,7 @@ Brevo Free מוגבל בכמות יומית לכל החשבון, לכן ביום
 - Added protected `POST /api/admin/bzzoiro/sync-predictions` for BSD model predictions. These are stored separately on `matches` as BSD probabilities/expected goals/model metadata and raw JSON, without touching user `predictions`.
 - `POST /api/admin/bzzoiro/sync-odds` still syncs only match 1X2. It now accepts optional `date_from` / `date_to` query params for active-window cron runs; no query still means a full 104-match 1X2 refresh.
 - Added `supabase/migrations/20260430000038_add_bsd_match_prediction_fields.sql` for the BSD model-prediction columns.
-- Added `cloudflare/bzzoiro-cron-worker.js` as a Cloudflare Worker cron runner. It calls live sync every scheduled run, active-window 1X2 odds every 5 minutes, full 1X2 odds every 30 minutes, and BSD model predictions every 15 minutes using the existing bearer admin/cron secret.
+- Added `cloudflare/bzzoiro-cron-worker.js` as a Cloudflare Worker cron runner. It calls live sync every scheduled run plus a delayed second live pulse after 30 seconds, active-window 1X2 odds every 5 minutes, full 1X2 odds every 30 minutes, and BSD model predictions every 15 minutes using the existing bearer admin/cron secret.
 - Added `cloudflare/wrangler.bzzoiro-cron.example.toml` with a one-minute cron trigger example.
+- Match pages now hide pre-match context, broadcasts and 1X2 odds once a match is live/finished, keeping the live page focused on score, live stats, events, lineups, player stats and spatial data.
+- Added local-only `GET /api/dev/bzzoiro/live-match/[id]` for quickly checking a real BSD event payload, counts and samples without writing to Supabase.

@@ -1,4 +1,5 @@
 const DEFAULT_LIVE_WINDOW_DAYS = 1;
+const DEFAULT_SECOND_LIVE_PULSE_SECONDS = 30;
 
 const worker = {
   async fetch(request, env) {
@@ -27,12 +28,14 @@ export default worker;
 async function runScheduledSync(event, env) {
   const scheduledAt = new Date(event.scheduledTime);
   const minute = scheduledAt.getUTCMinutes();
+  const liveQuery = buildLiveQuery(scheduledAt);
+  const secondLivePulseSeconds = readSecondLivePulseSeconds(env);
   const jobs = [];
 
-  jobs.push(["live", () => callAppRoute(env, "/api/admin/bzzoiro/sync-live", buildLiveQuery(scheduledAt))]);
+  jobs.push(["live", () => callAppRoute(env, "/api/admin/bzzoiro/sync-live", liveQuery)]);
 
   if (minute % 5 === 0) {
-    jobs.push(["odds-active-window", () => callAppRoute(env, "/api/admin/bzzoiro/sync-odds", buildLiveQuery(scheduledAt))]);
+    jobs.push(["odds-active-window", () => callAppRoute(env, "/api/admin/bzzoiro/sync-odds", liveQuery)]);
   }
 
   if (minute % 30 === 0) {
@@ -43,7 +46,25 @@ async function runScheduledSync(event, env) {
     jobs.push(["predictions", () => callAppRoute(env, "/api/admin/bzzoiro/sync-predictions")]);
   }
 
-  return runJobs(jobs);
+  const immediate = await runJobs(jobs);
+  if (secondLivePulseSeconds <= 0) return immediate;
+
+  const delayed = await runJobs([
+    [
+      `live+${secondLivePulseSeconds}s`,
+      async () => {
+        await sleep(secondLivePulseSeconds * 1000);
+        return callAppRoute(env, "/api/admin/bzzoiro/sync-live", buildLiveQuery(new Date(scheduledAt.getTime() + secondLivePulseSeconds * 1000)));
+      },
+    ],
+  ]);
+
+  return {
+    ok: immediate.ok && delayed.ok,
+    startedAt: immediate.startedAt,
+    finishedAt: delayed.finishedAt,
+    results: [...immediate.results, ...delayed.results],
+  };
 }
 
 async function runSyncPlan(mode, env) {
@@ -168,4 +189,14 @@ function shiftDate(dateKey, days) {
   const date = new Date(`${dateKey}T00:00:00.000Z`);
   date.setUTCDate(date.getUTCDate() + days);
   return toDateKey(date);
+}
+
+function readSecondLivePulseSeconds(env) {
+  const raw = env.LIVE_SECOND_PULSE_SECONDS ?? DEFAULT_SECOND_LIVE_PULSE_SECONDS;
+  const seconds = Number(raw);
+  return Number.isFinite(seconds) && seconds >= 5 && seconds <= 45 ? Math.round(seconds) : 0;
+}
+
+function sleep(milliseconds) {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }

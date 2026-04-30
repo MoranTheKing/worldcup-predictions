@@ -110,6 +110,7 @@ export default function MatchDetailClient({
   const awayName = getTeamDisplayName(match.awayTeam, match.away_placeholder);
   const homeLogo = getTeamDisplayLogo(match.homeTeam);
   const awayLogo = getTeamDisplayLogo(match.awayTeam);
+  const isPreMatch = isPreMatchView(match, event);
 
   return (
     <div className="wc-shell px-4 py-4 md:px-6 md:py-6" dir="rtl">
@@ -164,9 +165,18 @@ export default function MatchDetailClient({
 
       {bzzoiro.source === "api" && event ? (
         <>
-          <MatchContextPanel event={event} match={match} />
-          <BroadcastPanel broadcasts={bzzoiro.broadcasts} />
-          <LiveStatsPanel event={event} match={match} devEvents={devEvents} />
+          {isPreMatch ? (
+            <>
+              <MatchContextPanel event={event} match={match} />
+              <BroadcastPanel broadcasts={bzzoiro.broadcasts} />
+            </>
+          ) : null}
+          <LiveStatsPanel
+            event={event}
+            match={match}
+            devEvents={devEvents}
+            showOdds={isPreMatch}
+          />
           <LineupsPanel
             event={event}
             predictedLineup={bzzoiro.predictedLineup}
@@ -336,10 +346,12 @@ function LiveStatsPanel({
   event,
   match,
   devEvents,
+  showOdds = true,
 }: {
   event: BzzoiroMatchEvent | null;
   match: MatchDetailRow;
   devEvents: MatchDetailDevEvent[];
+  showOdds?: boolean;
 }) {
   const pairs = getLiveStatPairs(event, match, devEvents);
 
@@ -355,7 +367,7 @@ function LiveStatsPanel({
       ) : (
         <EmptyState text={event ? "הסטטיסטיקות החיות יופיעו כאן כש־BSD יחזיר live_stats או xG למשחק." : "תוצאה מקומית או אירועי Dev יופיעו כאן אחרי סימולציה."} />
       )}
-      {event ? <OddsStrip event={event} match={match} /> : null}
+      {event && showOdds ? <OddsStrip event={event} match={match} /> : null}
     </section>
   );
 }
@@ -1838,6 +1850,18 @@ function shouldPreferLocalScore(match: MatchDetailRow, event: BzzoiroMatchEvent 
     apiStatus === "finished";
 
   return !apiIsLiveOrFinished;
+}
+
+function isPreMatchView(match: MatchDetailRow, event: BzzoiroMatchEvent | null) {
+  const apiStatus = String(event?.status ?? "").toLowerCase();
+  const apiStarted =
+    apiStatus.includes("progress") ||
+    apiStatus.includes("half") ||
+    apiStatus.includes("finish") ||
+    apiStatus === "live" ||
+    apiStatus === "ft";
+
+  return match.status === "scheduled" && !apiStarted;
 }
 
 function getStatusLabel(match: MatchDetailRow, event: BzzoiroMatchEvent | null) {
