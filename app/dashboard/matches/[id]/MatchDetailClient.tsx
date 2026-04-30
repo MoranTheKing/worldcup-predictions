@@ -173,6 +173,7 @@ export default function MatchDetailClient({
               <BroadcastPanel broadcasts={bzzoiro.broadcasts} />
             </>
           ) : null}
+          <TimelinePanel event={event} match={match} players={players} devEvents={devEvents} />
           <LiveStatsPanel
             event={event}
             match={match}
@@ -186,10 +187,7 @@ export default function MatchDetailClient({
             players={players}
             devEvents={devEvents}
           />
-          <div className="mt-5 grid gap-5 xl:grid-cols-[1fr_0.95fr]">
-            <TimelinePanel event={event} match={match} players={players} devEvents={devEvents} />
-            <PlayerStatsPanel rows={bzzoiro.playerStats} match={match} players={players} />
-          </div>
+          <PlayerStatsPanel rows={bzzoiro.playerStats} match={match} players={players} />
           <MomentumAndShotsPanel event={event} match={match} players={players} />
         </>
       ) : (
@@ -615,11 +613,22 @@ function LineupsPanel({
   const homePredicted = predictedLineup?.lineups?.home ?? null;
   const awayPredicted = predictedLineup?.lineups?.away ?? null;
   const hasPredicted = Boolean(homePredicted || awayPredicted);
-  const eventSummaryByPlayerId = buildPlayerEventSummaryMap(devEvents);
+  const eventSummaryByPlayerId = buildPlayerEventSummaryMap(devEvents, event);
+  const hasStarted = !isPreMatchView(match, event);
+  const lineupEyebrow = hasActualLineups
+    ? "הרכב רשמי"
+    : hasPredicted
+      ? hasStarted
+        ? "מבנה זמני מ-BSD"
+        : "הרכב משוער"
+      : hasStarted
+        ? "ממתין להרכב הרשמי"
+        : "ממתין ל-BSD";
+  const lineupSourceLabel = hasStarted ? "מבנה זמני מ-BSD" : "הרכב משוער";
 
   return (
     <section className="mt-5 rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-4 md:p-5">
-      <SectionHeader title="הרכבים וסגלים למשחק" eyebrow={hasActualLineups ? "הרכב בפועל" : hasPredicted ? "הרכב משוער" : "ממתין ל-BSD"} />
+      <SectionHeader title="הרכבים וסגלים למשחק" eyebrow={lineupEyebrow} />
       {hasActualLineups ? (
         <div className="mt-4 grid gap-4 xl:grid-cols-2">
           <ActualLineupSide
@@ -649,6 +658,7 @@ function LineupsPanel({
             eventUnavailable={event.unavailable_players?.home ?? []}
             coachFormation={event.home_coach?.preferred_formation}
             eventSummaryByPlayerId={eventSummaryByPlayerId}
+            sourceLabel={lineupSourceLabel}
           />
           <PredictedLineupSide
             title={getTeamDisplayName(match.awayTeam, match.away_placeholder)}
@@ -658,13 +668,14 @@ function LineupsPanel({
             eventUnavailable={event.unavailable_players?.away ?? []}
             coachFormation={event.away_coach?.preferred_formation}
             eventSummaryByPlayerId={eventSummaryByPlayerId}
+            sourceLabel={lineupSourceLabel}
           />
         </div>
       ) : (
         players.length > 0 ? (
           <LocalSquadPreview match={match} event={event} players={players} eventSummaryByPlayerId={eventSummaryByPlayerId} />
         ) : (
-          <EmptyState text="כש־BSD יחזיר predicted-lineup או lineups בפועל, יוצגו כאן פותחים, ספסל וחסרים." />
+          <EmptyState text={hasStarted ? "ממתין להרכב הרשמי מ-BSD. ברגע שהוא יגיע, הפותחים והספסל יתעדכנו כאן אוטומטית." : "כש־BSD יחזיר predicted-lineup או lineups בפועל, יוצגו כאן פותחים, ספסל וחסרים."} />
         )
       )}
     </section>
@@ -907,7 +918,7 @@ function ActualLineupSide({
           {lineupPlayers.length} שחקנים
         </span>
       </div>
-      <FormationPitch lines={lines} formationName={formationName} source="הרכב בפועל" />
+      <FormationPitch lines={lines} formationName={formationName} source="הרכב רשמי" />
     </div>
   );
 }
@@ -920,6 +931,7 @@ function PredictedLineupSide({
   eventUnavailable,
   coachFormation,
   eventSummaryByPlayerId,
+  sourceLabel,
 }: {
   title: string;
   teamId: string | null;
@@ -928,6 +940,7 @@ function PredictedLineupSide({
   eventUnavailable: BzzoiroUnavailablePlayer[];
   coachFormation?: string | null;
   eventSummaryByPlayerId: Map<string, PlayerMatchEventSummary>;
+  sourceLabel: string;
 }) {
   const starters = (lineup?.starters ?? []).filter((player) => player.name);
   const substitutes = (lineup?.substitutes ?? []).filter((player) => player.name);
@@ -944,15 +957,15 @@ function PredictedLineupSide({
           {formationName}
         </span>
       </div>
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_18rem]">
+      <div className="mt-4 grid gap-4">
         {pitchPlayers.length > 0 ? (
-          <FormationPitch lines={lines} formationName={formationName} source="הרכב משוער" />
+          <FormationPitch lines={lines} formationName={formationName} source={sourceLabel} />
         ) : (
-          <div className="mt-4">
+          <div>
             <EmptyMini text="אין עדיין פותחים" />
           </div>
         )}
-        <LineupGroup className="mt-4" title="ספסל" empty="אין עדיין ספסל" count={substitutes.length}>
+        <LineupGroup className="" title="ספסל" empty="אין עדיין ספסל" count={substitutes.length}>
           {substitutes.slice(0, 12).map((player, index) => (
             <LineupPlayerRow
               key={`${player.name}-${index}`}
@@ -1038,7 +1051,7 @@ function toFormationPlayer(
   }, eventSummaryByPlayerId);
 }
 
-function buildPlayerEventSummaryMap(events: MatchDetailDevEvent[]) {
+function buildPlayerEventSummaryMap(events: MatchDetailDevEvent[], apiEvent?: BzzoiroMatchEvent | null) {
   const summaries = new Map<string, PlayerMatchEventSummary>();
 
   for (const event of events) {
@@ -1051,6 +1064,26 @@ function buildPlayerEventSummaryMap(events: MatchDetailDevEvent[]) {
 
     if (event.event_type === "goal" && event.related_player_id !== null && event.related_player_id !== undefined) {
       getOrCreatePlayerEventSummary(summaries, event.related_player_id).assists += 1;
+    }
+  }
+
+  for (const incident of asArray(apiEvent?.incidents)) {
+    const type = String(incident.type ?? "").toLowerCase();
+    const cardType = String(incident.card_type ?? "").toLowerCase();
+    const playerName = incident.player_name ?? incident.player ?? incident.player_out ?? incident.player_in ?? null;
+    const playerSummary = playerName ? getOrCreatePlayerNameEventSummary(summaries, playerName) : null;
+
+    if (playerSummary && type.includes("goal")) {
+      playerSummary.goals += 1;
+    } else if (playerSummary && type.includes("card") && cardType.includes("red")) {
+      playerSummary.redCards += 1;
+    } else if (playerSummary && type.includes("card")) {
+      playerSummary.yellowCards += 1;
+    }
+
+    const assistName = incident.assist ?? incident.assist_player ?? null;
+    if (type.includes("goal") && assistName) {
+      getOrCreatePlayerNameEventSummary(summaries, assistName).assists += 1;
     }
   }
 
@@ -1070,11 +1103,63 @@ function getOrCreatePlayerEventSummary(
   return summary;
 }
 
+function getOrCreatePlayerNameEventSummary(
+  summaries: Map<string, PlayerMatchEventSummary>,
+  playerName: string,
+) {
+  const keys = getPlayerNameSummaryKeys(playerName);
+  const existing = keys
+    .map((key) => summaries.get(key))
+    .find((summary): summary is PlayerMatchEventSummary => Boolean(summary));
+  const summary = existing ?? { goals: 0, assists: 0, yellowCards: 0, redCards: 0 };
+
+  for (const key of keys) {
+    summaries.set(key, summary);
+  }
+
+  return summary;
+}
+
+function getPlayerEventSummaryByName(
+  summaries: Map<string, PlayerMatchEventSummary> | undefined,
+  playerName: string | null | undefined,
+) {
+  if (!summaries) return null;
+
+  for (const key of getPlayerNameSummaryKeys(playerName)) {
+    const summary = summaries.get(key);
+    if (summary) return summary;
+  }
+
+  return null;
+}
+
+function getPlayerNameSummaryKeys(playerName: string | null | undefined) {
+  const normalized = normalizePlayerName(playerName);
+  if (!normalized) return [];
+
+  const parts = String(playerName ?? "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .split(/[^a-z0-9א-ת]+/i)
+    .filter(Boolean);
+  const lastName = normalizePlayerName(parts.at(-1));
+  const keys = [`name:${normalized}`];
+
+  if (lastName && lastName !== normalized) {
+    keys.push(`last:${lastName}`);
+  }
+
+  return keys;
+}
+
 function applyEventSummary<T extends FormationPitchPlayer>(
   player: T,
   eventSummaryByPlayerId?: Map<string, PlayerMatchEventSummary>,
 ): T {
-  const summary = eventSummaryByPlayerId?.get(String(player.id));
+  const summary =
+    eventSummaryByPlayerId?.get(String(player.id)) ??
+    getPlayerEventSummaryByName(eventSummaryByPlayerId, player.name);
   if (!summary || !hasEventSummary(summary)) return player;
 
   return {
@@ -1093,8 +1178,9 @@ function getEventSummaryForLineupName(
   eventSummaryByPlayerId: Map<string, PlayerMatchEventSummary>,
 ) {
   const localPlayer = findLocalPlayer(name, players, teamId);
-  if (!localPlayer) return null;
-  return eventSummaryByPlayerId.get(String(localPlayer.id)) ?? null;
+  return (localPlayer ? eventSummaryByPlayerId.get(String(localPlayer.id)) : null) ??
+    getPlayerEventSummaryByName(eventSummaryByPlayerId, name) ??
+    null;
 }
 
 function hasEventSummary(summary: PlayerMatchEventSummary | null | undefined): summary is PlayerMatchEventSummary {
@@ -1313,14 +1399,15 @@ function TimelinePanel({
   devEvents: MatchDetailDevEvent[];
 }) {
   const incidents = asArray(event.incidents)
+    .filter(isDisplayableIncident)
     .slice()
     .sort((left, right) => readNumber(left.minute) - readNumber(right.minute));
   const devRows = buildDevTimelineRows(devEvents, match, players);
   const hasApiTimeline = incidents.length > 0;
 
   return (
-    <section className="rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-4 md:p-5">
-      <SectionHeader title="אירועי משחק" eyebrow={hasApiTimeline ? "Goals, cards, subs, VAR" : "Dev Tools timeline"} />
+    <section className="mt-5 rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-4 md:p-5">
+      <SectionHeader title="אירועי משחק" eyebrow={hasApiTimeline ? "שערים, כרטיסים, חילופים, VAR" : "Dev Tools timeline"} />
       {hasApiTimeline ? (
         <div className="mt-4 grid gap-3">
           {incidents.map((incident, index) => (
@@ -1494,7 +1581,7 @@ function PlayerStatsPanel({
     .slice(0, 8);
 
   return (
-    <section className="rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-4 md:p-5">
+    <section className="mt-5 rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-4 md:p-5">
       <SectionHeader title="שחקנים בולטים" eyebrow="player-stats" />
       {topRows.length > 0 ? (
         <div className="mt-4 grid gap-3">
@@ -2039,7 +2126,7 @@ function namesMatch(leftValue: string | null | undefined, rightValue: string | n
 }
 
 function formatTimelineScore(homeGoals: number, awayGoals: number) {
-  return `${homeGoals}-${awayGoals}`;
+  return `${awayGoals}-${homeGoals}`;
 }
 
 function formatPosition(position: string | null | undefined) {
@@ -2062,6 +2149,17 @@ function formatIncidentTitle(incident: BzzoiroIncident) {
   if (type.includes("var")) return "בדיקת VAR";
   if (type.includes("pen")) return "פנדל";
   return incident.type ?? "אירוע";
+}
+
+function isDisplayableIncident(incident: BzzoiroIncident) {
+  const type = String(incident.type ?? "").toLowerCase();
+  return (
+    type.includes("goal") ||
+    type.includes("card") ||
+    type.includes("sub") ||
+    type.includes("var") ||
+    type.includes("pen")
+  );
 }
 
 function formatDevEventTitle(type: MatchDetailDevEvent["event_type"]) {
