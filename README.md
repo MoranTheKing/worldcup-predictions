@@ -616,6 +616,7 @@ Brevo Free מוגבל בכמות יומית לכל החשבון, לכן ביום
 - A full-time marker is also added for finished BSD events, showing `FT` and the final score at the top of the match timeline.
 - BSD live preview no longer calls `predicted-lineup` after a match is finished or after official `lineups` are already present, and 400/404 predicted-lineup responses are treated as unavailable data instead of crashing the page.
 - Substitution badges no longer show `נכנס 0'`. Zero/empty substitution minutes are ignored, while real substitutions render as compact `נכנס` / `יצא` markers with related player/minute details when BSD provides them.
-- Non-scoring match events show the team logo instead of a text team-name chip, making yellow cards, substitutions and VAR checks easier to scan.
+- Match-event chips now include the team logo: scoring rows show the logo beside the score, and non-scoring rows show the logo instead of a text team-name chip.
 - Pitch-token event symbols now sit as small overlays outside the player card, so goals, assists, cards and substitutions do not stretch the player tile.
-- Shotmap icons now use visual symbols instead of short Hebrew abbreviations such as `חס` or `בע`, while the detailed shot result text stays in Hebrew. The panel now sorts shots by actual minute before taking the latest eight, so it does not get stuck on early shots when BSD returns shotmap newest-first.
+- Shotmap icons now use visual symbols instead of short Hebrew abbreviations such as `חס` or `בע`, while the detailed shot result text stays in Hebrew. The panel now sorts shots by actual minute before taking the latest eight, shows team logos, and includes a toggle to open the full shot list.
+- If `/player-stats/` returns no rows for a BSD event, the `שחקנים בולטים` panel falls back to ratings and goals from the official BSD lineup payload instead of rendering an empty state.

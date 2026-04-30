@@ -32,7 +32,7 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 export type MatchDetailRow = MatchWithTeams;
 
@@ -69,6 +69,19 @@ type PlayerMatchEventSummary = {
   assists: number;
   yellowCards: number;
   redCards: number;
+};
+
+type PlayerStatDisplayRow = {
+  key: string;
+  name: string;
+  teamName: string;
+  localPlayer: MatchPagePlayer | null;
+  photoUrl?: string | null;
+  rating: number | string | null | undefined;
+  minutes: number | string | null | undefined;
+  goals: number | string | null | undefined;
+  assists: number | string | null | undefined;
+  shots: number | string | null | undefined;
 };
 
 type LineupSubstitutionDisplay = {
@@ -206,7 +219,7 @@ export default function MatchDetailClient({
             players={players}
             devEvents={devEvents}
           />
-          <PlayerStatsPanel rows={bzzoiro.playerStats} match={match} players={players} />
+          <PlayerStatsPanel rows={bzzoiro.playerStats} event={event} match={match} players={players} />
           <MomentumAndShotsPanel event={event} match={match} players={players} />
         </>
       ) : (
@@ -1989,8 +2002,9 @@ function IncidentSideMark({
 }) {
   if (score) {
     return (
-      <span className={`rounded-full px-2.5 py-1 text-xs font-black ${getIncidentChipClass(kind, true)}`} dir="ltr">
-        {score}
+      <span className={`inline-flex items-center gap-2 rounded-full py-1 pe-2.5 ps-1 text-xs font-black ${getIncidentChipClass(kind, true)}`} dir="ltr">
+        <TeamLogoBubble logo={logo} name={name} size="sm" />
+        <span>{score}</span>
       </span>
     );
   }
@@ -2013,14 +2027,46 @@ function IncidentSideMark({
       title={name}
       aria-label={name}
     >
-      <Image
-        src={logo}
-        alt={name}
-        width={36}
-        height={36}
-        className="h-full w-full object-cover"
-        unoptimized
-      />
+      <TeamLogoBubble logo={logo} name={name} size="md" bare />
+    </span>
+  );
+}
+
+function TeamLogoBubble({
+  logo,
+  name,
+  size = "md",
+  bare = false,
+}: {
+  logo: string | null;
+  name: string;
+  size?: "sm" | "md";
+  bare?: boolean;
+}) {
+  const sizeClass = size === "sm" ? "h-7 w-7" : "h-9 w-9";
+  const textClass = size === "sm" ? "text-[9px]" : "text-[10px]";
+  const content = logo ? (
+    <Image
+      src={logo}
+      alt={name}
+      width={size === "sm" ? 28 : 36}
+      height={size === "sm" ? 28 : 36}
+      className="h-full w-full object-cover"
+      unoptimized
+    />
+  ) : (
+    <span className={`font-black text-wc-fg2 ${textClass}`}>{name.slice(0, 2)}</span>
+  );
+
+  if (bare) return content;
+
+  return (
+    <span
+      className={`grid ${sizeClass} shrink-0 place-items-center overflow-hidden rounded-full border border-white/12 bg-white/8`}
+      title={name}
+      aria-label={name}
+    >
+      {content}
     </span>
   );
 }
@@ -2048,73 +2094,159 @@ function IncidentPlayerName({
 
 function PlayerStatsPanel({
   rows,
+  event,
   match,
   players,
 }: {
   rows: BzzoiroPlayerStatsRow[];
+  event: BzzoiroMatchEvent;
   match: MatchDetailRow;
   players: MatchPagePlayer[];
 }) {
-  const topRows = rows
+  const apiRows = rows
     .filter((row) => readNumber(row.minutes_played) > 0 || readNumber(row.rating) > 0)
     .slice()
     .sort((left, right) => readNumber(right.rating) - readNumber(left.rating) || readNumber(right.minutes_played) - readNumber(left.minutes_played))
-    .slice(0, 8);
+    .map((row, index) => toApiPlayerStatDisplayRow(row, match, players, index));
+  const lineupRows = apiRows.length > 0 ? [] : buildLineupPlayerStatRows(event, match, players);
+  const topRows = (apiRows.length > 0 ? apiRows : lineupRows).slice(0, 8);
+  const sourceLabel = apiRows.length > 0 ? "player-stats" : "דירוגים מההרכב הרשמי";
 
   return (
     <section className="mt-5 rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-4 md:p-5">
-      <SectionHeader title="שחקנים בולטים" eyebrow="player-stats" />
+      <SectionHeader title="שחקנים בולטים" eyebrow={sourceLabel} />
       {topRows.length > 0 ? (
         <div className="mt-4 grid gap-3">
           {topRows.map((row, index) => (
-            <PlayerStatRow key={`${row.player?.id ?? row.player?.name ?? "player"}-${index}`} row={row} match={match} players={players} />
+            <PlayerStatRow key={`${row.key}-${index}`} row={row} />
           ))}
         </div>
       ) : (
-        <EmptyState text="מדדי שחקנים יופיעו כאן בזמן/אחרי משחק כשה־API יחזיר player-stats לאירוע." />
+        <EmptyState text="BSD לא החזיר עדיין player-stats או דירוגים בהרכב הרשמי למשחק הזה." />
       )}
     </section>
   );
 }
 
-function PlayerStatRow({
-  row,
-  match,
-  players,
-}: {
-  row: BzzoiroPlayerStatsRow;
-  match: MatchDetailRow;
-  players: MatchPagePlayer[];
-}) {
+function toApiPlayerStatDisplayRow(
+  row: BzzoiroPlayerStatsRow,
+  match: MatchDetailRow,
+  players: MatchPagePlayer[],
+  index: number,
+): PlayerStatDisplayRow {
   const playerName = row.player?.name ?? "-";
   const sideTeamId = namesMatch(row.player?.team, match.homeTeam?.name) ? match.home_team_id : namesMatch(row.player?.team, match.awayTeam?.name) ? match.away_team_id : null;
-  const localPlayer = findLocalPlayer(playerName, players, sideTeamId);
+  const localPlayer = findLocalPlayerByBzzoiroId(row.player?.id, players) ?? findLocalPlayer(playerName, players, sideTeamId);
+
+  return {
+    key: `api-${row.player?.id ?? playerName}-${index}`,
+    name: localPlayer?.name ?? playerName,
+    teamName: translateTeamNameToHebrew(row.player?.team),
+    localPlayer,
+    photoUrl: localPlayer?.photo_url ?? getBzzoiroPlayerImageUrl(row.player?.id),
+    rating: row.rating,
+    minutes: row.minutes_played,
+    goals: row.goals,
+    assists: row.goal_assist,
+    shots: row.total_shots,
+  };
+}
+
+function buildLineupPlayerStatRows(
+  event: BzzoiroMatchEvent,
+  match: MatchDetailRow,
+  players: MatchPagePlayer[],
+): PlayerStatDisplayRow[] {
+  const lineups = normalizeActualLineups(event.lineups);
+  const sides = [
+    {
+      players: [...lineups.home.players, ...lineups.home.substitutes],
+      teamId: match.home_team_id,
+      teamName: getTeamDisplayName(match.homeTeam, match.home_placeholder),
+    },
+    {
+      players: [...lineups.away.players, ...lineups.away.substitutes],
+      teamId: match.away_team_id,
+      teamName: getTeamDisplayName(match.awayTeam, match.away_placeholder),
+    },
+  ];
+
+  return sides
+    .flatMap((side) =>
+      side.players.map((player, index) => {
+        const name = readApiPlayerName(player);
+        const apiId = player.api_id ?? player.player_id;
+        const localPlayer = findLocalPlayerByBzzoiroId(apiId, players) ?? findLocalPlayer(name, players, side.teamId);
+
+        return {
+          key: `lineup-${apiId ?? name}-${index}`,
+          name: localPlayer?.name ?? name,
+          teamName: side.teamName,
+          localPlayer,
+          photoUrl: localPlayer?.photo_url ?? getBzzoiroPlayerImageUrl(apiId),
+          rating: player.rating,
+          minutes: readProvidedNumber(player.sub_out) ?? (readProvidedNumber(player.sub_in) !== null ? null : 90),
+          goals: player.goals,
+          assists: null,
+          shots: null,
+        } satisfies PlayerStatDisplayRow;
+      }),
+    )
+    .filter((row) => readNumber(row.rating) > 0 || readNumber(row.goals) > 0)
+    .sort((left, right) => readNumber(right.rating) - readNumber(left.rating) || readNumber(right.goals) - readNumber(left.goals));
+}
+
+function PlayerStatRow({ row }: { row: PlayerStatDisplayRow }) {
   const content = (
     <div className="rounded-[1.1rem] border border-white/10 bg-black/14 p-3 transition hover:bg-white/[0.055]">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="truncate text-sm font-black text-wc-fg1">{localPlayer?.name ?? playerName}</p>
-          <p className="mt-1 text-xs font-bold text-wc-fg3">{translateTeamNameToHebrew(row.player?.team)}</p>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <PlayerStatAvatar name={row.name} photoUrl={row.photoUrl ?? null} />
+          <div className="min-w-0">
+            <p className="truncate text-sm font-black text-wc-fg1">{row.name}</p>
+            <p className="mt-1 truncate text-xs font-bold text-wc-fg3">{row.teamName}</p>
+          </div>
         </div>
         <span className="rounded-full bg-white/8 px-2.5 py-1 text-xs font-black text-wc-fg2" dir="ltr">
           {formatDecimal(row.rating)}
         </span>
       </div>
       <div className="mt-3 grid grid-cols-4 gap-1 text-center">
-        <MiniMetric label="דקות" value={readNumber(row.minutes_played)} />
-        <MiniMetric label="שערים" value={readNumber(row.goals)} />
-        <MiniMetric label="בישולים" value={readNumber(row.goal_assist)} />
-        <MiniMetric label="בעיטות" value={readNumber(row.total_shots)} />
+        <MiniMetric label="דקות" value={formatOptionalStat(row.minutes)} />
+        <MiniMetric label="שערים" value={formatOptionalStat(row.goals)} />
+        <MiniMetric label="בישולים" value={formatOptionalStat(row.assists)} />
+        <MiniMetric label="בעיטות" value={formatOptionalStat(row.shots)} />
       </div>
     </div>
   );
 
-  return localPlayer ? (
-    <PlayerLink player={localPlayer} className="block">
+  return row.localPlayer ? (
+    <PlayerLink player={row.localPlayer} className="block">
       {content}
     </PlayerLink>
   ) : (
     content
+  );
+}
+
+function PlayerStatAvatar({ name, photoUrl }: { name: string; photoUrl: string | null }) {
+  return (
+    <span className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-2xl border border-white/10 bg-white/8">
+      {photoUrl ? (
+        <Image
+          src={photoUrl}
+          alt={name}
+          width={44}
+          height={44}
+          className="h-full w-full object-cover"
+          unoptimized
+        />
+      ) : (
+        <span className="font-sans text-xs font-black tracking-normal text-wc-fg2" dir="ltr">
+          {getInitials(name)}
+        </span>
+      )}
+    </span>
   );
 }
 
@@ -2149,24 +2281,33 @@ function ShotList({
   match: MatchDetailRow;
   players: MatchPagePlayer[];
 }) {
-  const visible = shots
+  const [showAllShots, setShowAllShots] = useState(false);
+  const orderedShots = shots
     .slice()
-    .sort((left, right) => readNumber(right.min) - readNumber(left.min))
-    .slice(0, 8);
+    .sort((left, right) => readNumber(right.min) - readNumber(left.min));
+  const visible = showAllShots ? orderedShots : orderedShots.slice(0, 8);
+  const hiddenCount = Math.max(0, orderedShots.length - visible.length);
   if (visible.length === 0) return <EmptyState text="בעיטות יופיעו כאן כשה־API יחזיר shotmap." />;
 
   return (
     <div className="rounded-[1.25rem] border border-white/10 bg-black/14 p-4">
-      <p className="text-xs font-black text-wc-fg2">בעיטות אחרונות</p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-xs font-black text-wc-fg2">בעיטות אחרונות</p>
+        <span className="rounded-full bg-white/8 px-2.5 py-1 text-[11px] font-black text-wc-fg3">
+          {orderedShots.length} בעיטות
+        </span>
+      </div>
       <div className="mt-3 grid gap-2">
         {visible.map((shot, index) => {
           const localPlayer = findLocalPlayerByBzzoiroId(shot.pid, players);
           const resultKind = getShotResultKind(shot.type);
+          const team = shot.home === true ? match.homeTeam : shot.home === false ? match.awayTeam : null;
           const teamName = shot.home === true
             ? getTeamDisplayName(match.homeTeam, match.home_placeholder)
             : shot.home === false
               ? getTeamDisplayName(match.awayTeam, match.away_placeholder)
               : "-";
+          const teamLogo = getTeamDisplayLogo(team);
           return (
             <div key={`${shot.min ?? index}-${index}`} className={`grid grid-cols-[3.25rem_1fr_auto] items-center gap-3 rounded-xl border px-3 py-2 ${getShotRowClass(resultKind)}`}>
               <div className="grid place-items-center gap-1">
@@ -2174,15 +2315,16 @@ function ShotList({
                 <span className="text-center font-sans text-[11px] font-black text-wc-fg3" dir="rtl">{formatShotMinute(shot.min)}</span>
               </div>
               <div className="min-w-0">
-                <p className="truncate text-sm font-black text-wc-fg1">
+                <div className="flex min-w-0 items-center gap-2">
+                  <TeamLogoBubble logo={teamLogo} name={teamName} size="sm" />
                   {localPlayer ? (
-                    <PlayerLink player={localPlayer} className="hover:text-wc-neon">
+                    <PlayerLink player={localPlayer} className="min-w-0 truncate text-sm font-black text-wc-fg1 hover:text-wc-neon">
                       {localPlayer.name}
                     </PlayerLink>
                   ) : (
-                    teamName
+                    <span className="sr-only">{teamName}</span>
                   )}
-                </p>
+                </div>
                 <p className="mt-0.5 truncate text-[11px] font-bold text-wc-fg3">
                   {formatShotType(shot.body ?? shot.sit ?? shot.type)} · {formatShotSituation(shot.sit)} · שערים צפויים {formatDecimal(shot.xg)}
                 </p>
@@ -2192,6 +2334,15 @@ function ShotList({
           );
         })}
       </div>
+      {orderedShots.length > 8 ? (
+        <button
+          type="button"
+          onClick={() => setShowAllShots((value) => !value)}
+          className="mt-3 w-full rounded-xl border border-white/10 bg-white/[0.045] px-3 py-2 text-xs font-black text-wc-fg2 transition hover:border-wc-neon/25 hover:bg-wc-neon/10 hover:text-wc-neon"
+        >
+          {showAllShots ? "הצג פחות" : `הצג את כל הבעיטות (${hiddenCount} נוספות)`}
+        </button>
+      ) : null}
     </div>
   );
 }
@@ -2526,6 +2677,12 @@ function formatDecimal(value: number | string | null | undefined) {
   return number.toFixed(2);
 }
 
+function formatOptionalStat(value: number | string | null | undefined) {
+  if (value === null || value === undefined || value === "") return "-";
+  if (typeof value === "string" && Number.isNaN(Number(value))) return value;
+  return String(readNumber(value));
+}
+
 function formatPercent(value: number) {
   return `${Math.round(value)}%`;
 }
@@ -2644,6 +2801,16 @@ function normalizePlayerName(value: string | null | undefined) {
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9א-ת]+/gi, "")
     .toLowerCase();
+}
+
+function getInitials(name: string) {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.slice(0, 1))
+    .join("")
+    .toUpperCase();
 }
 
 function namesMatch(leftValue: string | null | undefined, rightValue: string | null | undefined) {
