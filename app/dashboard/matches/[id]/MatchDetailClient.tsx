@@ -6,6 +6,7 @@ import PlayerLink from "@/components/PlayerLink";
 import TeamLink from "@/components/TeamLink";
 import type {
   BzzoiroBroadcast,
+  BzzoiroActualLineupPlayer,
   BzzoiroIncident,
   BzzoiroMatchCenter,
   BzzoiroMatchEvent,
@@ -15,6 +16,7 @@ import type {
   BzzoiroShot,
   BzzoiroUnavailablePlayer,
 } from "@/lib/bzzoiro/matches";
+import { asArray } from "@/lib/utils/array";
 import type { BzzoiroPlayerStatsRow } from "@/lib/bzzoiro/players";
 import { normalizeTeamNameKey, translateTeamNameToHebrew } from "@/lib/i18n/team-names";
 import { buildFootballFormation, normalizeFootballPosition } from "@/lib/football/formation";
@@ -275,7 +277,7 @@ function TeamBlock({
   );
   const className = "flex min-w-0 flex-col items-center gap-3 rounded-2xl p-2 transition hover:bg-white/5";
 
-  if (team) {
+  if (team && !String(team.id).startsWith("bsd-preview-")) {
     return (
       <TeamLink team={team} className={className}>
         {content}
@@ -606,8 +608,9 @@ function LineupsPanel({
   players: MatchPagePlayer[];
   devEvents: MatchDetailDevEvent[];
 }) {
-  const actualHome = (event.lineups ?? []).filter((player) => player.is_home === true);
-  const actualAway = (event.lineups ?? []).filter((player) => player.is_home === false);
+  const actualLineups = asArray<BzzoiroActualLineupPlayer>(event.lineups);
+  const actualHome = actualLineups.filter((player) => player.is_home === true);
+  const actualAway = actualLineups.filter((player) => player.is_home === false);
   const hasActualLineups = actualHome.length > 0 || actualAway.length > 0;
   const homePredicted = predictedLineup?.lineups?.home ?? null;
   const awayPredicted = predictedLineup?.lineups?.away ?? null;
@@ -1309,7 +1312,7 @@ function TimelinePanel({
   players: MatchPagePlayer[];
   devEvents: MatchDetailDevEvent[];
 }) {
-  const incidents = (event.incidents ?? [])
+  const incidents = asArray(event.incidents)
     .slice()
     .sort((left, right) => readNumber(left.minute) - readNumber(right.minute));
   const devRows = buildDevTimelineRows(devEvents, match, players);
@@ -1556,8 +1559,8 @@ function MomentumAndShotsPanel({
   match: MatchDetailRow;
   players: MatchPagePlayer[];
 }) {
-  const momentum = event.momentum ?? [];
-  const shots = event.shotmap ?? [];
+  const momentum = asArray(event.momentum);
+  const shots = asArray(event.shotmap);
   if (momentum.length === 0 && shots.length === 0) return null;
 
   return (

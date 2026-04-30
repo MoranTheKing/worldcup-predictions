@@ -585,3 +585,4 @@ Brevo Free מוגבל בכמות יומית לכל החשבון, לכן ביום
 - Added `cloudflare/wrangler.bzzoiro-cron.example.toml` with a one-minute cron trigger example.
 - Match pages now hide pre-match context, broadcasts and 1X2 odds once a match is live/finished, keeping the live page focused on score, live stats, events, lineups, player stats and spatial data.
 - Added local-only `GET /api/dev/bzzoiro/live-match/[id]` for quickly checking a real BSD event payload, counts and samples without writing to Supabase.
+- Added local-only `/dashboard/matches/bsd-live/[id]` as a temporary visual preview page that renders a real BSD live event through the same match-center UI without writing to Supabase. Example: `/dashboard/matches/bsd-live/9291`.

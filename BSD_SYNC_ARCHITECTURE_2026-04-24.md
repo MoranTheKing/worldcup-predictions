@@ -871,6 +871,7 @@ raw_error
 - Added `cloudflare/bzzoiro-cron-worker.js` plus `cloudflare/wrangler.bzzoiro-cron.example.toml`. With the sample one-minute trigger, live sync runs immediately and then again after `LIVE_SECOND_PULSE_SECONDS` seconds, active-window 1X2 odds every 5 minutes, full 1X2 odds every 30 minutes, and BSD model predictions every 15 minutes.
 - Match pages now treat pre-match preview as pre-match only. Once a match is live or finished, form/H2H/coaches preview, broadcasts and 1X2 odds are hidden so the screen is focused on live score, stats, incidents, lineups, player stats, shots and momentum.
 - Added local-only `GET /api/dev/bzzoiro/live-match/[id]` for inspecting a live BSD event such as `9291` without writing to Supabase.
+- Added local-only `/dashboard/matches/bsd-live/[id]` as a temporary visual match-page preview for a real BSD event. It renders through the normal match detail UI and should be removed once live UX has been approved.
 
 ## Outright picker and player-feed pagination - 2026-04-27
 
