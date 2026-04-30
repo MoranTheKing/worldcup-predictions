@@ -130,6 +130,7 @@ export default function MatchDetailClient({
   const awayLogo = getTeamDisplayLogo(match.awayTeam);
   const isPreMatch = isPreMatchView(match, event);
   const isBsdPreview = isBsdPreviewMatch(match);
+  const showLocalSimulationCenter = shouldPreferLocalScore(match, event);
 
   return (
     <div className="wc-shell px-4 py-4 md:px-6 md:py-6" dir="rtl">
@@ -182,7 +183,15 @@ export default function MatchDetailClient({
         </div>
       </section>
 
-      {bzzoiro.source === "api" && event ? (
+      {showLocalSimulationCenter ? (
+        <LocalFallbackMatchCenter
+          match={match}
+          source={bzzoiro.source}
+          players={players}
+          devEvents={devEvents}
+          isSimulationOverride
+        />
+      ) : bzzoiro.source === "api" && event ? (
         <>
           {isPreMatch ? (
             <>
@@ -343,23 +352,27 @@ function LocalFallbackMatchCenter({
   source,
   players,
   devEvents,
+  isSimulationOverride = false,
 }: {
   match: MatchDetailRow;
   source: BzzoiroMatchCenter["source"];
   players: MatchPagePlayer[];
   devEvents: MatchDetailDevEvent[];
+  isSimulationOverride?: boolean;
 }) {
   return (
     <>
       <section className="mt-5 rounded-[1.75rem] border border-[rgba(95,255,123,0.18)] bg-[linear-gradient(135deg,rgba(95,255,123,0.07),rgba(111,60,255,0.1),rgba(255,255,255,0.025))] p-4 md:p-5">
         <SectionHeader title="מרכז משחק מקומי" eyebrow="סימולציה" />
         <p className="mt-2 max-w-3xl text-sm leading-7 text-wc-fg2">
-          {getBzzoiroEmptyDescription(source)} עד ש-BSD יחבר את האירוע הרשמי, העמוד מציג את תוצאת הסימולציה, xG מקומי, אירועים והרכב משוער מתוך הדאטה המקומי.
+          {isSimulationOverride
+            ? "המשחק הסתיים בסימולציה המקומית, אבל BSD עדיין מחזיר את אירוע המונדיאל כטרם התחיל. לכן העמוד מציג כאן את חוויית המשחק מתוך הדאטה המקומי במקום פריוויו עתידי מה-API."
+            : `${getBzzoiroEmptyDescription(source)} עד ש-BSD יחבר את האירוע הרשמי, העמוד מציג את תוצאת הסימולציה, xG מקומי, אירועים והרכב משוער מתוך הדאטה המקומי.`}
         </p>
       </section>
+      <LocalTimelinePanel match={match} players={players} devEvents={devEvents} />
       <LiveStatsPanel event={null} match={match} devEvents={devEvents} />
       <LocalLineupsPanel match={match} players={players} devEvents={devEvents} />
-      <LocalTimelinePanel match={match} players={players} devEvents={devEvents} />
     </>
   );
 }
@@ -1643,12 +1656,14 @@ function LocalTimelinePanel({
   devEvents: MatchDetailDevEvent[];
 }) {
   const devRows = buildDevTimelineRows(devEvents, match, players);
+  const fulltimeItem = getLocalFulltimeTimelineItem(match);
 
   return (
     <section className="mt-5 rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-4 md:p-5">
       <SectionHeader title="אירועי משחק" eyebrow="סימולציה מקומית" />
-      {devRows.length > 0 ? (
+      {fulltimeItem || devRows.length > 0 ? (
         <div className="mt-4 grid gap-3">
+          {fulltimeItem ? <FulltimeRow item={fulltimeItem} /> : null}
           {devRows.map((row) => (
             <DevIncidentRow key={row.id} row={row} />
           ))}
@@ -1658,6 +1673,21 @@ function LocalTimelinePanel({
       )}
     </section>
   );
+}
+
+function getLocalFulltimeTimelineItem(match: MatchDetailRow): Extract<ApiTimelineItem, { kind: "fulltime" }> | null {
+  if (match.status !== "finished") return null;
+  const homeScore = readProvidedNumber(match.home_score);
+  const awayScore = readProvidedNumber(match.away_score);
+  if (homeScore === null || awayScore === null) return null;
+
+  return {
+    kind: "fulltime",
+    minute: Math.max(90, match.minute ?? 90),
+    order: Number.MAX_SAFE_INTEGER,
+    homeScore,
+    awayScore,
+  };
 }
 
 function TimelinePanel({

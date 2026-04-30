@@ -623,3 +623,4 @@ Brevo Free מוגבל בכמות יומית לכל החשבון, לכן ביום
 - Official BSD lineup players now show their API rating directly on the formation token, with a rating-color scale for poor/average/good/excellent performances and a distinct `★` marker for each team's top-rated player.
 - Formation pitches now render each tactical line as a fixed column grid instead of wrapping cards, so shapes such as `4-2-3-1` stay visually correct on mobile and desktop across match and squad pages.
 - The match page no longer renders the separate `שחקנים בולטים` panel; ratings, goals, assists, cards, substitutions and shot data stay visible in the lineup, timeline and shot panels without duplicating the same information.
+- Finished/local Dev Tools simulations now prefer the local match center even when BSD still reports the real World Cup event as not started, so simulated match pages show timeline, final score, local xG and lineups instead of an API pre-match preview.

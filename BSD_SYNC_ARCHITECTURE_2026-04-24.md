@@ -877,6 +877,7 @@ raw_error
 - Formation pitches now use fixed per-line grids instead of card wrapping, so mobile keeps formations such as `4-2-3-1` visually faithful across match and squad pages.
 - Lineup rating badges now use a performance color scale, while each team's top-rated player keeps a distinct star treatment instead of sharing the same dark badge style.
 - The separate featured-player panel was removed from the match page to reduce visual duplication; per-player ratings and events remain available on the lineup, timeline and shot panels.
+- Local Dev Tools results override pre-match BSD rendering when the real API event has not started yet. This keeps simulated finished matches in the match-center layout with a final-score marker, local xG and local timeline.
 
 ## Outright picker and player-feed pagination - 2026-04-27
 
