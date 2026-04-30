@@ -1766,7 +1766,7 @@ function getFulltimeScore(event: BzzoiroMatchEvent) {
 }
 
 function isFullTimeEvent(event: BzzoiroMatchEvent) {
-  const status = `${event.status ?? ""} ${event.period ?? ""}`.toLowerCase();
+  const status = `${event.status ?? ""} ${event.period ?? ""}`.toLowerCase().trim();
   return (
     status.includes("finish") ||
     status.includes("ended") ||
