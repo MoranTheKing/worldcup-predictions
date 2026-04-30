@@ -31,6 +31,7 @@ export type BzzoiroIncident = {
   type?: string | null;
   minute?: number | string | null;
   is_home?: boolean | null;
+  player_id?: number | string | null;
   player?: string | null;
   player_name?: string | null;
   assist?: string | null;

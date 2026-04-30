@@ -88,7 +88,19 @@ type PlayerStatRole = "goalkeeper" | "defender" | "midfielder" | "attacker" | "o
 type PlayerStatMetric = {
   label: string;
   value: string;
-  tone?: "goal" | "assist" | "defense" | "keeper" | "neutral";
+  tone?: "goal" | "assist" | "defense" | "keeper" | "card" | "neutral";
+};
+
+type FallbackPlayerPerformance = {
+  minutes: number | null;
+  goals: number;
+  assists: number;
+  yellowCards: number;
+  redCards: number;
+  shots: number;
+  shotsOnTarget: number;
+  xg: number;
+  goalsConceded: number | null;
 };
 
 type LineupSubstitutionDisplay = {
@@ -1469,14 +1481,11 @@ function LineupRatingBadge({
 }) {
   const ratingText = formatRating(rating);
   if (!ratingText) return null;
+  const ratingNumber = Number(ratingText);
 
   return (
     <span
-      className={`inline-flex h-7 items-center gap-1 rounded-full border px-2 font-sans text-[10px] font-black tracking-normal ${
-        isTopRated
-          ? "border-wc-neon/45 bg-wc-neon/16 text-wc-neon shadow-[0_0_18px_rgba(95,255,123,0.18)]"
-          : "border-white/10 bg-white/8 text-wc-fg2"
-      }`}
+      className={`inline-flex h-7 items-center gap-1 rounded-full border px-2 font-sans text-[10px] font-black tracking-normal ${getLineupRatingBadgeClass(ratingNumber, isTopRated)}`}
       title={isTopRated ? `מצטיין הקבוצה - ציון ${ratingText}` : `ציון ${ratingText}`}
       dir="ltr"
     >
@@ -1484,6 +1493,18 @@ function LineupRatingBadge({
       {ratingText}
     </span>
   );
+}
+
+function getLineupRatingBadgeClass(rating: number, isTopRated: boolean) {
+  if (isTopRated) {
+    return "border-wc-amber/60 bg-[linear-gradient(135deg,rgba(255,199,77,0.24),rgba(111,60,255,0.18))] text-wc-amber shadow-[0_0_18px_rgba(255,199,77,0.18)]";
+  }
+
+  if (rating >= 8) return "border-wc-neon/42 bg-wc-neon/14 text-wc-neon";
+  if (rating >= 7.2) return "border-cyan-300/35 bg-cyan-300/12 text-cyan-100";
+  if (rating >= 6.5) return "border-[#C9B2FF]/28 bg-[#6F3CFF]/14 text-[#E7DDFF]";
+  if (rating >= 6) return "border-wc-amber/38 bg-wc-amber/12 text-wc-amber";
+  return "border-wc-danger/38 bg-wc-danger/12 text-wc-danger";
 }
 
 function LineupSubstitutionPill({ substitution }: { substitution: LineupSubstitutionDisplay }) {
@@ -2156,7 +2177,7 @@ function PlayerStatsPanel({
     .map((row, index) => toApiPlayerStatDisplayRow(row, match, players, index));
   const lineupRows = apiRows.length > 0 ? [] : buildLineupPlayerStatRows(event, match, players);
   const topRows = (apiRows.length > 0 ? apiRows : lineupRows).slice(0, 8);
-  const sourceLabel = apiRows.length > 0 ? "player-stats" : "דירוגים מההרכב הרשמי";
+  const sourceLabel = apiRows.length > 0 ? "player-stats" : "נתוני אירוע והרכב רשמי";
 
   return (
     <section className="mt-5 rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-4 md:p-5">
@@ -2203,6 +2224,7 @@ function buildLineupPlayerStatRows(
   players: MatchPagePlayer[],
 ): PlayerStatDisplayRow[] {
   const lineups = normalizeActualLineups(event.lineups);
+  const fallbackPerformance = buildFallbackPlayerPerformanceMap(event);
   const sides = [
     {
       players: [...lineups.home.players, ...lineups.home.substitutes],
@@ -2222,17 +2244,20 @@ function buildLineupPlayerStatRows(
         const name = readApiPlayerName(player);
         const apiId = player.api_id ?? player.player_id;
         const localPlayer = findLocalPlayerByBzzoiroId(apiId, players) ?? findLocalPlayer(name, players, side.teamId);
+        const position = localPlayer?.position ?? normalizeFootballPosition(player.specific_position ?? player.position);
+        const role = getPlayerStatRole(position);
+        const performance = getFallbackPlayerPerformance(fallbackPerformance, player, localPlayer);
 
         return {
           key: `lineup-${apiId ?? name}-${index}`,
           name: localPlayer?.name ?? name,
           teamName: side.teamName,
-          position: localPlayer?.position ?? normalizeFootballPosition(player.specific_position ?? player.position),
-          role: getPlayerStatRole(localPlayer?.position ?? player.specific_position ?? player.position),
+          position,
+          role,
           localPlayer,
           photoUrl: localPlayer?.photo_url ?? getBzzoiroPlayerImageUrl(apiId),
           rating: player.rating,
-          metrics: buildLineupPlayerStatMetrics(player),
+          metrics: buildLineupPlayerStatMetrics(player, performance, role),
         } satisfies PlayerStatDisplayRow;
       }),
     )
@@ -2347,14 +2372,264 @@ function buildApiPlayerStatMetrics(row: BzzoiroPlayerStatsRow, position: string 
   return metrics.filter((metric): metric is PlayerStatMetric => Boolean(metric)).slice(0, 4);
 }
 
-function buildLineupPlayerStatMetrics(player: BzzoiroActualLineupPlayer): PlayerStatMetric[] {
-  const metrics = [
-    statMetric("שערים", player.goals, "goal"),
-    statMetric("יצא", player.sub_out, "neutral"),
-    statMetric("נכנס", player.sub_in, "neutral"),
-  ].filter((metric): metric is PlayerStatMetric => Boolean(metric));
+function buildFallbackPlayerPerformanceMap(event: BzzoiroMatchEvent) {
+  const map = new Map<string, FallbackPlayerPerformance>();
+  const lineups = normalizeActualLineups(event.lineups);
+  const elapsedMinute = getEventElapsedMinute(event);
+  const incidents = asArray(event.incidents);
+  const hasGoalIncidents = incidents.some((incident) => String(incident.type ?? "").toLowerCase().includes("goal"));
+  const hasCardIncidents = incidents.some((incident) => String(incident.type ?? "").toLowerCase().includes("card"));
 
-  return metrics.slice(0, 3);
+  for (const player of lineups.home.players) {
+    registerFallbackLineupPlayer(map, player, true, true, event, elapsedMinute, hasGoalIncidents, hasCardIncidents);
+  }
+
+  for (const player of lineups.home.substitutes) {
+    registerFallbackLineupPlayer(map, player, true, false, event, elapsedMinute, hasGoalIncidents, hasCardIncidents);
+  }
+
+  for (const player of lineups.away.players) {
+    registerFallbackLineupPlayer(map, player, false, true, event, elapsedMinute, hasGoalIncidents, hasCardIncidents);
+  }
+
+  for (const player of lineups.away.substitutes) {
+    registerFallbackLineupPlayer(map, player, false, false, event, elapsedMinute, hasGoalIncidents, hasCardIncidents);
+  }
+
+  for (const shot of asArray(event.shotmap)) {
+    const performance = getOrCreateFallbackPlayerPerformance(map, getFallbackShotKeys(shot));
+    performance.shots += 1;
+    performance.xg += readNumber(shot.xg);
+    if (isShotOnTarget(shot)) {
+      performance.shotsOnTarget += 1;
+    }
+  }
+
+  for (const incident of incidents) {
+    const type = String(incident.type ?? "").toLowerCase();
+    const cardType = String(incident.card_type ?? "").toLowerCase();
+
+    if (type.includes("goal")) {
+      const scorer = getOrCreateFallbackPlayerPerformance(map, getFallbackIncidentPlayerKeys(incident));
+      scorer.goals += 1;
+
+      const assistKeys = getFallbackAssistKeys(incident);
+      if (assistKeys.length > 0) {
+        getOrCreateFallbackPlayerPerformance(map, assistKeys).assists += 1;
+      }
+    }
+
+    if (type.includes("card")) {
+      const performance = getOrCreateFallbackPlayerPerformance(map, getFallbackIncidentPlayerKeys(incident));
+      if (cardType.includes("red") || cardType.includes("second")) {
+        performance.redCards += 1;
+      } else {
+        performance.yellowCards += 1;
+      }
+    }
+  }
+
+  return map;
+}
+
+function registerFallbackLineupPlayer(
+  map: Map<string, FallbackPlayerPerformance>,
+  player: BzzoiroActualLineupPlayer,
+  isHome: boolean,
+  started: boolean,
+  event: BzzoiroMatchEvent,
+  elapsedMinute: number,
+  hasGoalIncidents: boolean,
+  hasCardIncidents: boolean,
+) {
+  const performance = getOrCreateFallbackPlayerPerformance(
+    map,
+    getFallbackLineupPlayerKeys(player),
+    isHome ? readNumber(event.away_score) : readNumber(event.home_score),
+  );
+
+  performance.minutes = Math.max(performance.minutes ?? 0, estimateLineupMinutes(player, started, elapsedMinute));
+  performance.goals = Math.max(performance.goals, hasGoalIncidents ? 0 : readNumber(player.goals));
+
+  if (!hasCardIncidents) {
+    performance.yellowCards = Math.max(performance.yellowCards, player.yellow_card ? 1 : 0);
+    performance.redCards = Math.max(performance.redCards, player.red_card ? 1 : 0);
+  }
+}
+
+function getFallbackPlayerPerformance(
+  map: Map<string, FallbackPlayerPerformance>,
+  player: BzzoiroActualLineupPlayer,
+  localPlayer: MatchPagePlayer | null,
+) {
+  for (const key of getFallbackLineupPlayerKeys(player, localPlayer)) {
+    const performance = map.get(key);
+    if (performance) return performance;
+  }
+
+  return null;
+}
+
+function getOrCreateFallbackPlayerPerformance(
+  map: Map<string, FallbackPlayerPerformance>,
+  keys: string[],
+  goalsConceded: number | null = null,
+) {
+  const existing = keys.map((key) => map.get(key)).find((performance): performance is FallbackPlayerPerformance => Boolean(performance));
+  const performance = existing ?? {
+    minutes: null,
+    goals: 0,
+    assists: 0,
+    yellowCards: 0,
+    redCards: 0,
+    shots: 0,
+    shotsOnTarget: 0,
+    xg: 0,
+    goalsConceded,
+  };
+
+  if (performance.goalsConceded === null && goalsConceded !== null) {
+    performance.goalsConceded = goalsConceded;
+  }
+
+  for (const key of keys) {
+    map.set(key, performance);
+  }
+
+  return performance;
+}
+
+function getFallbackLineupPlayerKeys(player: BzzoiroActualLineupPlayer, localPlayer: MatchPagePlayer | null = null) {
+  return uniqueStrings([
+    player.api_id !== null && player.api_id !== undefined ? `id:${player.api_id}` : null,
+    player.player_id !== null && player.player_id !== undefined ? `id:${player.player_id}` : null,
+    localPlayer?.bzzoiro_player_id !== null && localPlayer?.bzzoiro_player_id !== undefined ? `id:${localPlayer.bzzoiro_player_id}` : null,
+    localPlayer?.id !== null && localPlayer?.id !== undefined ? `local:${localPlayer.id}` : null,
+    ...getPlayerNameSummaryKeys(readApiPlayerName(player)),
+    ...getPlayerNameSummaryKeys(localPlayer?.name),
+  ]);
+}
+
+function getFallbackShotKeys(shot: BzzoiroShot) {
+  return uniqueStrings([
+    shot.pid !== null && shot.pid !== undefined ? `id:${shot.pid}` : null,
+  ]);
+}
+
+function getFallbackIncidentPlayerKeys(incident: BzzoiroIncident) {
+  return uniqueStrings([
+    incident.player_id !== null && incident.player_id !== undefined ? `id:${incident.player_id}` : null,
+    ...getPlayerNameSummaryKeys(incident.player_name ?? incident.player ?? null),
+  ]);
+}
+
+function getFallbackAssistKeys(incident: BzzoiroIncident) {
+  const sequenceAssist = asArray(incident.sequence)
+    .map((item) => {
+      if (!item || typeof item !== "object") return null;
+      const payload = item as { assist?: boolean | null; pid?: number | string | null; player?: string | null };
+      if (payload.assist !== true) return null;
+      return uniqueStrings([
+        payload.pid !== null && payload.pid !== undefined ? `id:${payload.pid}` : null,
+        ...getPlayerNameSummaryKeys(payload.player),
+      ]);
+    })
+    .find((keys): keys is string[] => Boolean(keys && keys.length > 0)) ?? [];
+
+  return uniqueStrings([
+    ...getPlayerNameSummaryKeys(incident.assist ?? incident.assist_player ?? null),
+    ...sequenceAssist,
+  ]);
+}
+
+function uniqueStrings(values: Array<string | null | undefined>) {
+  return Array.from(new Set(values.filter((value): value is string => Boolean(value))));
+}
+
+function getEventElapsedMinute(event: BzzoiroMatchEvent) {
+  const status = `${event.status ?? ""} ${event.period ?? ""}`.toLowerCase();
+  const minute = readProvidedNumber(event.current_minute);
+  const incidentMinute = Math.max(0, ...asArray(event.incidents).map((incident) => readNumber(incident.minute)));
+  const shotMinute = Math.max(0, ...asArray(event.shotmap).map((shot) => readNumber(shot.min)));
+
+  if (status.includes("finished") || status.includes("ft")) return Math.max(90, minute ?? 0, incidentMinute, shotMinute);
+  return Math.max(0, minute ?? 0, incidentMinute, shotMinute);
+}
+
+function estimateLineupMinutes(player: BzzoiroActualLineupPlayer, started: boolean, elapsedMinute: number) {
+  const subIn = readProvidedNumber(player.sub_in);
+  const subOut = readProvidedNumber(player.sub_out);
+
+  if (subIn !== null && subOut !== null) return Math.max(0, Math.round(subOut - subIn));
+  if (subIn !== null) return Math.max(0, Math.round(elapsedMinute - subIn));
+  if (subOut !== null) return Math.max(0, Math.round(subOut));
+  return started ? Math.max(0, Math.round(elapsedMinute)) : 0;
+}
+
+function isShotOnTarget(shot: BzzoiroShot) {
+  const type = String(shot.type ?? "").toLowerCase();
+  return type.includes("goal") || type.includes("save") || type.includes("target") || readProvidedNumber(shot.xgot) !== null;
+}
+
+function buildLineupPlayerStatMetrics(
+  player: BzzoiroActualLineupPlayer,
+  performance: FallbackPlayerPerformance | null,
+  role: PlayerStatRole,
+): PlayerStatMetric[] {
+  const data = performance ?? {
+    minutes: estimateLineupMinutes(player, true, 90),
+    goals: readNumber(player.goals),
+    assists: 0,
+    yellowCards: player.yellow_card ? 1 : 0,
+    redCards: player.red_card ? 1 : 0,
+    shots: 0,
+    shotsOnTarget: 0,
+    xg: 0,
+    goalsConceded: null,
+  };
+  const discipline = normalizeEventSummaryForDisplay({
+    goals: data.goals,
+    assists: data.assists,
+    yellowCards: data.yellowCards,
+    redCards: data.redCards,
+  });
+  const metrics: Array<PlayerStatMetric | null> = [];
+
+  if (role === "goalkeeper") {
+    metrics.push(
+      statMetric("ספג", data.goalsConceded, "keeper", true),
+      statMetric("דקות", data.minutes, "neutral", true),
+      statMetric("אדומים", discipline.redCards, "card"),
+      statMetric("צהובים", discipline.yellowCards, "card"),
+    );
+  } else if (role === "defender") {
+    metrics.push(
+      statMetric("דקות", data.minutes, "neutral", true),
+      statPairMetric("בעיטות", data.shotsOnTarget, data.shots, "goal"),
+      statMetric("xG", data.xg, "goal"),
+      statMetric("אדומים", discipline.redCards, "card"),
+      statMetric("צהובים", discipline.yellowCards, "card"),
+    );
+  } else if (role === "midfielder") {
+    metrics.push(
+      statMetric("בישולים", discipline.assists, "assist"),
+      statPairMetric("בעיטות", data.shotsOnTarget, data.shots, "goal"),
+      statMetric("xG", data.xg, "goal"),
+      statMetric("דקות", data.minutes, "neutral", true),
+      statMetric("אדומים", discipline.redCards, "card"),
+      statMetric("צהובים", discipline.yellowCards, "card"),
+    );
+  } else {
+    metrics.push(
+      statMetric("שערים", discipline.goals, "goal"),
+      statMetric("בישולים", discipline.assists, "assist"),
+      statPairMetric("בעיטות", data.shotsOnTarget, data.shots, "goal"),
+      statMetric("xG", data.xg, "goal"),
+      statMetric("דקות", data.minutes, "neutral", true),
+    );
+  }
+
+  return metrics.filter((metric): metric is PlayerStatMetric => Boolean(metric)).slice(0, 4);
 }
 
 function statMetric(
@@ -2434,6 +2709,7 @@ function getPlayerStatMetricClass(tone: PlayerStatMetric["tone"] = "neutral") {
   if (tone === "assist") return "border-[#C9B2FF]/18 bg-[#6F3CFF]/10";
   if (tone === "defense") return "border-wc-neon/18 bg-wc-neon/8";
   if (tone === "keeper") return "border-cyan-300/18 bg-cyan-300/8";
+  if (tone === "card") return "border-wc-amber/18 bg-wc-amber/8";
   return "border-white/10 bg-white/[0.045]";
 }
 
