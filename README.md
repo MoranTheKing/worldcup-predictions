@@ -624,3 +624,8 @@ Brevo Free מוגבל בכמות יומית לכל החשבון, לכן ביום
 - Formation pitches now render each tactical line as a fixed column grid instead of wrapping cards, so shapes such as `4-2-3-1` stay visually correct on mobile and desktop across match and squad pages.
 - The match page no longer renders the separate `שחקנים בולטים` panel; ratings, goals, assists, cards, substitutions and shot data stay visible in the lineup, timeline and shot panels without duplicating the same information.
 - Finished/local Dev Tools simulations now prefer the local match center even when BSD still reports the real World Cup event as not started, so simulated match pages show timeline, final score, local xG and lineups instead of an API pre-match preview.
+
+## Dev full reset alignment - 2026-04-30
+
+- Dev Tools `Clear All Match Data` now clears the same surfaces used by the one-off development reset: local match status/scores, knockout team slots, 1X2 odds, BSD model-prediction fields, user match predictions, tournament predictions, legacy bets, profile totals, team tournament stats, player tournament stats and generated dev player events.
+- The temporary `/dashboard/matches/bsd-live/[id]` preview stays separate from this reset because it reads BSD live data server-side and does not write a local World Cup match row.

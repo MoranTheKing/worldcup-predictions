@@ -39,7 +39,9 @@ export async function POST(request: Request) {
     legacyBetsReset,
     profilesReset,
     teamOddsReset,
+    teamStatsReset,
     playerOddsReset,
+    playerStatsReset,
     devEventsReset,
   ] = await Promise.all([
     deleteRows("predictions", "user_id"),
@@ -48,7 +50,9 @@ export async function POST(request: Request) {
     deleteRows("bets", "user_id"),
     resetProfileScores(),
     resetTeamOutrightOdds(),
+    resetTeamTournamentStats(),
     resetPlayerTopScorerOdds(),
+    resetPlayerTournamentStats(),
     resetDevMatchPlayerEvents(),
   ]);
 
@@ -58,7 +62,9 @@ export async function POST(request: Request) {
   if (isResetError(legacyBetsReset)) return errorResponse(legacyBetsReset.error);
   if (isResetError(profilesReset)) return errorResponse(profilesReset.error);
   if (isResetError(teamOddsReset)) return errorResponse(teamOddsReset.error);
+  if (isResetError(teamStatsReset)) return errorResponse(teamStatsReset.error);
   if (isResetError(playerOddsReset)) return errorResponse(playerOddsReset.error);
+  if (isResetError(playerStatsReset)) return errorResponse(playerStatsReset.error);
   if (isResetError(devEventsReset)) return errorResponse(devEventsReset.error);
 
   // Explicitly wipe resolved team slots from all knockout matches so they
@@ -87,6 +93,19 @@ export async function POST(request: Request) {
         is_extra_time: false,
         home_penalty_score: null,
         away_penalty_score: null,
+        bsd_prediction_id: null,
+        bsd_prediction_created_at: null,
+        bsd_prob_home_win: null,
+        bsd_prob_draw: null,
+        bsd_prob_away_win: null,
+        bsd_predicted_result: null,
+        bsd_expected_home_goals: null,
+        bsd_expected_away_goals: null,
+        bsd_prediction_confidence: null,
+        bsd_most_likely_score: null,
+        bsd_prediction_model_version: null,
+        bsd_prediction_raw: null,
+        bsd_prediction_synced_at: null,
       },
       { count: "exact" },
     )
@@ -116,7 +135,9 @@ export async function POST(request: Request) {
     legacyBetsReset: legacyBetsReset.count,
     profilesReset: profilesReset.count,
     teamOddsReset: teamOddsReset.count,
+    teamStatsReset: teamStatsReset.count,
     playerOddsReset: playerOddsReset.count,
+    playerStatsReset: playerStatsReset.count,
     devEventsReset: devEventsReset.count,
   });
 
@@ -150,10 +171,50 @@ export async function POST(request: Request) {
     return { count: updatedCount ?? 0 };
   }
 
+  async function resetTeamTournamentStats(): Promise<ResetResult> {
+    const { error, count: updatedCount } = await admin
+      .from("teams")
+      .update(
+        {
+          points: 0,
+          goals_for: 0,
+          goals_against: 0,
+          fair_play_score: 0,
+          played_count: 0,
+          is_eliminated: false,
+        },
+        { count: "exact" },
+      )
+      .not("id", "is", null);
+
+    if (error) return { error: error.message };
+    return { count: updatedCount ?? 0 };
+  }
+
   async function resetPlayerTopScorerOdds(): Promise<ResetResult> {
     const { error, count: updatedCount } = await admin
       .from("players")
       .update({ top_scorer_odds: null, top_scorer_odds_updated_at: null }, { count: "exact" })
+      .not("id", "is", null);
+
+    if (error) return { error: error.message };
+    return { count: updatedCount ?? 0 };
+  }
+
+  async function resetPlayerTournamentStats(): Promise<ResetResult> {
+    const { error, count: updatedCount } = await admin
+      .from("players")
+      .update(
+        {
+          goals: 0,
+          assists: 0,
+          appearances: 0,
+          minutes_played: 0,
+          yellow_cards: 0,
+          red_cards: 0,
+        },
+        { count: "exact" },
+      )
       .not("id", "is", null);
 
     if (error) return { error: error.message };
