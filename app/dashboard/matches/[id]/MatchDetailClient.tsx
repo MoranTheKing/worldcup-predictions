@@ -1004,7 +1004,8 @@ function ActualLineupSide({
   eventSummaryByPlayerId: Map<string, PlayerMatchEventSummary>;
 }) {
   const allLineupPlayers = [...lineup.players, ...lineup.substitutes];
-  const starters = lineup.players.map((player, index) => mapApiLineupPlayer(player, players, teamId, index, eventSummaryByPlayerId, allLineupPlayers));
+  const topRatedPlayerKey = getTopRatedApiLineupPlayerKey(allLineupPlayers);
+  const starters = lineup.players.map((player, index) => mapApiLineupPlayer(player, players, teamId, index, eventSummaryByPlayerId, allLineupPlayers, topRatedPlayerKey));
   const substitutes = lineup.substitutes.filter((player) => readApiPlayerName(player) !== "-");
   const formationName = lineup.formation ?? fallbackFormationName ?? "4-3-3";
   const lines = buildFootballFormation(starters, formationName, starters);
@@ -1038,6 +1039,8 @@ function ActualLineupSide({
                 players={players}
                 photoUrl={getBzzoiroPlayerImageUrl(player.api_id)}
                 substitution={getLineupSubstitutionDisplay(player, allLineupPlayers)}
+                rating={player.rating}
+                isTopRated={getApiLineupPlayerKey(player) === topRatedPlayerKey}
                 eventSummary={getActualLineupPlayerEventSummary(player, players, teamId, eventSummaryByPlayerId)}
               />
             );
@@ -1120,6 +1123,7 @@ function mapApiLineupPlayer(
   index: number,
   eventSummaryByPlayerId: Map<string, PlayerMatchEventSummary>,
   lineupPlayers: BzzoiroActualLineupPlayer[] = [],
+  topRatedPlayerKey: string | null = null,
 ): FormationLineupPlayer {
   const name = readApiPlayerName(player);
   const apiPlayerId = player.api_id ?? player.player_id ?? null;
@@ -1146,6 +1150,8 @@ function mapApiLineupPlayer(
     match_red_cards: player.red_card ? 1 : 0,
     match_sub_in: substitution?.kind === "in" ? substitution.minute ?? 1 : null,
     match_sub_out: substitution?.kind === "out" ? substitution.minute ?? 1 : null,
+    match_rating: player.rating,
+    is_team_top_rated: getApiLineupPlayerKey(player) === topRatedPlayerKey,
   }, eventSummaryByPlayerId);
 }
 
@@ -1395,6 +1401,8 @@ function LineupPlayerRow({
   eventSummary,
   photoUrl,
   substitution,
+  rating,
+  isTopRated = false,
 }: {
   name: string;
   position?: string | null;
@@ -1404,6 +1412,8 @@ function LineupPlayerRow({
   eventSummary?: PlayerMatchEventSummary | null;
   photoUrl?: string | null;
   substitution?: LineupSubstitutionDisplay | null;
+  rating?: number | string | null;
+  isTopRated?: boolean;
 }) {
   const localPlayer = findLocalPlayer(name, players, teamId);
   const content = (
@@ -1427,7 +1437,10 @@ function LineupPlayerRow({
           </p>
         ) : null}
       </div>
-      <InlineEventBadges summary={eventSummary} substitution={substitution} />
+      <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+        <LineupRatingBadge rating={rating} isTopRated={isTopRated} />
+        <InlineEventBadges summary={eventSummary} substitution={substitution} />
+      </div>
     </div>
   );
 
@@ -1437,6 +1450,32 @@ function LineupPlayerRow({
     </PlayerLink>
   ) : (
     content
+  );
+}
+
+function LineupRatingBadge({
+  rating,
+  isTopRated,
+}: {
+  rating?: number | string | null;
+  isTopRated: boolean;
+}) {
+  const ratingText = formatRating(rating);
+  if (!ratingText) return null;
+
+  return (
+    <span
+      className={`inline-flex h-7 items-center gap-1 rounded-full border px-2 font-sans text-[10px] font-black tracking-normal ${
+        isTopRated
+          ? "border-wc-neon/45 bg-wc-neon/16 text-wc-neon shadow-[0_0_18px_rgba(95,255,123,0.18)]"
+          : "border-white/10 bg-white/8 text-wc-fg2"
+      }`}
+      title={isTopRated ? `מצטיין הקבוצה - ציון ${ratingText}` : `ציון ${ratingText}`}
+      dir="ltr"
+    >
+      {isTopRated ? <span aria-hidden="true">★</span> : null}
+      {ratingText}
+    </span>
   );
 }
 
@@ -1779,7 +1818,7 @@ function getFulltimeScore(event: BzzoiroMatchEvent) {
 }
 
 function isFullTimeEvent(event: BzzoiroMatchEvent) {
-  const status = `${event.status ?? ""} ${event.period ?? ""}`.toLowerCase();
+  const status = `${event.status ?? ""} ${event.period ?? ""}`.toLowerCase().trim();
   return (
     status.includes("finish") ||
     status.includes("ended") ||
@@ -2677,6 +2716,12 @@ function formatDecimal(value: number | string | null | undefined) {
   return number.toFixed(2);
 }
 
+function formatRating(value: number | string | null | undefined) {
+  const number = readProvidedNumber(value);
+  if (number === null || number <= 0) return null;
+  return number.toFixed(1);
+}
+
 function formatOptionalStat(value: number | string | null | undefined) {
   if (value === null || value === undefined || value === "") return "-";
   if (typeof value === "string" && Number.isNaN(Number(value))) return value;
@@ -2715,6 +2760,29 @@ function readApiPlayerName(player: { player_name?: string | null; player?: strin
 function getBzzoiroPlayerImageUrl(id: number | string | null | undefined) {
   if (id === null || id === undefined || id === "") return null;
   return `https://sports.bzzoiro.com/img/player/${encodeURIComponent(String(id))}/`;
+}
+
+function getTopRatedApiLineupPlayerKey(players: BzzoiroActualLineupPlayer[]) {
+  let topKey: string | null = null;
+  let topRating = Number.NEGATIVE_INFINITY;
+
+  for (const player of players) {
+    const rating = readProvidedNumber(player.rating);
+    if (rating === null) continue;
+    if (rating > topRating) {
+      topRating = rating;
+      topKey = getApiLineupPlayerKey(player);
+    }
+  }
+
+  return topKey;
+}
+
+function getApiLineupPlayerKey(player: BzzoiroActualLineupPlayer) {
+  const id = player.api_id ?? player.player_id;
+  return id !== null && id !== undefined && id !== ""
+    ? `id:${id}`
+    : `name:${normalizePlayerName(readApiPlayerName(player))}`;
 }
 
 function getLineupSubstitutionDisplay(

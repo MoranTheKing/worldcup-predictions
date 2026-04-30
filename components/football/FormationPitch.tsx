@@ -16,6 +16,8 @@ export type FormationPitchPlayer = {
   match_red_cards?: number | null;
   match_sub_in?: number | null;
   match_sub_out?: number | null;
+  match_rating?: number | string | null;
+  is_team_top_rated?: boolean;
 };
 
 export function FormationBadge({ value, label = "מערך" }: { value: string | null | undefined; label?: string }) {
@@ -80,6 +82,7 @@ function PlayerToken({ player, compact }: { player: FormationPitchPlayer; compac
   const content = (
     <div className="relative inline-block pb-2">
       <div className={`${compact ? "w-[5.15rem]" : "w-[5.85rem]"} rounded-[1rem] border border-white/12 bg-black/36 px-2 py-2 text-center shadow-[0_10px_24px_rgba(0,0,0,0.24)] backdrop-blur transition hover:border-wc-neon/40 hover:bg-white/[0.07]`}>
+        <RatingBadge rating={player.match_rating} isTopRated={player.is_team_top_rated === true} />
         <PlayerAvatar player={player} compact={compact} />
         <p
           className="mx-auto mt-2 min-h-[2rem] max-w-full overflow-hidden text-[11px] font-black leading-4 text-wc-fg1"
@@ -124,6 +127,32 @@ function PlayerToken({ player, compact }: { player: FormationPitchPlayer; compac
     <PlayerLink player={player} className="block">
       {content}
     </PlayerLink>
+  );
+}
+
+function RatingBadge({
+  rating,
+  isTopRated,
+}: {
+  rating?: number | string | null;
+  isTopRated: boolean;
+}) {
+  const ratingText = formatRating(rating);
+  if (!ratingText) return null;
+
+  return (
+    <span
+      className={`absolute end-1.5 top-1.5 z-20 inline-flex h-6 items-center gap-1 rounded-full border px-1.5 font-sans text-[10px] font-black tracking-normal ${
+        isTopRated
+          ? "border-wc-neon/45 bg-wc-neon/16 text-wc-neon shadow-[0_0_18px_rgba(95,255,123,0.2)]"
+          : "border-white/12 bg-black/42 text-wc-fg2"
+      }`}
+      title={isTopRated ? `מצטיין הקבוצה - ציון ${ratingText}` : `ציון ${ratingText}`}
+      dir="ltr"
+    >
+      {isTopRated ? <span aria-hidden="true">★</span> : null}
+      {ratingText}
+    </span>
   );
 }
 
@@ -235,6 +264,12 @@ function readPositiveCount(value: number | null | undefined) {
 function readSubstitutionMinute(value: number | null | undefined) {
   const minute = Number(value ?? 0);
   return Number.isFinite(minute) && minute > 0 ? Math.round(minute) : null;
+}
+
+function formatRating(value: number | string | null | undefined) {
+  const number = Number(value);
+  if (!Number.isFinite(number) || number <= 0) return null;
+  return number.toFixed(1);
 }
 
 function PlayerAvatar({ player, compact }: { player: FormationPitchPlayer; compact: boolean }) {
